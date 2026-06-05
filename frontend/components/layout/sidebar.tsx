@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
-  Database,
   FolderKanban,
   LayoutDashboard,
   MessageSquarePlus,
@@ -17,7 +16,6 @@ const navItems = [
   { href: "/chat", label: "Chat", icon: MessageSquarePlus },
   { href: "/providers", label: "Providers", icon: FolderKanban },
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/knowledge", label: "Knowledge", icon: Database },
 ];
 
 export function Sidebar({
@@ -131,16 +129,6 @@ export function Sidebar({
           );
         })}
       </nav>
-
-      {!collapsed || mobile ? (
-        <div className="mt-5 rounded-3xl bg-surface p-4 shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Workspace memory</p>
-          <p className="mt-2 text-sm font-medium text-foreground">Shared knowledge stays available across chats.</p>
-          <p className="mt-2 text-xs leading-6 text-foreground-muted">
-            Keep universal uploads at the workspace level, and let each conversation manage its own files and records.
-          </p>
-        </div>
-      ) : null}
     </aside>
   );
 }

@@ -42,7 +42,7 @@ olanma/
 
 - User registration, login, logout, refresh tokens, password reset, and profile management
 - Provider management for OpenAI, Anthropic, Gemini, Ollama, and OpenAI-compatible endpoints
-- Chat workspace with streaming-ready API design, conversation folders, message editing, regeneration, and model selection
+- Chat workspace with live OpenAI-backed replies, conversation folders, message editing, regeneration, and model selection
 - Document, audio, and video ingestion endpoints with background-job orchestration
 - Dashboard analytics for provider health, recent activity, uploads, and jobs
 
@@ -97,6 +97,17 @@ cd backend
 uv run celery -A app.workers.celery_app.celery_app worker --loglevel=info
 ```
 
+### 4. Connect OpenAI First
+
+To use live chat right away:
+
+1. Register or sign in.
+2. Open the `Providers` page.
+3. Add an `OpenAI` provider with your `sk-...` API key.
+4. Go to `Chat` and send a message.
+
+The first enabled OpenAI model is used for live replies. Other provider types remain scaffolded until their execution adapters are wired.
+
 ## API Surface
 
 Versioned endpoints live under `/api/v1`:
@@ -121,7 +132,7 @@ Versioned endpoints live under `/api/v1`:
 ## Production Notes
 
 - The backend uses a service/repository split to keep provider, auth, and job orchestration logic isolated.
-- Chat, document, audio, and video features are scaffolded with provider abstraction hooks so real model integrations can be added safely.
+- OpenAI chat execution is wired first through the provider system; other provider adapters can be added behind the same service boundary.
 - Celery jobs and SQL-backed job records provide trackable processing state for long-running media workflows.
 - The frontend uses a shared API client, React Query for server state, and Zustand for session/chat UI state.
 

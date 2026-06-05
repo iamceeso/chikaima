@@ -196,7 +196,7 @@ export function ChatLayout() {
                 Ask a question, switch models, and keep the conversation moving.
               </p>
               <div className="mt-8 grid gap-3 text-left sm:grid-cols-3">
-                {["Summarize PDF", "Compare models", "Search workspace knowledge"].map((prompt) => (
+                {["Summarize PDF", "Compare models", "Review chat history"].map((prompt) => (
                   <button
                     key={prompt}
                     type="button"
@@ -241,6 +241,11 @@ export function ChatLayout() {
                 </Button>
               </div>
             </div>
+            {createConversation.error || sendMessage.error ? (
+              <p className="mt-3 text-center text-sm text-primary">
+                {(createConversation.error ?? sendMessage.error)?.message}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>

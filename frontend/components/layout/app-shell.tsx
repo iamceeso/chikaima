@@ -62,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 lg:flex">
                   <Search className="h-4 w-4 text-muted" />
                   <span className="truncate text-sm text-foreground-muted">
-                    Search conversations, providers, records, and workspace knowledge
+                    Search conversations, providers, records, and models
                   </span>
                 </div>
                 <button

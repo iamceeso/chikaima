@@ -45,7 +45,7 @@ export default function HomePage() {
               One platform for all AI workflows.
             </h2>
             <p className="text-sm sm:text-base leading-relaxed text-foreground-muted max-w-lg mb-8">
-              Chat with any model, manage conversation-specific records, and reuse shared workspace knowledge from one calm interface.
+              Chat with any model and manage conversation-specific records from one calm interface.
             </p>
             <div className="flex flex-wrap gap-3">
               <Button asChild href="/register" size="default" className="px-5">

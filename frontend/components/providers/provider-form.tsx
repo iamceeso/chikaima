@@ -91,8 +91,7 @@ export function ProviderForm() {
           <Input id="api_key" type="password" {...form.register("api_key")} placeholder="sk-..." />
         </div>
         <div className="rounded-xl border border-border bg-[var(--surface-strong)] p-4 text-xs leading-6 text-foreground-muted">
-          Saved credentials are prepared for encrypted storage. Add provider-specific endpoints or keys here before
-          wiring live inference.
+          OpenAI is wired first for live chat. Add your OpenAI API key here, then pick the synced model from chat.
         </div>
         {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
         <Button type="submit" className="w-full">

@@ -17,4 +17,9 @@ class Conversation(UUIDTimestampMixin, Base):
 
     user = relationship("User", back_populates="conversations")
     model = relationship("AIModel", back_populates="conversations")
-    messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
+    messages = relationship(
+        "Message",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="Message.created_at",
+    )

@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Topbar title="Workspace overview" description="A calmer operations home for your models, chat records, and shared knowledge." />
+      <Topbar title="Workspace overview" description="A calmer operations home for your models, chat records, and provider activity." />
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
         <Card className="rounded-[1.75rem] bg-surface p-6">
