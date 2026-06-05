@@ -19,7 +19,7 @@ class MessageResponse(TimestampedResponse):
     role: str
     content: str
     status: str
-    metadata: dict
+    metadata: dict = Field(validation_alias="meta")
 
 
 class ConversationCreate(BaseModel):

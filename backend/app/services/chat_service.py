@@ -34,7 +34,7 @@ class ChatService:
                     conversation_id=conversation.id,
                     role="user",
                     content=payload.initial_message,
-                    metadata={"source": "initial"},
+                    meta={"source": "initial"},
                 )
             )
 
@@ -51,7 +51,7 @@ class ChatService:
             conversation_id=conversation_id,
             role=payload.role,
             content=payload.content,
-            metadata={"streaming": payload.role == "assistant"},
+            meta={"streaming": payload.role == "assistant"},
         )
         self.db.add(message)
         self.db.commit()
@@ -63,7 +63,7 @@ class ChatService:
         if not message or message.conversation.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
         message.content = content
-        message.metadata = {**message.metadata, "edited": True}
+        message.meta = {**message.meta, "edited": True}
         self.db.add(message)
         self.db.commit()
         self.db.refresh(message)
@@ -77,7 +77,7 @@ class ChatService:
             conversation_id=message.conversation_id,
             role="assistant",
             content="Regenerated response placeholder. Connect a provider to stream live output.",
-            metadata={"regenerated_from": message.id},
+            meta={"regenerated_from": message.id},
         )
         self.db.add(regenerated)
         self.db.commit()

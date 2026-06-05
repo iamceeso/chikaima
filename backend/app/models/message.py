@@ -14,6 +14,6 @@ class Message(UUIDTimestampMixin, Base):
     role: Mapped[str] = mapped_column(String(20))
     content: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="completed")
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    meta: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
 
     conversation = relationship("Conversation", back_populates="messages")
