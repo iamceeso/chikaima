@@ -44,9 +44,12 @@ export function RegisterForm() {
   });
 
   return (
-    <Card className="w-full max-w-md bg-slate-950/70">
-      <h1 className="text-3xl font-semibold">Create your workspace</h1>
-      <p className="mt-2 text-sm text-slate-400">Set up Olanma with one account and start connecting models.</p>
+    <Card className="w-full max-w-md border-white/8 bg-[#2f3037] p-8">
+      <div className="mb-8">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Olanma</p>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground">Create your workspace</h1>
+        <p className="mt-2 text-sm text-zinc-400">Set up Olanma with one account and start connecting models.</p>
+      </div>
       <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
         <div>
           <Label htmlFor="full_name">Full name</Label>
@@ -65,8 +68,11 @@ export function RegisterForm() {
           {mutation.isPending ? "Creating..." : "Create account"}
         </Button>
       </form>
-      <p className="mt-6 text-sm text-slate-400">
-        Already have an account? <Link href="/login" className="text-cyan-300">Sign in</Link>
+      <p className="mt-6 text-sm text-zinc-400">
+        Already have an account?{" "}
+        <Link href="/login" className="text-foreground underline decoration-white/20 underline-offset-4">
+          Sign in
+        </Link>
       </p>
     </Card>
   );
@@ -88,9 +94,12 @@ export function LoginForm() {
   });
 
   return (
-    <Card className="w-full max-w-md bg-slate-950/70">
-      <h1 className="text-3xl font-semibold">Welcome back</h1>
-      <p className="mt-2 text-sm text-slate-400">Sign in to manage providers, jobs, and AI workspaces.</p>
+    <Card className="w-full max-w-md border-white/8 bg-[#2f3037] p-8">
+      <div className="mb-8">
+        <p className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Olanma</p>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground">Welcome back</h1>
+        <p className="mt-2 text-sm text-zinc-400">Sign in to manage providers, jobs, and AI workspaces.</p>
+      </div>
       <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
         <div>
           <Label htmlFor="email">Email</Label>
@@ -105,8 +114,11 @@ export function LoginForm() {
           {mutation.isPending ? "Signing in..." : "Sign in"}
         </Button>
       </form>
-      <p className="mt-6 text-sm text-slate-400">
-        Need an account? <Link href="/register" className="text-cyan-300">Create one</Link>
+      <p className="mt-6 text-sm text-zinc-400">
+        Need an account?{" "}
+        <Link href="/register" className="text-foreground underline decoration-white/20 underline-offset-4">
+          Create one
+        </Link>
       </p>
     </Card>
   );

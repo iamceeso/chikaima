@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Activity, FolderClock, HardDriveUpload, ShieldCheck, Sparkles } from "lucide-react";
 
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Topbar } from "@/components/layout/topbar";
@@ -27,6 +28,12 @@ export default function DashboardPage() {
     },
   });
 
+  const quickActions = [
+    { label: "Start a chat", helper: "Launch a new model conversation", icon: Sparkles },
+    { label: "Add provider", helper: "Connect a hosted or local endpoint", icon: ShieldCheck },
+    { label: "Upload content", helper: "Queue document, audio, or video analysis", icon: HardDriveUpload },
+  ];
+
   return (
     <>
       <Topbar
@@ -40,19 +47,58 @@ export default function DashboardPage() {
         <StatCard label="Videos" value={data?.videos ?? 0} helper="Queued and processed media" />
         <StatCard label="Health" value={data?.system_health ?? "n/a"} helper="Runtime health snapshot" />
       </div>
-      <div className="mt-6 grid gap-4 xl:grid-cols-2">
-        <Card className="bg-slate-950/50">
-          <h2 className="text-xl font-semibold">Recent activity</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Chat, provider, and upload activity streams can be extended from the typed API client layer.
-          </p>
+      <div className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card className="bg-[#40414f]">
+          <div className="mb-5 flex items-center gap-3">
+            <Activity className="h-5 w-5 text-zinc-300" />
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">Recent activity</h2>
+              <p className="mt-1 text-sm text-zinc-400">A focused snapshot of what changed in the workspace.</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {[
+              "Provider sync surface is ready for dynamic model refresh.",
+              "Document, audio, and video routes are scaffolded for background jobs.",
+              "Chat UI is prepared for streaming and message regeneration flows.",
+            ].map((item) => (
+              <div key={item} className="rounded-xl border border-border bg-[#343541] p-4 text-sm text-zinc-300">
+                {item}
+              </div>
+            ))}
+          </div>
         </Card>
-        <Card className="bg-slate-950/50">
-          <h2 className="text-xl font-semibold">Job status</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Celery-backed background jobs expose pending, running, completed, and failed states through `/jobs`.
-          </p>
-        </Card>
+        <div className="grid gap-4">
+          <Card className="bg-[#40414f]">
+            <div className="mb-4 flex items-center gap-3">
+              <FolderClock className="h-5 w-5 text-zinc-300" />
+              <h2 className="text-xl font-semibold text-foreground">Quick actions</h2>
+            </div>
+            <div className="space-y-3">
+              {quickActions.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="flex gap-3 rounded-xl border border-border bg-[#343541] p-4">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#202123]">
+                      <Icon className="h-4 w-4 text-zinc-300" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{item.label}</p>
+                      <p className="mt-1 text-sm text-zinc-400">{item.helper}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+          <Card className="bg-[#40414f]">
+            <h2 className="text-xl font-semibold text-foreground">System status</h2>
+            <p className="mt-3 text-sm leading-7 text-zinc-400">
+              Celery-backed background jobs expose pending, running, completed, and failed states through `/jobs`.
+              Provider health, queue depth, and sync timing can be layered onto this panel next.
+            </p>
+          </Card>
+        </div>
       </div>
     </>
   );

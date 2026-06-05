@@ -52,10 +52,10 @@ export function ProviderForm() {
   });
 
   return (
-    <Card className="bg-slate-950/50">
+    <Card className="bg-[#40414f]">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold">Add provider</h2>
-        <p className="mt-2 text-sm text-slate-400">Connect cloud APIs, local runtimes, or compatible gateways.</p>
+        <h2 className="text-xl font-semibold text-foreground">Add provider</h2>
+        <p className="mt-2 text-sm text-zinc-400">Connect cloud APIs, local runtimes, or compatible gateways.</p>
       </div>
       <form
         className="grid gap-4"
@@ -71,7 +71,7 @@ export function ProviderForm() {
           <Label htmlFor="provider_type">Provider type</Label>
           <select
             id="provider_type"
-            className="h-11 w-full rounded-2xl border border-border bg-white/5 px-4 text-sm"
+            className="h-11 w-full rounded-xl border border-border bg-[#40414f] px-4 text-sm text-foreground"
             {...form.register("provider_type")}
           >
             <option value="openai">OpenAI</option>
@@ -90,8 +90,14 @@ export function ProviderForm() {
           <Label htmlFor="api_key">API key</Label>
           <Input id="api_key" type="password" {...form.register("api_key")} placeholder="sk-..." />
         </div>
+        <div className="rounded-xl border border-border bg-[#343541] p-4 text-xs leading-6 text-zinc-400">
+          Saved credentials are prepared for encrypted storage. Add provider-specific endpoints or keys here before
+          wiring live inference.
+        </div>
         {mutation.error ? <p className="text-sm text-rose-300">{mutation.error.message}</p> : null}
-        <Button type="submit">{mutation.isPending ? "Saving..." : "Save provider"}</Button>
+        <Button type="submit" className="w-full">
+          {mutation.isPending ? "Saving..." : "Save provider"}
+        </Button>
       </form>
     </Card>
   );

@@ -19,31 +19,36 @@ export function ProviderList() {
   });
 
   return (
-    <Card className="bg-slate-950/50">
+    <Card className="bg-[#40414f]">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold">Connected providers</h2>
-        <p className="mt-2 text-sm text-slate-400">Providers and local runtimes available to the workspace.</p>
+        <h2 className="text-xl font-semibold text-foreground">Connected providers</h2>
+        <p className="mt-2 text-sm text-zinc-400">Providers and local runtimes available to the workspace.</p>
       </div>
       <div className="space-y-3">
-        {isLoading ? <p className="text-sm text-slate-400">Loading providers...</p> : null}
+        {isLoading ? <p className="text-sm text-zinc-400">Loading providers...</p> : null}
         {data?.length ? (
           data.map((provider) => (
-            <div key={provider.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div key={provider.id} className="rounded-xl border border-border bg-[#343541] p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="font-medium">{provider.name}</p>
-                  <p className="text-sm text-slate-400">
+                  <p className="font-medium text-foreground">{provider.name}</p>
+                  <p className="text-sm text-zinc-400">
                     {provider.provider_type} {provider.base_url ? `• ${provider.base_url}` : ""}
                   </p>
+                  {provider.masked_secret ? (
+                    <p className="mt-1 text-xs text-zinc-500">Credential {provider.masked_secret}</p>
+                  ) : null}
                 </div>
-                <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs uppercase tracking-[0.22em] text-cyan-200">
+                <span className="rounded-full border border-border bg-[#40414f] px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-300">
                   {provider.is_enabled ? "enabled" : "disabled"}
                 </span>
               </div>
             </div>
           ))
         ) : (
-          <p className="text-sm text-slate-400">No providers added yet.</p>
+          <div className="rounded-xl border border-dashed border-border bg-[#343541] p-4 text-sm text-zinc-400">
+            No providers added yet.
+          </div>
         )}
       </div>
     </Card>

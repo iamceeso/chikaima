@@ -1,57 +1,88 @@
+import { ArrowRight, Bot, Database, FileUp, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
 const highlights = [
-  "Connect OpenAI, Anthropic, Gemini, Ollama, and OpenAI-compatible endpoints",
-  "Manage chats, uploads, transcripts, and jobs from one workspace",
-  "Deploy locally with Docker, PostgreSQL, Redis, and Celery workers",
+  {
+    icon: Bot,
+    title: "Unified chat",
+    copy: "Talk to OpenAI, Claude, Gemini, Ollama, and local models from one interface.",
+  },
+  {
+    icon: FileUp,
+    title: "Built-in analysis",
+    copy: "Upload documents, audio, and video into one operational workspace.",
+  },
+  {
+    icon: Database,
+    title: "Self-hosted stack",
+    copy: "Run the full platform with FastAPI, PostgreSQL, Redis, Docker, and Celery.",
+  },
 ];
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(244,114,182,0.18),transparent_30%),linear-gradient(135deg,#07111f_0%,#0b1b2d_45%,#0d1321_100%)] text-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10 sm:px-10">
-        <header className="flex items-center justify-between">
+    <main className="min-h-screen bg-[#202123] text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-8 sm:px-10">
+        <header className="flex items-center justify-between border-b border-border pb-6">
           <div>
-            <p className="text-sm uppercase tracking-[0.32em] text-cyan-300">Olanma</p>
-            <h1 className="mt-3 max-w-2xl font-(--font-heading) text-5xl tracking-tight sm:text-6xl">
-              Your self-hosted AI control room.
-            </h1>
+            <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">Olanma</p>
+            <h1 className="mt-2 text-lg font-medium">Self-hosted AI workspace</h1>
           </div>
-          <Link
-            href="/login"
-            className="rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100 backdrop-blur transition hover:bg-white/10"
-          >
+          <Button asChild href="/login" variant="ghost">
             Sign in
-          </Link>
+          </Button>
         </header>
 
-        <section className="mt-16 grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-4xl border border-white/10 bg-white/6 p-8 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl">
-            <p className="text-sm uppercase tracking-[0.28em] text-cyan-300">Scalable foundation</p>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-              Olanma gives teams one interface for hosted APIs and private local models, with provider
-              management, job orchestration, and a dashboard built for serious AI operations.
+        <section className="grid flex-1 items-center gap-10 py-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-[#2a2b32] px-3 py-1 text-xs text-zinc-400">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Private-by-default AI operations
+            </div>
+            <h2 className="mt-6 max-w-3xl font-[family:var(--font-heading)] text-5xl font-semibold tracking-tight sm:text-6xl">
+              Use ChatGPT-like workflows across every model you run.
+            </h2>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
+              Olanma gives your team one place to chat, upload, summarize, transcribe, and orchestrate AI work
+              without bouncing between vendors or tools.
             </p>
-            <div className="mt-10 flex flex-wrap gap-4">
+            <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild href="/register" size="lg">
                 Create workspace
               </Button>
-              <Button asChild href="/dashboard" size="lg" variant="ghost">
-                Open demo dashboard
+              <Button asChild href="/chat" size="lg" variant="ghost">
+                Open chat
               </Button>
             </div>
           </div>
 
-          <div className="rounded-4xl border border-cyan-400/20 bg-slate-950/70 p-8 shadow-2xl shadow-black/30">
-            <p className="text-sm uppercase tracking-[0.28em] text-cyan-300">What ships first</p>
-            <div className="mt-6 space-y-4">
-              {highlights.map((item) => (
-                <div key={item} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-7 text-slate-300">
-                  {item}
+          <div className="rounded-[1.75rem] border border-border bg-[#2f3037] p-5">
+            <div className="rounded-2xl border border-border bg-[#343541] p-5">
+              <div className="flex items-center justify-between border-b border-border pb-4">
+                <div>
+                  <p className="text-sm font-medium">Olanma workspace</p>
+                  <p className="mt-1 text-xs text-zinc-500">Chat, providers, uploads, and jobs</p>
                 </div>
-              ))}
+                <ArrowRight className="h-4 w-4 text-zinc-500" />
+              </div>
+              <div className="mt-4 space-y-3">
+                {highlights.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.title} className="flex gap-3 rounded-xl border border-border bg-[#40414f] p-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#202123]">
+                        <Icon className="h-4 w-4 text-zinc-300" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{item.title}</p>
+                        <p className="mt-1 text-sm leading-6 text-zinc-400">{item.copy}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
