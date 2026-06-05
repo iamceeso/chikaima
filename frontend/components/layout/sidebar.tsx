@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { MessageSquarePlus, LayoutDashboard, FolderKanban, Settings, UploadCloud } from "lucide-react";
+import {
+  ChevronRight,
+  FolderKanban,
+  LayoutDashboard,
+  MessageSquarePlus,
+  Settings,
+  Sparkles,
+  UploadCloud,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -13,20 +21,25 @@ const navItems = [
 
 export function Sidebar({ pathname }: { pathname: string }) {
   return (
-    <aside className="w-full rounded-[1.5rem] border border-border bg-[#171717] p-4 xl:w-[280px]">
-      <div className="mb-5">
-        <p className="text-[11px] uppercase tracking-[0.32em] text-zinc-500">Olanma</p>
-        <h2 className="mt-2 font-[family:var(--font-heading)] text-xl font-semibold text-foreground">AI Workspace</h2>
+    <aside className="w-full rounded-[1.75rem] border border-border bg-surface p-4 xl:w-[312px] xl:p-5">
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-border-light bg-[var(--surface-raised)] px-4 py-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">Olanma</p>
+          <h2 className="mt-1 font-heading text-base font-semibold text-foreground">Workspace Console</h2>
+        </div>
       </div>
       <Link
         href="/chat"
-        className="mb-5 flex items-center gap-3 rounded-xl border border-border bg-[#2a2b32] px-4 py-3 text-sm text-foreground transition hover:bg-[#30313a]"
+        className="mb-6 flex items-center justify-center gap-2.5 rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-150 hover:bg-primary-dark hover:shadow-md"
       >
-        <MessageSquarePlus className="h-4 w-4" />
-        New chat
+        <MessageSquarePlus className="h-4.5 w-4.5" />
+        <span>New chat</span>
       </Link>
-      <div className="mb-4 px-1 text-[11px] uppercase tracking-[0.22em] text-zinc-500">Workspace</div>
-      <nav className="space-y-1.5">
+      <div className="mb-3 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Navigation</div>
+      <nav className="space-y-1">
         {navItems.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
@@ -35,22 +48,35 @@ export function Sidebar({ pathname }: { pathname: string }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
+                "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition-colors duration-150",
                 active
-                  ? "bg-[#2a2b32] text-foreground"
-                  : "text-zinc-400 hover:bg-[#212226] hover:text-zinc-100",
+                  ? "bg-[var(--surface-strong)] text-foreground"
+                  : "text-foreground-muted hover:bg-[var(--surface-raised)] hover:text-foreground",
               )}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
+              <div
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-xl border border-transparent transition-colors",
+                  active
+                    ? "bg-surface text-primary shadow-sm"
+                    : "bg-[var(--surface-raised)] text-foreground-muted group-hover:text-foreground",
+                )}
+              >
+                <Icon className="h-4.5 w-4.5" />
+              </div>
+              <div className="flex flex-1 items-center justify-between">
+                <span className={cn("font-medium", active ? "text-foreground" : "")}>{item.label}</span>
+                {active ? <ChevronRight className="h-4 w-4 text-muted" /> : null}
+              </div>
             </Link>
           );
         })}
       </nav>
-      <div className="mt-8 rounded-xl border border-border bg-[#1d1e22] p-4">
-        <p className="text-sm font-medium text-foreground">Workspace tips</p>
-        <p className="mt-2 text-xs leading-6 text-zinc-400">
-          Connect a provider, choose a default model, and keep uploads in one place for a smoother workflow.
+      <div className="mt-6 rounded-2xl border border-border bg-[var(--surface-raised)] p-4">
+        <p className="text-sm font-semibold text-foreground">Workspace tip</p>
+        <p className="mt-2 text-xs leading-6 text-foreground-muted">
+          Connect a provider, set a default model, and use uploads as reusable context so every conversation starts
+          closer to the answer.
         </p>
       </div>
     </aside>

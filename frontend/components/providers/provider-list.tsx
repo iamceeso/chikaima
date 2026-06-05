@@ -19,34 +19,34 @@ export function ProviderList() {
   });
 
   return (
-    <Card className="bg-[#40414f]">
+    <Card className="bg-[var(--surface-raised)]">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-foreground">Connected providers</h2>
-        <p className="mt-2 text-sm text-zinc-400">Providers and local runtimes available to the workspace.</p>
+        <p className="mt-2 text-sm text-foreground-muted">Providers and local runtimes available to the workspace.</p>
       </div>
       <div className="space-y-3">
-        {isLoading ? <p className="text-sm text-zinc-400">Loading providers...</p> : null}
+        {isLoading ? <p className="text-sm text-foreground-muted">Loading providers...</p> : null}
         {data?.length ? (
           data.map((provider) => (
-            <div key={provider.id} className="rounded-xl border border-border bg-[#343541] p-4">
+            <div key={provider.id} className="rounded-xl border border-border bg-[var(--surface-strong)] p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="font-medium text-foreground">{provider.name}</p>
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-foreground-muted">
                     {provider.provider_type} {provider.base_url ? `• ${provider.base_url}` : ""}
                   </p>
                   {provider.masked_secret ? (
-                    <p className="mt-1 text-xs text-zinc-500">Credential {provider.masked_secret}</p>
+                    <p className="mt-1 text-xs text-muted">Credential {provider.masked_secret}</p>
                   ) : null}
                 </div>
-                <span className="rounded-full border border-border bg-[#40414f] px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-300">
+                <span className="rounded-full border border-border bg-[var(--surface-raised)] px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">
                   {provider.is_enabled ? "enabled" : "disabled"}
                 </span>
               </div>
             </div>
           ))
         ) : (
-          <div className="rounded-xl border border-dashed border-border bg-[#343541] p-4 text-sm text-zinc-400">
+          <div className="rounded-xl border border-dashed border-border bg-[var(--surface-strong)] p-4 text-sm text-foreground-muted">
             No providers added yet.
           </div>
         )}

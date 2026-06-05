@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { BellRing, MoonStar, SlidersHorizontal } from "lucide-react";
+import { Sliders, Moon, Bell } from "lucide-react";
 
 import { Topbar } from "@/components/layout/topbar";
 import { Card } from "@/components/ui/card";
@@ -23,60 +23,69 @@ export default function SettingsPage() {
   return (
     <>
       <Topbar
-        title="Settings and jobs"
-        description="Workspace preferences, upload operations, and asynchronous processing status live here."
+        title="Settings"
+        description="Manage your workspace and preferences"
       />
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="space-y-4">
-          <Card className="bg-[#40414f]">
-            <div className="mb-4 flex items-center gap-3">
-              <SlidersHorizontal className="h-5 w-5 text-zinc-300" />
-              <h2 className="text-xl font-semibold text-foreground">Workspace settings</h2>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Sliders className="h-4.5 w-4.5" />
             </div>
-            <div className="space-y-3">
-              {[
-                "Default model selection and provider preferences",
-                "Response behavior, retrieval, and chat defaults",
-                "Workspace-specific profile and usage settings",
-              ].map((item) => (
-                <div key={item} className="rounded-xl border border-border bg-[#343541] p-4 text-sm text-zinc-300">
-                  {item}
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card className="bg-[#40414f]">
-            <div className="mb-4 flex items-center gap-3">
-              <MoonStar className="h-5 w-5 text-zinc-300" />
-              <h2 className="text-xl font-semibold text-foreground">Appearance</h2>
-            </div>
-            <p className="text-sm leading-7 text-zinc-400">
-              Dark and light themes are available globally so the whole workspace stays consistent with the chat view.
-            </p>
-          </Card>
-        </div>
-        <Card className="bg-[#40414f]">
-          <div className="mb-4 flex items-center gap-3">
-            <BellRing className="h-5 w-5 text-zinc-300" />
-            <h2 className="text-xl font-semibold text-foreground">Background jobs</h2>
+            <h2 className="text-base font-semibold text-foreground">Workspace</h2>
           </div>
-          <p className="mb-4 text-sm text-zinc-400">Track uploads and async AI processing from one queue-aware panel.</p>
-          <div className="space-y-3">
+          <p className="text-sm text-foreground-muted mb-4">
+            Configure model defaults, response behavior, and workspace profile.
+          </p>
+          <div className="space-y-2">
+            {[
+              "Default model selection",
+              "Response behavior settings",
+              "Profile and usage",
+            ].map((item) => (
+              <div key={item} className="rounded-lg border border-border bg-background-secondary p-3 text-sm text-foreground">
+                {item}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Moon className="h-4.5 w-4.5" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">Appearance</h2>
+          </div>
+          <p className="text-sm text-foreground-muted">
+            Choose between light and dark mode. Your preference applies to the entire workspace.
+          </p>
+        </Card>
+
+        <Card className="p-6 lg:col-span-2">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Bell className="h-4.5 w-4.5" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">Background jobs</h2>
+          </div>
+          <p className="text-sm text-foreground-muted mb-4">Track uploads and async processing tasks.</p>
+          <div className="space-y-2">
             {jobs?.length ? (
               jobs.map((job) => (
-                <div key={job.id} className="rounded-xl border border-border bg-[#343541] p-4 text-sm">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="font-medium text-foreground">{job.job_type}</p>
-                    <span className="rounded-full border border-border bg-[#40414f] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-zinc-300">
-                      {job.status}
-                    </span>
+                <div key={job.id} className="rounded-lg border border-border bg-background-secondary p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{job.job_type}</p>
+                    <p className="text-xs text-foreground-muted mt-0.5">{job.resource_type ?? "Task"}</p>
                   </div>
-                  <p className="mt-2 text-zinc-400">{job.resource_type ?? "general task"}</p>
+                  <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium uppercase text-foreground-muted">
+                    {job.status}
+                  </span>
                 </div>
               ))
             ) : (
-              <div className="rounded-xl border border-dashed border-border bg-[#343541] p-4 text-sm text-zinc-400">
-                No jobs yet. Upload a document, audio clip, or video to queue work.
+              <div className="rounded-lg border border-dashed border-border bg-background-secondary p-4 text-center text-sm text-foreground-muted">
+                No active jobs
               </div>
             )}
           </div>

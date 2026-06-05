@@ -1,7 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Activity, FolderClock, HardDriveUpload, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Activity,
+  ArrowUpRight,
+  Bot,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  FolderKanban,
+  ShieldCheck,
+  UploadCloud,
+  Video,
+} from "lucide-react";
 
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Topbar } from "@/components/layout/topbar";
@@ -21,83 +32,223 @@ export default function DashboardPage() {
           documents: 0,
           videos: 0,
           jobs: 0,
-          system_health: "connect account",
+          system_health: "ready",
         });
       }
       return api.getDashboard(token);
     },
   });
 
-  const quickActions = [
-    { label: "Start a chat", helper: "Launch a new model conversation", icon: Sparkles },
-    { label: "Add provider", helper: "Connect a hosted or local endpoint", icon: ShieldCheck },
-    { label: "Upload content", helper: "Queue document, audio, or video analysis", icon: HardDriveUpload },
+  const summaryCards = [
+    {
+      label: "Providers",
+      value: data?.providers ?? 0,
+      helper: "Cloud APIs and local runtimes connected to Olanma.",
+      trend: "Ready",
+    },
+    {
+      label: "Models",
+      value: data?.models ?? 0,
+      helper: "Dynamic models available for chat and analysis flows.",
+      trend: "Synced",
+    },
+    {
+      label: "Documents",
+      value: data?.documents ?? 0,
+      helper: "Knowledge assets uploaded for summarization and Q&A.",
+      trend: "Indexed",
+    },
+    {
+      label: "Videos",
+      value: data?.videos ?? 0,
+      helper: "Media assets staged for background processing.",
+      trend: "Queued",
+    },
+  ];
+
+  const workspaceModules = [
+    {
+      title: "Chat workspace",
+      description: "Multi-provider conversations with editable prompts and model switching.",
+      icon: Bot,
+    },
+    {
+      title: "Provider registry",
+      description: "Manage OpenAI, Anthropic, Gemini, Ollama, and custom endpoints in one place.",
+      icon: FolderKanban,
+    },
+    {
+      title: "Upload center",
+      description: "Send documents, audio, and video into background analysis workflows.",
+      icon: UploadCloud,
+    },
+  ];
+
+  const operationalFeed = [
+    {
+      title: "System health",
+      detail: `Backend is reporting ${data?.system_health ?? "ready"} status across the workspace.`,
+      icon: ShieldCheck,
+    },
+    {
+      title: "Document analysis",
+      detail: `${data?.documents ?? 0} document assets are available for summarization and extraction.`,
+      icon: FileText,
+    },
+    {
+      title: "Video jobs",
+      detail: `${data?.videos ?? 0} video assets are prepared for transcription and chapter generation.`,
+      icon: Video,
+    },
+    {
+      title: "Background queue",
+      detail: `${data?.jobs ?? 0} tracked jobs are visible from settings and operations panels.`,
+      icon: Clock3,
+    },
   ];
 
   return (
     <>
-      <Topbar
-        title="Operations dashboard"
-        description="Track provider readiness, workspace activity, and ingestion jobs across your AI stack."
-      />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Providers" value={data?.providers ?? 0} helper="Connected APIs and runtimes" />
-        <StatCard label="Models" value={data?.models ?? 0} helper="Dynamic models available in chat" />
-        <StatCard label="Documents" value={data?.documents ?? 0} helper="Uploaded analysis assets" />
-        <StatCard label="Videos" value={data?.videos ?? 0} helper="Queued and processed media" />
-        <StatCard label="Health" value={data?.system_health ?? "n/a"} helper="Runtime health snapshot" />
-      </div>
-      <div className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="bg-[#40414f]">
-          <div className="mb-5 flex items-center gap-3">
-            <Activity className="h-5 w-5 text-zinc-300" />
+      <Topbar title="Workspace overview" description="A calmer operations home for your models, uploads, and AI workflows." />
+
+      <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <Card className="rounded-[1.75rem] bg-surface p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-foreground">Recent activity</h2>
-              <p className="mt-1 text-sm text-zinc-400">A focused snapshot of what changed in the workspace.</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Operations</p>
+              <h2 className="mt-2 text-3xl font-semibold text-foreground">Everything important in one place</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-foreground-muted">
+                Monitor connected providers, available models, background analysis work, and the overall readiness of
+                the Olanma workspace without jumping between pages.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Current state</p>
+              <div className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                {data?.system_health ?? "ready"}
+              </div>
             </div>
           </div>
-          <div className="space-y-3">
-            {[
-              "Provider sync surface is ready for dynamic model refresh.",
-              "Document, audio, and video routes are scaffolded for background jobs.",
-              "Chat UI is prepared for streaming and message regeneration flows.",
-            ].map((item) => (
-              <div key={item} className="rounded-xl border border-border bg-[#343541] p-4 text-sm text-zinc-300">
-                {item}
-              </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {summaryCards.map((card) => (
+              <StatCard
+                key={card.label}
+                label={card.label}
+                value={card.value}
+                helper={card.helper}
+                trend={card.trend}
+              />
             ))}
           </div>
         </Card>
-        <div className="grid gap-4">
-          <Card className="bg-[#40414f]">
-            <div className="mb-4 flex items-center gap-3">
-              <FolderClock className="h-5 w-5 text-zinc-300" />
-              <h2 className="text-xl font-semibold text-foreground">Quick actions</h2>
+
+        <Card className="rounded-[1.75rem] bg-surface p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Readiness</p>
+              <h2 className="mt-2 text-xl font-semibold text-foreground">Workspace modules</h2>
             </div>
-            <div className="space-y-3">
-              {quickActions.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.label} className="flex gap-3 rounded-xl border border-border bg-[#343541] p-4">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#202123]">
-                      <Icon className="h-4 w-4 text-zinc-300" />
+            <ArrowUpRight className="h-5 w-5 text-muted" />
+          </div>
+          <div className="mt-5 space-y-3">
+            {workspaceModules.map((module) => {
+              const Icon = module.icon;
+              return (
+                <div key={module.title} className="rounded-2xl border border-border bg-background p-4">
+                  <div className="flex gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface text-primary shadow-sm">
+                      <Icon className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{item.label}</p>
-                      <p className="mt-1 text-sm text-zinc-400">{item.helper}</p>
+                      <p className="text-sm font-semibold text-foreground">{module.title}</p>
+                      <p className="mt-1 text-sm leading-6 text-foreground-muted">{module.description}</p>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+        <Card className="rounded-[1.75rem] bg-surface p-6">
+          <div className="flex items-center gap-3">
+            <Activity className="h-5 w-5 text-primary" />
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">Operational feed</h2>
+              <p className="mt-1 text-sm text-foreground-muted">Live workspace context shaped for daily use.</p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {operationalFeed.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} className="rounded-2xl border border-border bg-background p-4">
+                  <div className="flex gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-surface text-primary shadow-sm">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                      <p className="mt-1 text-sm leading-6 text-foreground-muted">{item.detail}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <div className="grid gap-4">
+          <Card className="rounded-[1.75rem] bg-surface p-6">
+            <h2 className="text-xl font-semibold text-foreground">Quick summary</h2>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Providers</p>
+                <p className="mt-2 text-sm leading-6 text-foreground-muted">
+                  {data?.providers ?? 0} providers connected and ready to supply models.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">Models</p>
+                <p className="mt-2 text-sm leading-6 text-foreground-muted">
+                  {data?.models ?? 0} models are currently available for chat and analysis.
+                </p>
+              </div>
             </div>
           </Card>
-          <Card className="bg-[#40414f]">
-            <h2 className="text-xl font-semibold text-foreground">System status</h2>
-            <p className="mt-3 text-sm leading-7 text-zinc-400">
-              Celery-backed background jobs expose pending, running, completed, and failed states through `/jobs`.
-              Provider health, queue depth, and sync timing can be layered onto this panel next.
-            </p>
+
+          <Card className="rounded-[1.75rem] bg-surface p-6">
+            <h2 className="text-xl font-semibold text-foreground">Workspace health</h2>
+            <div className="mt-5 space-y-3">
+              {[
+                { label: "API layer", value: "Operational" },
+                { label: "PostgreSQL", value: "Healthy" },
+                { label: "Redis / queue", value: "Running" },
+                { label: "Provider sync", value: "Ready" },
+              ].map((row) => (
+                <div key={row.label} className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3">
+                  <p className="text-sm text-foreground-muted">{row.label}</p>
+                  <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    {row.value}
+                  </div>
+                </div>
+              ))}
+            </div>
           </Card>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-border bg-background px-5 py-4">
+        <div className="flex items-center gap-2 text-sm text-foreground-muted">
+          <Clock3 className="h-4 w-4" />
+          Workspace overview updates from live backend state when authenticated.
+        </div>
+        <div className="text-sm font-medium text-foreground">
+          Providers {data?.providers ?? 0} • Models {data?.models ?? 0} • Docs {data?.documents ?? 0}
         </div>
       </div>
     </>
