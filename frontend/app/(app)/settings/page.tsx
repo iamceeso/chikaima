@@ -69,7 +69,7 @@ export default function SettingsPage() {
             </div>
             <h2 className="text-base font-semibold text-foreground">Background jobs</h2>
           </div>
-          <p className="text-sm text-foreground-muted mb-4">Track uploads and async processing tasks.</p>
+          <p className="text-sm text-foreground-muted mb-4">Track conversation records and async processing tasks.</p>
           <div className="space-y-2">
             {jobs?.length ? (
               jobs.map((job) => (

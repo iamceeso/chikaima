@@ -11,7 +11,7 @@ export default function LoginPage() {
           </h1>
         </div>
         <p className="text-base leading-relaxed text-foreground-muted max-w-md">
-          Connect every AI provider you use. Upload files. Summarize. Transcribe. All in one place with full control.
+          Connect every AI provider you use. Keep chat-specific records organized while shared knowledge stays available across the workspace.
         </p>
       </section>
       <section className="flex flex-1 items-center justify-center px-6 py-10">
