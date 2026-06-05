@@ -6,7 +6,6 @@ import {
   Bot,
   ChevronDown,
   PencilLine,
-  Plus,
   Sparkles,
   User2,
 } from "lucide-react";
@@ -91,47 +90,7 @@ export function ChatLayout() {
   };
 
   return (
-    <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="hidden min-h-0 border-b border-border bg-background-secondary/50 lg:flex lg:flex-col lg:border-b-0 lg:border-r">
-        <div className="border-b border-border px-3 py-3">
-          <Button
-            size="sm"
-            className="w-full justify-start gap-2 rounded-2xl border border-border bg-surface text-foreground hover:bg-surface-raised"
-            onClick={() => setActiveConversationId(null)}
-          >
-            <Plus className="h-4 w-4" />
-            New chat
-          </Button>
-        </div>
-        <div className="border-b border-border px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Recent</p>
-        </div>
-        <div className="flex-1 space-y-1 overflow-y-auto p-2">
-          {conversationsQuery.data?.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setActiveConversationId(item.id)}
-              className={`w-full rounded-2xl px-3 py-3 text-left text-sm transition-colors duration-150 ${
-                conversation?.id === item.id
-                  ? "bg-surface text-foreground"
-                  : "text-foreground-muted hover:bg-surface/80 hover:text-foreground"
-              }`}
-            >
-              <p className="truncate font-medium">{item.title}</p>
-              <p className="mt-1 truncate text-xs text-muted">
-                {item.messages?.at(-1)?.content ?? "No messages yet"}
-              </p>
-            </button>
-          ))}
-          {!conversationsQuery.data?.length ? (
-            <div className="rounded-2xl border border-dashed border-border px-3 py-4 text-xs text-foreground-muted">
-              No chats yet
-            </div>
-          ) : null}
-        </div>
-      </aside>
-
+    <div className="h-full min-h-0">
       <section className="flex min-h-0 flex-col bg-background">
         {conversation?.messages?.length ? (
           <>

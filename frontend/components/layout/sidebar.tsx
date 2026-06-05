@@ -1,3 +1,6 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -10,6 +13,9 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { api } from "@/services/api";
+import { useAuthStore } from "@/store/auth-store";
+import { useChatStore } from "@/store/chat-store";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,11 +37,25 @@ export function Sidebar({
   onClose?: () => void;
   onToggleCollapse?: () => void;
 }) {
+  const token = useAuthStore((state) => state.tokens?.access_token);
+  const activeConversationId = useChatStore((state) => state.activeConversationId);
+  const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
+  const conversationsQuery = useQuery({
+    queryKey: ["conversations"],
+    queryFn: () => {
+      if (!token) {
+        return Promise.resolve([]);
+      }
+      return api.getConversations(token);
+    },
+  });
+  const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
+
   return (
     <aside
       className={cn(
         "w-full rounded-[1.75rem] border border-border bg-background-secondary/55 p-3 transition-all xl:p-4",
-        collapsed && !mobile ? "xl:w-[96px]" : "xl:w-[312px]",
+        collapsed && !mobile ? "xl:w-[88px]" : "xl:w-[268px]",
       )}
     >
       <div
@@ -75,9 +95,12 @@ export function Sidebar({
         </button>
       ) : null}
 
-        <Link
+      <Link
         href="/chat"
-        onClick={onClose}
+        onClick={() => {
+          setActiveConversationId(null);
+          onClose?.();
+        }}
         className={cn(
           "mb-4 flex items-center rounded-2xl bg-surface px-4 py-3 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] transition hover:bg-surface-raised dark:shadow-none",
           collapsed && !mobile ? "justify-center px-0" : "gap-2.5",
@@ -129,6 +152,43 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      {!collapsed || mobile ? (
+        <div className="mt-5 min-h-0 border-t border-border pt-4">
+          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Chats</div>
+          <div className="space-y-1">
+            {conversationsQuery.data?.map((item) => {
+              const active = pathname === "/chat" && selectedConversationId === item.id;
+              return (
+                <Link
+                  key={item.id}
+                  href="/chat"
+                  onClick={() => {
+                    setActiveConversationId(item.id);
+                    onClose?.();
+                  }}
+                  className={cn(
+                    "block rounded-2xl px-3 py-2.5 transition-colors duration-150",
+                    active
+                      ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
+                      : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
+                  )}
+                >
+                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="mt-1 truncate text-xs text-muted">
+                    {item.messages?.at(-1)?.content ?? "No messages yet"}
+                  </p>
+                </Link>
+              );
+            })}
+            {!conversationsQuery.data?.length ? (
+              <div className="rounded-2xl border border-dashed border-border px-3 py-4 text-xs text-foreground-muted">
+                No chats yet
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </aside>
   );
 }

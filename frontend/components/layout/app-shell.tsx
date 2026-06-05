@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {sidebarOpen ? (
           <div className="fixed inset-0 z-40 bg-foreground/12 backdrop-blur-[2px] xl:hidden dark:bg-black/35" onClick={() => setSidebarOpen(false)}>
-            <div className="h-full w-[88vw] max-w-[320px] p-3" onClick={(event) => event.stopPropagation()}>
+            <div className="h-full w-[82vw] max-w-[280px] p-3" onClick={(event) => event.stopPropagation()}>
               <Sidebar pathname={pathname} mobile onClose={() => setSidebarOpen(false)} />
             </div>
           </div>
