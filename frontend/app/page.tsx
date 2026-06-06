@@ -1,6 +1,10 @@
+"use client";
+
 import { AudioLines, FileText, ShieldCheck, Video } from "lucide-react";
 
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/store/auth-store";
 
 const highlights = [
   {
@@ -21,6 +25,9 @@ const highlights = [
 ];
 
 export default function HomePage() {
+  const tokens = useAuthStore((state) => state.tokens);
+  const isAuthenticated = Boolean(tokens?.access_token);
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -29,9 +36,18 @@ export default function HomePage() {
             <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted mb-1">Olanma</p>
             <h1 className="text-xl sm:text-2xl font-semibold">Media intelligence workspace</h1>
           </div>
-          <Button asChild href="/login" variant="outline" size="sm">
-            Sign in
-          </Button>
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3">
+              <Button asChild href="/library" variant="outline" size="sm">
+                Open workspace
+              </Button>
+              <SignOutButton className="h-9 rounded-lg px-3.5" />
+            </div>
+          ) : (
+            <Button asChild href="/login" variant="outline" size="sm">
+              Sign in
+            </Button>
+          )}
         </header>
 
         <section className="py-16 sm:py-24 grid gap-12 lg:grid-cols-2 items-center">
@@ -47,12 +63,25 @@ export default function HomePage() {
               Upload media, transcribe it, summarize it, extract key points, and ask questions across the results.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button asChild href="/register" size="default" className="px-5">
-                Get started
-              </Button>
-              <Button asChild href="/library" size="default" variant="outline" className="px-5">
-                Open library
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Button asChild href="/library" size="default" className="px-5">
+                    Open library
+                  </Button>
+                  <Button asChild href="/processing" size="default" variant="outline" className="px-5">
+                    View processing
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button asChild href="/register" size="default" className="px-5">
+                    Get started
+                  </Button>
+                  <Button asChild href="/library" size="default" variant="outline" className="px-5">
+                    Open library
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -66,7 +95,7 @@ export default function HomePage() {
                 {highlights.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.title} className="flex gap-3 rounded-lg border border-border bg-surface p-3 transition-colors hover:bg-(--surface-strong)/50">
+                    <div key={item.title} className="flex gap-3 rounded-lg border border-border bg-surface p-3 transition-colors hover:bg-[var(--surface-strong)]/50">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
                         <Icon className="h-4 w-4" />
                       </div>

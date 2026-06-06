@@ -42,6 +42,7 @@ export const api = {
     request<User>("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
   login: (payload: { email: string; password: string }) =>
     request<AuthTokens>("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+  logout: (token: string) => request<{ message: string }>("/auth/logout", { method: "POST", token }),
   getProfile: (token: string) => request<User>("/users/me", { token }),
   getDashboard: (token: string) => request<DashboardSummary>("/dashboard", { token }),
   getProviders: (token: string) => request<Provider[]>("/providers", { token }),
