@@ -7,11 +7,11 @@ export default function LoginPage() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Olanma</p>
           <h1 className="text-5xl font-semibold leading-tight text-foreground max-w-lg">
-            Your all-in-one AI workspace.
+            Your self-hosted media intelligence workspace.
           </h1>
         </div>
         <p className="text-base leading-relaxed text-foreground-muted max-w-md">
-          Connect every AI provider you use and keep chat-specific records organized across the workspace.
+          Connect transcription and reasoning providers, then turn recordings and documents into searchable knowledge.
         </p>
       </section>
       <section className="flex flex-1 items-center justify-center px-6 py-10">

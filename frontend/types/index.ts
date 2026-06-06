@@ -79,6 +79,40 @@ export interface Job {
   updated_at: string;
 }
 
+export interface DocumentAsset {
+  id: string;
+  name: string;
+  file_path: string;
+  mime_type: string;
+  summary: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AudioAsset {
+  id: string;
+  name: string;
+  file_path: string;
+  transcript: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VideoAsset {
+  id: string;
+  name: string;
+  file_path: string;
+  transcript: string | null;
+  summary: string | null;
+  chapters: unknown[];
+  action_items: unknown[];
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DashboardSummary {
   providers: number;
   models: number;

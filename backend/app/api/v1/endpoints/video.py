@@ -9,6 +9,9 @@ from app.models.user import User
 from app.models.video import Video
 from app.schemas.assets import VideoResponse
 from app.services.job_service import JobService
+from app.services.storage_service import storage_service
+from app.services.transcript_service import TranscriptService
+from app.schemas.transcript import TranscriptResponse, SummaryArtifactResponse
 
 router = APIRouter()
 
@@ -28,10 +31,21 @@ async def upload_video(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> VideoResponse:
+    stored = await storage_service.save_upload(
+        file,
+        "video",
+        allowed_content_types={
+            "video/mp4",
+            "video/quicktime",
+            "video/x-matroska",
+            "video/webm",
+        },
+        max_size_bytes=2 * 1024 * 1024 * 1024,
+    )
     video = Video(
         user_id=current_user.id,
-        name=file.filename or "video",
-        file_path=f"uploads/video/{file.filename or 'video'}",
+        name=str(stored["name"]),
+        file_path=str(stored["file_path"]),
         status="pending",
     )
     db.add(video)
@@ -39,6 +53,26 @@ async def upload_video(
     db.refresh(video)
     JobService(db).create_job(current_user.id, "video_analysis", "video", video.id)
     return VideoResponse.model_validate(video)
+
+
+@router.get("/{video_id}/transcript", response_model=TranscriptResponse)
+def get_video_transcript(
+    video_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TranscriptResponse:
+    transcript = TranscriptService(db).get_for_resource(current_user.id, "video", video_id)
+    return TranscriptResponse.model_validate(transcript)
+
+
+@router.get("/{video_id}/summaries", response_model=list[SummaryArtifactResponse])
+def get_video_summaries(
+    video_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[SummaryArtifactResponse]:
+    summaries = TranscriptService(db).list_summaries_for_resource(current_user.id, "video", video_id)
+    return [SummaryArtifactResponse.model_validate(item) for item in summaries]
 
 
 @router.post("/{video_id}/analyze")

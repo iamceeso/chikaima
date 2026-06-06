@@ -9,6 +9,9 @@ from app.models.audio import AudioAsset
 from app.models.user import User
 from app.schemas.assets import AudioResponse
 from app.services.job_service import JobService
+from app.services.storage_service import storage_service
+from app.services.transcript_service import TranscriptService
+from app.schemas.transcript import TranscriptResponse, SummaryArtifactResponse
 
 router = APIRouter()
 
@@ -28,10 +31,24 @@ async def upload_audio(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> AudioResponse:
+    stored = await storage_service.save_upload(
+        file,
+        "audio",
+        allowed_content_types={
+            "audio/mpeg",
+            "audio/mp4",
+            "audio/wav",
+            "audio/x-wav",
+            "audio/webm",
+            "audio/ogg",
+            "audio/m4a",
+        },
+        max_size_bytes=250 * 1024 * 1024,
+    )
     asset = AudioAsset(
         user_id=current_user.id,
-        name=file.filename or "audio",
-        file_path=f"uploads/audio/{file.filename or 'audio'}",
+        name=str(stored["name"]),
+        file_path=str(stored["file_path"]),
         status="pending",
     )
     db.add(asset)
@@ -39,6 +56,26 @@ async def upload_audio(
     db.refresh(asset)
     JobService(db).create_job(current_user.id, "audio_transcription", "audio", asset.id)
     return AudioResponse.model_validate(asset)
+
+
+@router.get("/{audio_id}/transcript", response_model=TranscriptResponse)
+def get_audio_transcript(
+    audio_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TranscriptResponse:
+    transcript = TranscriptService(db).get_for_resource(current_user.id, "audio", audio_id)
+    return TranscriptResponse.model_validate(transcript)
+
+
+@router.get("/{audio_id}/summaries", response_model=list[SummaryArtifactResponse])
+def get_audio_summaries(
+    audio_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[SummaryArtifactResponse]:
+    summaries = TranscriptService(db).list_summaries_for_resource(current_user.id, "audio", audio_id)
+    return [SummaryArtifactResponse.model_validate(item) for item in summaries]
 
 
 @router.post("/speech-to-text")

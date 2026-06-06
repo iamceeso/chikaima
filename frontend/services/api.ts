@@ -1,5 +1,16 @@
 import { env } from "@/lib/env";
-import type { AIModel, AuthTokens, Conversation, DashboardSummary, Job, Provider, User } from "@/types";
+import type {
+  AIModel,
+  AudioAsset,
+  AuthTokens,
+  Conversation,
+  DashboardSummary,
+  DocumentAsset,
+  Job,
+  Provider,
+  User,
+  VideoAsset,
+} from "@/types";
 
 type RequestOptions = RequestInit & {
   token?: string | null;
@@ -45,6 +56,9 @@ export const api = {
     },
   ) => request<Provider>("/providers", { method: "POST", token, body: JSON.stringify(payload) }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),
+  getDocuments: (token: string) => request<DocumentAsset[]>("/documents", { token }),
+  getAudioAssets: (token: string) => request<AudioAsset[]>("/audio", { token }),
+  getVideos: (token: string) => request<VideoAsset[]>("/video", { token }),
   getConversations: (token: string) => request<Conversation[]>("/chat/conversations", { token }),
   createConversation: (
     token: string,

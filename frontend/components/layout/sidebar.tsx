@@ -18,8 +18,9 @@ import { useAuthStore } from "@/store/auth-store";
 import { useChatStore } from "@/store/chat-store";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/chat", label: "Chat", icon: MessageSquarePlus },
+  { href: "/library", label: "Library", icon: LayoutDashboard },
+  { href: "/processing", label: "Processing", icon: FolderKanban },
+  { href: "/chat", label: "Ask", icon: MessageSquarePlus },
   { href: "/providers", label: "Providers", icon: FolderKanban },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -55,7 +56,7 @@ export function Sidebar({
     <aside
       className={cn(
         "w-full rounded-[1.75rem] border border-border bg-background-secondary/55 p-3 transition-all xl:p-4",
-        collapsed && !mobile ? "xl:w-[88px]" : "xl:w-[268px]",
+        collapsed && !mobile ? "xl:w-22" : "xl:w-67",
       )}
     >
       <div
@@ -72,7 +73,7 @@ export function Sidebar({
         {!collapsed || mobile ? (
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">Olanma</p>
-            <p className="mt-0.5 text-sm font-medium text-foreground">Workspace</p>
+            <p className="mt-0.5 text-sm font-medium text-foreground">Media intelligence</p>
           </div>
         ) : (
           <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none">
@@ -107,7 +108,7 @@ export function Sidebar({
         )}
       >
         <MessageSquarePlus className="h-4.5 w-4.5" />
-        {!collapsed || mobile ? <span>New chat</span> : null}
+        {!collapsed || mobile ? <span>New analysis</span> : null}
       </Link>
 
       {!collapsed || mobile ? (
@@ -155,7 +156,7 @@ export function Sidebar({
 
       {!collapsed || mobile ? (
         <div className="mt-5 min-h-0 border-t border-border pt-4">
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Chats</div>
+          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Recent analyses</div>
           <div className="space-y-1">
             {conversationsQuery.data?.map((item) => {
               const active = pathname === "/chat" && selectedConversationId === item.id;

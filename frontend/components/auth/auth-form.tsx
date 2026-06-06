@@ -48,7 +48,7 @@ export function RegisterForm() {
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Olanma</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">Create your workspace</h1>
-        <p className="mt-2 text-sm text-foreground-muted">Set up Olanma with one account and start connecting models.</p>
+        <p className="mt-2 text-sm text-foreground-muted">Set up Olanma and start processing audio, video, and documents.</p>
       </div>
       <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
         <div>
@@ -98,7 +98,7 @@ export function LoginForm() {
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Olanma</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">Welcome back</h1>
-        <p className="mt-2 text-sm text-foreground-muted">Sign in to manage providers, jobs, and AI workspaces.</p>
+        <p className="mt-2 text-sm text-foreground-muted">Sign in to manage providers, media jobs, and extracted knowledge.</p>
       </div>
       <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
         <div>

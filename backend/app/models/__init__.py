@@ -7,6 +7,8 @@ from app.models.job import Job
 from app.models.message import Message
 from app.models.provider import Provider
 from app.models.settings import Settings
+from app.models.summary import SummaryArtifact
+from app.models.transcript import Transcript
 from app.models.user import User
 from app.models.video import Video
 
@@ -20,6 +22,8 @@ __all__ = [
     "Message",
     "Provider",
     "Settings",
+    "SummaryArtifact",
+    "Transcript",
     "User",
     "Video",
 ]

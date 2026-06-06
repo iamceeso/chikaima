@@ -1,6 +1,6 @@
 # Olanma
 
-Olanma is a self-hosted AI workspace for managing multiple AI providers and local models from one dashboard. This monorepo contains a Next.js frontend and a FastAPI backend, plus Docker orchestration for PostgreSQL, Redis, and Celery workers.
+Olanma is a self-hosted AI media intelligence workspace for understanding audio, video, and documents with multiple AI providers. This monorepo contains a Next.js frontend and a FastAPI backend, plus Docker orchestration for PostgreSQL, Redis, and Celery workers.
 
 ## Monorepo Structure
 
@@ -42,9 +42,10 @@ olanma/
 
 - User registration, login, logout, refresh tokens, password reset, and profile management
 - Provider management for OpenAI, Anthropic, Gemini, Ollama, and OpenAI-compatible endpoints
-- Chat workspace with live OpenAI-backed replies, conversation folders, message editing, regeneration, and model selection
-- Document, audio, and video ingestion endpoints with background-job orchestration
-- Dashboard analytics for provider health, recent activity, uploads, and jobs
+- Audio, video, and document ingestion with persisted uploads
+- Background processing through PostgreSQL-backed jobs and Celery workers
+- Transcript and summary artifact foundations for media understanding workflows
+- Transcript Q&A support through provider-backed reasoning
 
 ## Quick Start
 
@@ -99,12 +100,12 @@ uv run celery -A app.workers.celery_app.celery_app worker --loglevel=info
 
 ### 4. Connect OpenAI First
 
-To use live chat right away:
+To use provider-backed transcript Q&A right away:
 
 1. Register or sign in.
 2. Open the `Providers` page.
 3. Add an `OpenAI` provider with your `sk-...` API key.
-4. Go to `Chat` and send a message.
+4. Go to `Ask` and send a message.
 
 The first enabled OpenAI model is used for live replies. Other provider types remain scaffolded until their execution adapters are wired.
 
@@ -121,6 +122,7 @@ Versioned endpoints live under `/api/v1`:
 - `/audio`
 - `/video`
 - `/jobs`
+- `/transcripts`
 
 ## Authentication Flow
 
@@ -132,7 +134,8 @@ Versioned endpoints live under `/api/v1`:
 ## Production Notes
 
 - The backend uses a service/repository split to keep provider, auth, and job orchestration logic isolated.
-- OpenAI chat execution is wired first through the provider system; other provider adapters can be added behind the same service boundary.
+- Upload persistence now goes through a storage service rooted at `MEDIA_ROOT`, with a shared Docker volume for backend and worker access.
+- OpenAI-backed reasoning is wired first through the provider system; other provider adapters can be added behind the same service boundary.
 - Celery jobs and SQL-backed job records provide trackable processing state for long-running media workflows.
 - The frontend uses a shared API client, React Query for server state, and Zustand for session/chat UI state.
 

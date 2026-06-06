@@ -23,3 +23,5 @@ class User(UUIDTimestampMixin, Base):
     audio_assets = relationship("AudioAsset", back_populates="user", cascade="all, delete-orphan")
     jobs = relationship("Job", back_populates="user", cascade="all, delete-orphan")
     settings = relationship("Settings", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    transcripts = relationship("Transcript", back_populates="user", cascade="all, delete-orphan")
+    summaries = relationship("SummaryArtifact", back_populates="user", cascade="all, delete-orphan")

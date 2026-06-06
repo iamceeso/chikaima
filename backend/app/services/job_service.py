@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.job import Job
 from app.repositories.jobs import JobRepository
+from app.workers.tasks import analyze_document, process_video, transcribe_audio
 
 
 class JobService:
@@ -32,4 +33,15 @@ class JobService:
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
+        self.dispatch(job)
         return job
+
+    def dispatch(self, job: Job) -> None:
+        task_map = {
+            "audio_transcription": transcribe_audio,
+            "video_analysis": process_video,
+            "document_analysis": analyze_document,
+        }
+        task = task_map.get(job.job_type)
+        if task:
+            task.delay(job.id)

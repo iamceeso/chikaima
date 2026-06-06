@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     provider_secret_key: str = Field(default="replace-with-32-char-secret", min_length=16)
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    media_root: str = "storage"
 
     model_config = SettingsConfigDict(
         env_file=".env",

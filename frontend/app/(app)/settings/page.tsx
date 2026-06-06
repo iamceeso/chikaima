@@ -24,7 +24,7 @@ export default function SettingsPage() {
     <>
       <Topbar
         title="Settings"
-        description="Manage your workspace and preferences"
+        description="Manage workspace defaults, background processing, and appearance"
       />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-6">
@@ -35,13 +35,13 @@ export default function SettingsPage() {
             <h2 className="text-base font-semibold text-foreground">Workspace</h2>
           </div>
           <p className="text-sm text-foreground-muted mb-4">
-            Configure model defaults, response behavior, and workspace profile.
+            Configure provider defaults, processing behavior, and workspace preferences.
           </p>
           <div className="space-y-2">
             {[
               "Default model selection",
-              "Response behavior settings",
-              "Profile and usage",
+              "Transcription and summary settings",
+              "Profile and storage preferences",
             ].map((item) => (
               <div key={item} className="rounded-lg border border-border bg-background-secondary p-3 text-sm text-foreground">
                 {item}
@@ -69,7 +69,7 @@ export default function SettingsPage() {
             </div>
             <h2 className="text-base font-semibold text-foreground">Background jobs</h2>
           </div>
-          <p className="text-sm text-foreground-muted mb-4">Track conversation records and async processing tasks.</p>
+          <p className="text-sm text-foreground-muted mb-4">Track uploads, processing pipelines, and async media analysis tasks.</p>
           <div className="space-y-2">
             {jobs?.length ? (
               jobs.map((job) => (

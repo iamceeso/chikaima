@@ -36,6 +36,8 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    volumes:
+      - media_storage:/app/storage
 
   celery-worker:
     build:
@@ -58,6 +60,8 @@ services:
       JWT_REFRESH_SECRET_KEY: change-me-too
       CORS_ORIGINS: http://localhost:3000
     restart: unless-stopped
+    volumes:
+      - media_storage:/app/storage
 
   postgres:
     image: postgres:17-alpine
@@ -95,3 +99,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  media_storage:

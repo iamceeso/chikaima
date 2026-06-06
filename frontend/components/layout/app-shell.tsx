@@ -54,15 +54,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             {isChat ? (
               <div className="min-w-0 flex-1">
-                <p className="text-xs uppercase tracking-[0.22em] text-foreground-muted">Chat Workspace</p>
-                <h1 className="mt-1 truncate text-lg font-medium text-foreground">Unified conversation</h1>
+                <p className="text-xs uppercase tracking-[0.22em] text-foreground-muted">Transcript Q&A</p>
+                <h1 className="mt-1 truncate text-lg font-medium text-foreground">Ask your content</h1>
               </div>
             ) : (
               <>
                 <div className="hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 lg:flex">
                   <Search className="h-4 w-4 text-muted" />
                   <span className="truncate text-sm text-foreground-muted">
-                    Search conversations, providers, records, and models
+                    Search assets, jobs, providers, and transcripts
                   </span>
                 </div>
                 <button
