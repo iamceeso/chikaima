@@ -74,6 +74,14 @@ Services:
 
 ### 3. Local Development
 
+Start both frontend and backend from the repo root:
+
+```bash
+./start-dev.sh
+```
+
+Or run each service manually:
+
 Backend:
 
 ```bash

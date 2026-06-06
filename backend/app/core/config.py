@@ -1,7 +1,9 @@
+import json
 from functools import lru_cache
+from typing import Annotated
 
-from pydantic import Field, computed_field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, computed_field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -17,7 +19,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     provider_secret_key: str = Field(default="replace-with-32-char-secret", min_length=16)
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:3000"])
     media_root: str = "storage"
 
     model_config = SettingsConfigDict(
@@ -25,6 +27,26 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, list):
+            return value
+
+        if not isinstance(value, str):
+            return ["http://localhost:3000"]
+
+        value = value.strip()
+        if not value:
+            return []
+
+        if value.startswith("["):
+            parsed = json.loads(value)
+            if isinstance(parsed, list):
+                return [str(item).strip() for item in parsed if str(item).strip()]
+
+        return [item.strip() for item in value.split(",") if item.strip()]
 
     @computed_field
     @property
