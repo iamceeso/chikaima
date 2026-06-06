@@ -25,3 +25,4 @@ class User(UUIDTimestampMixin, Base):
     settings = relationship("Settings", back_populates="user", uselist=False, cascade="all, delete-orphan")
     transcripts = relationship("Transcript", back_populates="user", cascade="all, delete-orphan")
     summaries = relationship("SummaryArtifact", back_populates="user", cascade="all, delete-orphan")
+    embeddings = relationship("Embedding", back_populates="user", cascade="all, delete-orphan")

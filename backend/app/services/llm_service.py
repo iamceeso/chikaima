@@ -9,11 +9,14 @@ from sqlalchemy.orm import Session
 from app.core.crypto import secret_manager
 from app.models.ai_model import AIModel
 from app.models.provider import Provider
+from app.services.embeddings_service import EmbeddingsService
+from app.services.providers.factory import AdapterFactory
 
 
 class LLMService:
     def __init__(self, db: Session) -> None:
         self.db = db
+        self.embeddings = EmbeddingsService(db)
 
     def resolve_model_and_provider(self, user_id: str, model_id: str | None) -> tuple[AIModel, Provider]:
         query = (
@@ -41,12 +44,6 @@ class LLMService:
         return model, provider
 
     def generate_reply(self, provider: Provider, model: AIModel, messages: list[dict[str, str]]) -> str:
-        if provider.provider_type not in {"openai", "openai_compatible"}:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"{provider.provider_type} chat execution is not wired yet. Use an OpenAI provider first.",
-            )
-
         encrypted_api_key = provider.encrypted_config.get("api_key")
         if not encrypted_api_key:
             raise HTTPException(
@@ -55,34 +52,9 @@ class LLMService:
             )
 
         api_key = secret_manager.decrypt(encrypted_api_key)
-        base_url = provider.base_url.rstrip("/") if provider.base_url else "https://api.openai.com/v1"
+        adapter = AdapterFactory.create(provider, api_key)
 
-        payload: dict[str, Any] = {
-            "model": model.model_key,
-            "messages": messages,
-        }
-
-        try:
-            with httpx.Client(timeout=60.0) as client:
-                response = client.post(
-                    f"{base_url}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
-                )
-                response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or "OpenAI request failed."
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail) from exc
-        except httpx.HTTPError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Could not reach the AI provider.",
-            ) from exc
-
-        content = self._extract_content(response.json())
+        content = adapter.generate_reply(model.model_key, messages)
         if not content:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -90,20 +62,39 @@ class LLMService:
             )
         return content
 
-    def _extract_content(self, payload: dict[str, Any]) -> str:
-        choice = (payload.get("choices") or [{}])[0]
-        message = choice.get("message") or {}
-        content = message.get("content")
+    def generate_reply_with_rag(
+        self,
+        user_id: str,
+        provider: Provider,
+        model: AIModel,
+        messages: list[dict[str, str]],
+        include_context: bool = True,
+    ) -> tuple[str, list[str]]:
+        user_message = messages[-1]["content"] if messages else ""
+        context_ids = []
 
-        if isinstance(content, str):
-            return content.strip()
+        if include_context and user_message:
+            similar_embeddings = self.embeddings.search_similar(user_id, user_message)
+            if similar_embeddings:
+                context = "\n\n".join([e[0].content for e in similar_embeddings])
+                context_ids = [e[0].id for e in similar_embeddings]
 
-        if isinstance(content, list):
-            text_parts = [
-                part.get("text", "").strip()
-                for part in content
-                if isinstance(part, dict) and part.get("type") == "text"
-            ]
-            return "\n".join(part for part in text_parts if part).strip()
+                rag_system_message = f"""You are a helpful assistant with access to relevant documents and transcripts.
+Use the following context to answer the user's question:
 
-        return ""
+{context}
+
+---
+
+If the context doesn't contain relevant information, answer based on your knowledge."""
+
+                rag_messages = [{"role": "system", "content": rag_system_message}]
+                rag_messages.extend(messages[:-1])
+                rag_messages.append({"role": "user", "content": user_message})
+
+                response = self.generate_reply(provider, model, rag_messages)
+                return response, context_ids
+
+        response = self.generate_reply(provider, model, messages)
+        return response, context_ids
+

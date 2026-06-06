@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     provider_secret_key: str = Field(default="replace-with-32-char-secret", min_length=16)
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:3000"])
     media_root: str = "storage"
+    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_dimension: int = 384
+    rag_top_k: int = 3
+    ollama_base_url: str = "http://localhost:11434"
 
     model_config = SettingsConfigDict(
         env_file=".env",

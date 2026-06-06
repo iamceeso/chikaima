@@ -20,7 +20,7 @@ class ChatService:
     def list_conversations(self, user_id: str) -> list[Conversation]:
         return self.conversations.list_for_user(user_id)
 
-    def create_conversation(self, user_id: str, payload: ConversationCreate) -> Conversation:
+    def create_conversation(self, user_id: str, payload: ConversationCreate, use_rag: bool = True) -> Conversation:
         try:
             model, provider = self.llm.resolve_model_and_provider(user_id, payload.model_id)
             conversation = Conversation(
@@ -42,17 +42,32 @@ class ChatService:
                 self.db.add(user_message)
                 self.db.flush()
 
-                assistant_content = self.llm.generate_reply(
-                    provider=provider,
-                    model=model,
-                    messages=self._serialize_messages([user_message]),
-                )
+                if use_rag:
+                    assistant_content, context_ids = self.llm.generate_reply_with_rag(
+                        user_id=user_id,
+                        provider=provider,
+                        model=model,
+                        messages=self._serialize_messages([user_message]),
+                    )
+                    meta = {
+                        "provider": provider.provider_type,
+                        "model": model.model_key,
+                        "rag_context_ids": context_ids,
+                    }
+                else:
+                    assistant_content = self.llm.generate_reply(
+                        provider=provider,
+                        model=model,
+                        messages=self._serialize_messages([user_message]),
+                    )
+                    meta = {"provider": provider.provider_type, "model": model.model_key}
+
                 self.db.add(
                     Message(
                         conversation_id=conversation.id,
                         role="assistant",
                         content=assistant_content,
-                        meta={"provider": provider.provider_type, "model": model.model_key},
+                        meta=meta,
                     )
                 )
 
@@ -63,7 +78,7 @@ class ChatService:
             self.db.rollback()
             raise
 
-    def add_message(self, user_id: str, conversation_id: str, payload: MessageCreate) -> Message:
+    def add_message(self, user_id: str, conversation_id: str, payload: MessageCreate, use_rag: bool = True) -> Message:
         conversation = self.conversations.get(conversation_id)
         if not conversation or conversation.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
@@ -85,17 +100,33 @@ class ChatService:
             self.db.flush()
 
             history = [*conversation.messages, message]
-            assistant_content = self.llm.generate_reply(
-                provider=provider,
-                model=model,
-                messages=self._serialize_messages(history),
-            )
+
+            if use_rag:
+                assistant_content, context_ids = self.llm.generate_reply_with_rag(
+                    user_id=user_id,
+                    provider=provider,
+                    model=model,
+                    messages=self._serialize_messages(history),
+                )
+                meta = {
+                    "provider": provider.provider_type,
+                    "model": model.model_key,
+                    "rag_context_ids": context_ids,
+                }
+            else:
+                assistant_content = self.llm.generate_reply(
+                    provider=provider,
+                    model=model,
+                    messages=self._serialize_messages(history),
+                )
+                meta = {"provider": provider.provider_type, "model": model.model_key}
+
             self.db.add(
                 Message(
                     conversation_id=conversation_id,
                     role="assistant",
                     content=assistant_content,
-                    meta={"provider": provider.provider_type, "model": model.model_key},
+                    meta=meta,
                 )
             )
 
@@ -106,7 +137,7 @@ class ChatService:
             self.db.rollback()
             raise
 
-    def update_message(self, user_id: str, message_id: str, content: str) -> Message:
+    def update_message(self, user_id: str, message_id: str, content: str, use_rag: bool = True) -> Message:
         message = self.messages.get(message_id)
         if not message or message.conversation.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
@@ -128,17 +159,32 @@ class ChatService:
                     if item.created_at <= message.created_at:
                         history.append(item)
 
-                assistant_content = self.llm.generate_reply(
-                    provider=provider,
-                    model=model,
-                    messages=self._serialize_messages(history),
-                )
+                if use_rag:
+                    assistant_content, context_ids = self.llm.generate_reply_with_rag(
+                        user_id=user_id,
+                        provider=provider,
+                        model=model,
+                        messages=self._serialize_messages(history),
+                    )
+                    meta = {
+                        "provider": provider.provider_type,
+                        "model": model.model_key,
+                        "rag_context_ids": context_ids,
+                    }
+                else:
+                    assistant_content = self.llm.generate_reply(
+                        provider=provider,
+                        model=model,
+                        messages=self._serialize_messages(history),
+                    )
+                    meta = {"provider": provider.provider_type, "model": model.model_key}
+
                 self.db.add(
                     Message(
                         conversation_id=message.conversation_id,
                         role="assistant",
                         content=assistant_content,
-                        meta={"regenerated_from": message.id, "provider": provider.provider_type, "model": model.model_key},
+                        meta=meta,
                     )
                 )
 
@@ -149,7 +195,7 @@ class ChatService:
             self.db.rollback()
             raise
 
-    def regenerate_message(self, user_id: str, message_id: str) -> Message:
+    def regenerate_message(self, user_id: str, message_id: str, use_rag: bool = True) -> Message:
         message = self.messages.get(message_id)
         if not message or message.conversation.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
@@ -166,16 +212,36 @@ class ChatService:
                     continue
                 history.append(item)
 
-            assistant_content = self.llm.generate_reply(
-                provider=provider,
-                model=model,
-                messages=self._serialize_messages(history),
-            )
+            if use_rag:
+                assistant_content, context_ids = self.llm.generate_reply_with_rag(
+                    user_id=user_id,
+                    provider=provider,
+                    model=model,
+                    messages=self._serialize_messages(history),
+                )
+                meta = {
+                    "regenerated_from": message.id,
+                    "provider": provider.provider_type,
+                    "model": model.model_key,
+                    "rag_context_ids": context_ids,
+                }
+            else:
+                assistant_content = self.llm.generate_reply(
+                    provider=provider,
+                    model=model,
+                    messages=self._serialize_messages(history),
+                )
+                meta = {
+                    "regenerated_from": message.id,
+                    "provider": provider.provider_type,
+                    "model": model.model_key,
+                }
+
             regenerated = Message(
                 conversation_id=message.conversation_id,
                 role="assistant",
                 content=assistant_content,
-                meta={"regenerated_from": message.id, "provider": provider.provider_type, "model": model.model_key},
+                meta=meta,
             )
             self.db.add(regenerated)
             self.db.commit()
