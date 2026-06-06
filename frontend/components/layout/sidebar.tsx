@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -61,15 +61,11 @@ export function Sidebar({
   const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));
 
-  useEffect(() => {
-    setSettingsOpen(pathname.startsWith("/settings"));
-  }, [pathname]);
-
   return (
     <aside
       className={cn(
         "flex h-full w-full flex-col rounded-none border border-border bg-background-secondary/55 p-3 transition-all xl:h-screen xl:p-4",
-        collapsed && !mobile ? "xl:w-[88px]" : "xl:w-[268px]",
+        collapsed && !mobile ? "xl:w-22" : "xl:w-67",
       )}
     >
       <div

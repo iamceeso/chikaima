@@ -15,7 +15,7 @@ router = APIRouter()
 def _mask(provider_secret: str | None) -> str | None:
     if not provider_secret:
         return None
-    return f"{'*' * max(len(provider_secret) - 4, 0)}{provider_secret[-4:]}"
+    return "**********"
 
 
 @router.get("", response_model=list[ProviderResponse])
