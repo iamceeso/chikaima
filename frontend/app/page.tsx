@@ -95,7 +95,7 @@ export default function HomePage() {
                 {highlights.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.title} className="flex gap-3 rounded-lg border border-border bg-surface p-3 transition-colors hover:bg-[var(--surface-strong)]/50">
+                    <div key={item.title} className="flex gap-3 rounded-lg border border-border bg-surface p-3 transition-colors hover:bg-(--surface-strong)/50">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
                         <Icon className="h-4 w-4" />
                       </div>

@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   ChevronLeft,
+  ChevronDown,
   ChevronRight,
+  Cog,
   FolderKanban,
   LayoutDashboard,
   MessageSquarePlus,
@@ -21,8 +23,12 @@ const navItems = [
   { href: "/library", label: "Library", icon: LayoutDashboard },
   { href: "/processing", label: "Processing", icon: FolderKanban },
   { href: "/chat", label: "Ask", icon: MessageSquarePlus },
-  { href: "/providers", label: "Providers", icon: FolderKanban },
-  { href: "/settings", label: "Settings", icon: Settings },
+];
+
+const settingsItems = [
+  { href: "/settings/workspace", label: "Workspace", icon: Cog, adminOnly: false },
+  { href: "/settings/users", label: "Users", icon: FolderKanban, adminOnly: true },
+  { href: "/settings/providers", label: "Providers", icon: Settings, adminOnly: false },
 ];
 
 export function Sidebar({
@@ -39,6 +45,7 @@ export function Sidebar({
   onToggleCollapse?: () => void;
 }) {
   const token = useAuthStore((state) => state.tokens?.access_token);
+  const user = useAuthStore((state) => state.user);
   const activeConversationId = useChatStore((state) => state.activeConversationId);
   const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
   const conversationsQuery = useQuery({
@@ -51,12 +58,13 @@ export function Sidebar({
     },
   });
   const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
+  const settingsOpen = pathname.startsWith("/settings");
 
   return (
     <aside
       className={cn(
         "w-full rounded-[1.75rem] border border-border bg-background-secondary/55 p-3 transition-all xl:p-4",
-        collapsed && !mobile ? "xl:w-22" : "xl:w-67",
+        collapsed && !mobile ? "xl:w-[88px]" : "xl:w-[268px]",
       )}
     >
       <div
@@ -152,6 +160,64 @@ export function Sidebar({
             </Link>
           );
         })}
+
+        <div className="pt-1">
+          <Link
+            href="/settings/workspace"
+            onClick={onClose}
+            className={cn(
+              "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150",
+              collapsed && !mobile ? "justify-center px-2" : "",
+              settingsOpen
+                ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
+                : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
+            )}
+          >
+            <div
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-xl border border-transparent transition-colors",
+                settingsOpen
+                  ? "bg-background-secondary text-foreground dark:bg-surface-strong"
+                  : "bg-transparent text-foreground-muted group-hover:text-foreground",
+              )}
+            >
+              <Settings className="h-4.5 w-4.5" />
+            </div>
+            {!collapsed || mobile ? (
+              <div className="flex flex-1 items-center justify-between">
+                <span className={cn("font-medium", settingsOpen ? "text-foreground" : "")}>Settings</span>
+                <ChevronDown className={cn("h-4 w-4 text-muted transition-transform", settingsOpen ? "rotate-180" : "")} />
+              </div>
+            ) : null}
+          </Link>
+
+          {(!collapsed || mobile) && settingsOpen ? (
+            <div className="mt-2 space-y-1 pl-4">
+              {settingsItems
+                .filter((item) => !item.adminOnly || user?.is_superuser)
+                .map((item) => {
+                  const active = pathname === item.href;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      className={cn(
+                        "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150",
+                        active
+                          ? "bg-background text-foreground"
+                          : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  );
+                })}
+            </div>
+          ) : null}
+        </div>
       </nav>
 
       {!collapsed || mobile ? (

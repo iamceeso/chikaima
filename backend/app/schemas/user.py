@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.common import TimestampedResponse
 
@@ -14,3 +14,11 @@ class UserResponse(TimestampedResponse):
 
 class UserProfileUpdate(BaseModel):
     full_name: str
+
+
+class UserAdminCreate(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=2, max_length=255)
+    password: str = Field(min_length=8, max_length=128)
+    is_superuser: bool = False
+    is_active: bool = True

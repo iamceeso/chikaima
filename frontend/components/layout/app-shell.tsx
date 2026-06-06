@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, Menu, Search, X } from "lucide-react";
+import { Bell, Menu, X } from "lucide-react";
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -13,13 +13,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
-
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex min-h-screen max-w-[1680px] flex-col gap-0 xl:flex-row">
+      <div className="mx-auto flex min-h-screen max-w-420 flex-col gap-0 xl:flex-row">
         <div className="hidden xl:block">
           <Sidebar
             pathname={pathname}
@@ -30,11 +26,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {sidebarOpen ? (
           <div className="fixed inset-0 z-40 bg-foreground/12 backdrop-blur-[2px] xl:hidden dark:bg-black/35" onClick={() => setSidebarOpen(false)}>
-            <div className="h-full w-[82vw] max-w-[280px] p-3" onClick={(event) => event.stopPropagation()}>
+            <div className="h-full w-[82vw] max-w-70 p-3" onClick={(event) => event.stopPropagation()}>
               <Sidebar pathname={pathname} mobile onClose={() => setSidebarOpen(false)} />
             </div>
           </div>
-        ) : null}
+        ) : null}max-w-70
 
         <div
           className={`flex flex-1 flex-col overflow-hidden xl:border-l xl:border-border ${
@@ -59,12 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             ) : (
               <>
-                <div className="hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 lg:flex">
-                  <Search className="h-4 w-4 text-muted" />
-                  <span className="truncate text-sm text-foreground-muted">
-                    Search assets, jobs, providers, and transcripts
-                  </span>
-                </div>
+                <div className="hidden flex-1 lg:block" />
                 <button
                   type="button"
                   className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-border bg-surface text-foreground-muted transition hover:text-foreground sm:flex"

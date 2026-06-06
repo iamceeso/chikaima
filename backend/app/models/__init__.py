@@ -11,6 +11,7 @@ from app.models.summary import SummaryArtifact
 from app.models.transcript import Transcript
 from app.models.user import User
 from app.models.video import Video
+from app.models.workspace_config import WorkspaceConfig
 
 __all__ = [
     "AIModel",
@@ -26,4 +27,5 @@ __all__ = [
     "Transcript",
     "User",
     "Video",
+    "WorkspaceConfig",
 ]

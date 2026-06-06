@@ -14,6 +14,8 @@ from app.models.settings import Settings
 from app.models.user import User
 from app.repositories.users import UserRepository
 from app.schemas.auth import PasswordResetConfirm, UserLogin, UserRegister
+from app.schemas.user import UserAdminCreate
+from app.services.workspace_service import WorkspaceService
 
 
 class AuthService:
@@ -25,10 +27,38 @@ class AuthService:
         if self.users.get_by_email(payload.email):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
+        is_first_user = self.users.count() == 0
+        workspace = WorkspaceService(self.db).get_or_create()
+        if not is_first_user and not workspace.public_registration_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Public registration is disabled. Ask an administrator to create your account.",
+            )
+
         user = User(
             email=payload.email,
             full_name=payload.full_name,
             hashed_password=hash_password(payload.password),
+            is_superuser=is_first_user,
+        )
+        settings = Settings(user=user)
+        self.db.add_all([user, settings])
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def create_user(self, actor: User, payload: UserAdminCreate) -> User:
+        if not actor.is_superuser:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+        if self.users.get_by_email(payload.email):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
+        user = User(
+            email=payload.email,
+            full_name=payload.full_name,
+            hashed_password=hash_password(payload.password),
+            is_superuser=payload.is_superuser,
+            is_active=payload.is_active,
         )
         settings = Settings(user=user)
         self.db.add_all([user, settings])

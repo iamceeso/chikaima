@@ -16,6 +16,23 @@ export interface User {
   updated_at: string;
 }
 
+export interface WorkspaceConfig {
+  id: string;
+  name: string;
+  public_registration_enabled: boolean;
+  total_users: number;
+  total_providers: number;
+  pending_jobs: number;
+  completed_jobs: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspacePublicSettings {
+  name: string;
+  public_registration_enabled: boolean;
+}
+
 export interface AuthTokens {
   access_token: string;
   refresh_token: string;
