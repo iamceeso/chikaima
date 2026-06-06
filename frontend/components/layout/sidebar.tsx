@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
-  ChevronLeft,
   ChevronDown,
   ChevronRight,
   Cog,
   FolderKanban,
   LayoutDashboard,
   MessageSquarePlus,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
-  Sparkles,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -68,7 +68,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "w-full rounded-[1.75rem] border border-border bg-background-secondary/55 p-3 transition-all xl:p-4",
+        "flex h-full w-full flex-col rounded-none border border-border bg-background-secondary/55 p-3 transition-all xl:h-screen xl:p-4",
         collapsed && !mobile ? "xl:w-[88px]" : "xl:w-[268px]",
       )}
     >
@@ -79,37 +79,24 @@ export function Sidebar({
         )}
       >
         {!collapsed || mobile ? (
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none">
-            <Sparkles className="h-4.5 w-4.5 text-foreground-muted" />
-          </div>
-        ) : null}
-        {!collapsed || mobile ? (
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">Olanma</p>
-            <p className="mt-0.5 text-sm font-medium text-foreground">Media intelligence</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-foreground">OLANMA</p>
           </div>
         ) : (
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none">
-            <Sparkles className="h-4.5 w-4.5 text-foreground-muted" />
-          </div>
+          <div className="flex-1" />
         )}
+        {onToggleCollapse ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="hidden h-9 w-9 items-center justify-center rounded-xl bg-surface text-foreground-muted transition hover:bg-surface/70 hover:text-foreground xl:flex"
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+        ) : null}
       </div>
-
-      {onToggleCollapse ? (
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className={cn(
-            "mb-3 hidden h-10 w-full items-center rounded-2xl px-3 text-sm text-foreground-muted transition hover:bg-surface/70 hover:text-foreground xl:flex",
-            collapsed ? "justify-center" : "justify-between",
-          )}
-        >
-          {!collapsed ? <span>Collapse menu</span> : null}
-          <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed ? "rotate-180" : "")} />
-        </button>
-      ) : null}
-
-    
+      <div className="flex min-h-0 flex-1 flex-col">
       <nav className="space-y-1">
         {navItems.map((item) => {
           const active = pathname === item.href;
@@ -124,7 +111,7 @@ export function Sidebar({
                 onClose?.();
               }}
               className={cn(
-                "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150",
+                "group flex items-center gap-3 rounded-2xl px-3 py-2 text-xs transition-colors duration-150",
                 collapsed && !mobile ? "justify-center px-2" : "",
                 active
                   ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
@@ -154,12 +141,12 @@ export function Sidebar({
         <div className="pt-1">
           <button
             type="button"
-            onClick={() => setSettingsOpen((value) => !value)}
-            className={cn(
-              "group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition-colors duration-150",
-              collapsed && !mobile ? "justify-center px-2" : "",
-              settingsOpen
-                ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
+              onClick={() => setSettingsOpen((value) => !value)}
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-xs transition-colors duration-150",
+                collapsed && !mobile ? "justify-center px-2" : "",
+                settingsOpen
+                  ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
                 : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
             )}
           >
@@ -191,12 +178,12 @@ export function Sidebar({
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
-                      onClick={() => {
-                        onClose?.();
-                      }}
-                      className={cn(
-                        "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150",
+                        href={item.href}
+                        onClick={() => {
+                          onClose?.();
+                        }}
+                        className={cn(
+                        "flex items-center gap-3 rounded-2xl px-3 py-2 text-xs transition-colors duration-150",
                         active
                           ? "bg-background text-foreground"
                           : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
@@ -213,9 +200,9 @@ export function Sidebar({
       </nav>
 
       {!collapsed || mobile ? (
-        <div className="mt-5 min-h-0 border-t border-border pt-4">
+        <div className="mt-auto min-h-0 border-t border-border pt-4">
           <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Recent analyses</div>
-          <div className="space-y-1">
+          <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
             {conversationsQuery.data?.map((item) => {
               const active = pathname === "/chat" && selectedConversationId === item.id;
               return (
@@ -227,13 +214,13 @@ export function Sidebar({
                     onClose?.();
                   }}
                   className={cn(
-                    "block rounded-2xl px-3 py-2.5 transition-colors duration-150",
+                    "block rounded-2xl px-3 py-2 transition-colors duration-150",
                     active
                       ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
                       : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
                   )}
                 >
-                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="truncate text-xs font-medium">{item.title}</p>
                   <p className="mt-1 truncate text-xs text-muted">
                     {item.messages?.at(-1)?.content ?? "No messages yet"}
                   </p>
@@ -248,6 +235,7 @@ export function Sidebar({
           </div>
         </div>
       ) : null}
+      </div>
     </aside>
   );
 }

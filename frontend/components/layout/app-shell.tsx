@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex min-h-screen max-w-420 flex-col gap-0 xl:flex-row">
-        <div className="hidden xl:block">
+        <div className="hidden xl:block xl:h-screen">
           <Sidebar
             pathname={pathname}
             collapsed={sidebarCollapsed}

@@ -8,12 +8,21 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { SettingsShell } from "@/components/settings/settings-shell";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
+import type { User } from "@/types";
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -39,6 +48,7 @@ export default function SettingsUsersPage() {
   const currentUser = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userPendingDelete, setUserPendingDelete] = useState<User | null>(null);
   const form = useForm<CreateUserValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
@@ -92,6 +102,7 @@ export default function SettingsUsersPage() {
       return api.deleteUser(token, userId);
     },
     onSuccess: async () => {
+      setUserPendingDelete(null);
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
     },
@@ -232,7 +243,7 @@ export default function SettingsUsersPage() {
                       user.id === currentUser.id ||
                       (user.is_superuser && adminCount <= 1)
                     }
-                    onClick={() => deleteMutation.mutate(user.id)}
+                    onClick={() => setUserPendingDelete(user)}
                   >
                     <Trash2 className="h-4 w-4" />
                     <span className="ml-2">Remove</span>
@@ -341,6 +352,49 @@ export default function SettingsUsersPage() {
           </Card>
         </div>
       ) : null}
+
+      <AlertDialog
+        open={Boolean(userPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) {
+            setUserPendingDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {userPendingDelete
+                ? `This will remove ${userPendingDelete.full_name} (${userPendingDelete.email}) from the workspace.`
+                : "This user will be removed from the workspace."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-border"
+              disabled={deleteMutation.isPending}
+              onClick={() => setUserPendingDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={deleteMutation.isPending || !userPendingDelete}
+              onClick={() => {
+                if (!userPendingDelete) {
+                  return;
+                }
+                deleteMutation.mutate(userPendingDelete.id);
+              }}
+            >
+              {deleteMutation.isPending ? "Removing..." : "Remove user"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SettingsShell>
   );
 }
