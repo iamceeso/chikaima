@@ -20,5 +20,7 @@ export function useAuthProfile() {
       return user;
     },
     enabled: Boolean(tokens?.access_token),
+    retry: false,
+    staleTime: 5 * 60_000,
   });
 }

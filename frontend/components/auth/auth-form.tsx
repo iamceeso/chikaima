@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -27,6 +27,7 @@ const loginSchema = z.object({
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setSession = useAuthStore((state) => state.setSession);
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
@@ -39,7 +40,7 @@ export function RegisterForm() {
     },
     onSuccess: (tokens) => {
       setSession(tokens);
-      router.push("/dashboard");
+      router.replace(searchParams.get("next") || "/library");
     },
   });
 
@@ -80,6 +81,7 @@ export function RegisterForm() {
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setSession = useAuthStore((state) => state.setSession);
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -89,7 +91,7 @@ export function LoginForm() {
     mutationFn: api.login,
     onSuccess: (tokens) => {
       setSession(tokens);
-      router.push("/dashboard");
+      router.replace(searchParams.get("next") || "/library");
     },
   });
 
