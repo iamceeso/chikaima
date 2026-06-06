@@ -15,14 +15,14 @@ import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 
 const registerSchema = z.object({
-  email: z.string().email(),
-  full_name: z.string().min(2),
-  password: z.string().min(8),
+  email: z.string().email("Enter a valid email address."),
+  full_name: z.string().min(2, "Full name must be at least 2 characters."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
 export function RegisterForm() {
@@ -31,6 +31,7 @@ export function RegisterForm() {
   const setSession = useAuthStore((state) => state.setSession);
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
+    mode: "onChange",
   });
   const workspaceQuery = useQuery({
     queryKey: ["public-workspace-settings"],
@@ -69,16 +70,32 @@ export function RegisterForm() {
       ) : (
         <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
           <div>
-            <Label htmlFor="full_name">Full name</Label>
+            <Label htmlFor="full_name">
+              Full name <span className="text-primary">*</span>
+            </Label>
             <Input id="full_name" {...form.register("full_name")} />
+            {form.formState.errors.full_name ? (
+              <p className="mt-1 text-sm text-primary">{form.formState.errors.full_name.message}</p>
+            ) : null}
           </div>
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">
+              Email <span className="text-primary">*</span>
+            </Label>
             <Input id="email" type="email" {...form.register("email")} />
+            {form.formState.errors.email ? (
+              <p className="mt-1 text-sm text-primary">{form.formState.errors.email.message}</p>
+            ) : null}
           </div>
           <div>
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">
+              Password <span className="text-primary">*</span>
+            </Label>
             <Input id="password" type="password" {...form.register("password")} />
+            <p className="mt-1 text-xs text-foreground-muted">Must be at least 8 characters.</p>
+            {form.formState.errors.password ? (
+              <p className="mt-1 text-sm text-primary">{form.formState.errors.password.message}</p>
+            ) : null}
           </div>
           {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
           <Button type="submit" className="w-full">
@@ -102,6 +119,7 @@ export function LoginForm() {
   const setSession = useAuthStore((state) => state.setSession);
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
+    mode: "onChange",
   });
 
   const mutation = useMutation({

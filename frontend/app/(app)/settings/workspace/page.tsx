@@ -1,10 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, ShieldCheck, UserCircle2 } from "lucide-react";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { SettingsShell } from "@/components/settings/settings-shell";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api } from "@/services/api";
@@ -14,6 +23,7 @@ export default function WorkspaceSettingsPage() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
+  const [registrationDialogOpen, setRegistrationDialogOpen] = useState(false);
 
   const workspaceQuery = useQuery({
     queryKey: ["workspace-settings"],
@@ -115,7 +125,7 @@ export default function WorkspaceSettingsPage() {
               </div>
               <Button
                 type="button"
-                onClick={() => toggleRegistration.mutate()}
+                onClick={() => setRegistrationDialogOpen(true)}
                 disabled={
                   !user?.is_superuser ||
                   toggleRegistration.isPending ||
@@ -193,6 +203,57 @@ export default function WorkspaceSettingsPage() {
           </Card>
         </div>
       </div>
+
+      <AlertDialog
+        open={registrationDialogOpen}
+        onOpenChange={(open) => {
+          if (!toggleRegistration.isPending) {
+            setRegistrationDialogOpen(open);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {workspaceQuery.data?.public_registration_enabled
+                ? "Disable public registration?"
+                : "Enable public registration?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {workspaceQuery.data?.public_registration_enabled
+                ? "New users will no longer be able to sign up on their own. Only admins will be able to create accounts."
+                : "Anyone with the registration page will be able to create an account in this workspace."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-border"
+              disabled={toggleRegistration.isPending}
+              onClick={() => setRegistrationDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={toggleRegistration.isPending}
+              onClick={() => toggleRegistration.mutate(undefined, {
+                onSuccess: async () => {
+                  setRegistrationDialogOpen(false);
+                  await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+                },
+              })}
+            >
+              {toggleRegistration.isPending
+                ? "Saving..."
+                : workspaceQuery.data?.public_registration_enabled
+                  ? "Disable registration"
+                  : "Enable registration"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SettingsShell>
   );
 }

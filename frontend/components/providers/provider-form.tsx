@@ -64,11 +64,15 @@ export function ProviderForm() {
         })}
       >
         <div>
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">
+            Name <span className="text-primary">*</span>
+          </Label>
           <Input id="name" {...form.register("name")} placeholder="Primary OpenAI" />
         </div>
         <div>
-          <Label htmlFor="provider_type">Provider type</Label>
+          <Label htmlFor="provider_type">
+            Provider type <span className="text-primary">*</span>
+          </Label>
           <select
             id="provider_type"
             className="h-11 w-full rounded-xl border border-border bg-[var(--surface-raised)] px-4 text-sm text-foreground"

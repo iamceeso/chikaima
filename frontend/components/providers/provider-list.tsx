@@ -1,16 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
+import type { Provider } from "@/types";
 
 export function ProviderList() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const queryClient = useQueryClient();
+  const [providerPendingDelete, setProviderPendingDelete] = useState<Provider | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["providers"],
     queryFn: () => {
@@ -41,6 +52,7 @@ export function ProviderList() {
       return api.deleteProvider(token, providerId);
     },
     onSuccess: async () => {
+      setProviderPendingDelete(null);
       await queryClient.invalidateQueries({ queryKey: ["providers"] });
       await queryClient.invalidateQueries({ queryKey: ["models"] });
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
@@ -92,12 +104,7 @@ export function ProviderList() {
                     variant="ghost"
                     className="h-9 border border-border px-3"
                     disabled={deleteMutation.isPending || toggleMutation.isPending}
-                    onClick={() => {
-                      if (!window.confirm(`Delete provider "${provider.name}"?`)) {
-                        return;
-                      }
-                      deleteMutation.mutate(provider.id);
-                    }}
+                    onClick={() => setProviderPendingDelete(provider)}
                   >
                     <Trash2 className="h-4 w-4" />
                     <span className="ml-2">Delete</span>
@@ -114,6 +121,49 @@ export function ProviderList() {
         {toggleMutation.error ? <p className="text-sm text-primary">{toggleMutation.error.message}</p> : null}
         {deleteMutation.error ? <p className="text-sm text-primary">{deleteMutation.error.message}</p> : null}
       </div>
+
+      <AlertDialog
+        open={Boolean(providerPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) {
+            setProviderPendingDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete provider?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {providerPendingDelete
+                ? `This will remove ${providerPendingDelete.name} and its synced models from the workspace.`
+                : "This provider will be removed from the workspace."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-border"
+              disabled={deleteMutation.isPending}
+              onClick={() => setProviderPendingDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={deleteMutation.isPending || !providerPendingDelete}
+              onClick={() => {
+                if (!providerPendingDelete) {
+                  return;
+                }
+                deleteMutation.mutate(providerPendingDelete.id);
+              }}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete provider"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

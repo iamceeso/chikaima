@@ -151,15 +151,21 @@ export default function SettingsUsersPage() {
           </div>
           <form className="grid gap-3" onSubmit={form.handleSubmit((values) => createMutation.mutate(values))}>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">
+                Email <span className="text-primary">*</span>
+              </Label>
               <Input id="email" {...form.register("email")} placeholder="teammate@example.com" />
             </div>
             <div>
-              <Label htmlFor="full_name">Full name</Label>
+              <Label htmlFor="full_name">
+                Full name <span className="text-primary">*</span>
+              </Label>
               <Input id="full_name" {...form.register("full_name")} placeholder="New teammate" />
             </div>
             <div>
-              <Label htmlFor="password">Temporary password</Label>
+              <Label htmlFor="password">
+                Temporary password <span className="text-primary">*</span>
+              </Label>
               <Input id="password" type="password" {...form.register("password")} placeholder="At least 8 characters" />
             </div>
             <label className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground">
@@ -274,11 +280,15 @@ export default function SettingsUsersPage() {
             </div>
             <form className="grid gap-3 md:grid-cols-2" onSubmit={editForm.handleSubmit((values) => updateMutation.mutate(values))}>
               <div>
-                <Label htmlFor="edit_email">Email</Label>
+                <Label htmlFor="edit_email">
+                  Email <span className="text-primary">*</span>
+                </Label>
                 <Input id="edit_email" {...editForm.register("email")} />
               </div>
               <div>
-                <Label htmlFor="edit_full_name">Full name</Label>
+                <Label htmlFor="edit_full_name">
+                  Full name <span className="text-primary">*</span>
+                </Label>
                 <Input id="edit_full_name" {...editForm.register("full_name")} />
               </div>
               <div>
