@@ -39,6 +39,10 @@ async def upload_document(
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "text/plain",
             "text/markdown",
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/gif",
         },
         max_size_bytes=100 * 1024 * 1024,
     )

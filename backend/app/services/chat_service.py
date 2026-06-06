@@ -37,7 +37,7 @@ class ChatService:
                     conversation_id=conversation.id,
                     role="user",
                     content=payload.initial_message,
-                    meta={"source": "initial"},
+                    meta={"source": "initial", **payload.initial_metadata},
                 )
                 self.db.add(user_message)
                 self.db.flush()
@@ -79,7 +79,7 @@ class ChatService:
                 conversation_id=conversation_id,
                 role=payload.role,
                 content=payload.content,
-                meta={"provider": provider.provider_type, "model": model.model_key},
+                meta={**payload.metadata, "provider": provider.provider_type, "model": model.model_key},
             )
             self.db.add(message)
             self.db.flush()
@@ -110,12 +110,44 @@ class ChatService:
         message = self.messages.get(message_id)
         if not message or message.conversation.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
-        message.content = content
-        message.meta = {**message.meta, "edited": True}
-        self.db.add(message)
-        self.db.commit()
-        self.db.refresh(message)
-        return message
+
+        try:
+            conversation = message.conversation
+            message.content = content
+            message.meta = {**message.meta, "edited": True}
+            self.db.add(message)
+            self.db.flush()
+
+            if message.role == "user":
+                model, provider = self.llm.resolve_model_and_provider(user_id, conversation.model_id)
+                history: list[Message] = []
+                for item in conversation.messages:
+                    if item.id == message.id:
+                        history.append(message)
+                        continue
+                    if item.created_at <= message.created_at:
+                        history.append(item)
+
+                assistant_content = self.llm.generate_reply(
+                    provider=provider,
+                    model=model,
+                    messages=self._serialize_messages(history),
+                )
+                self.db.add(
+                    Message(
+                        conversation_id=message.conversation_id,
+                        role="assistant",
+                        content=assistant_content,
+                        meta={"regenerated_from": message.id, "provider": provider.provider_type, "model": model.model_key},
+                    )
+                )
+
+            self.db.commit()
+            self.db.refresh(message)
+            return message
+        except Exception:
+            self.db.rollback()
+            raise
 
     def regenerate_message(self, user_id: str, message_id: str) -> Message:
         message = self.messages.get(message_id)

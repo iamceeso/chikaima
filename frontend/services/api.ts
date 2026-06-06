@@ -7,6 +7,7 @@ import type {
   DashboardSummary,
   DocumentAsset,
   Job,
+  Message,
   Provider,
   User,
   WorkspaceConfig,
@@ -20,7 +21,7 @@ type RequestOptions = RequestInit & {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body && !headers.has("Content-Type")) {
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
   if (options.token) {
@@ -101,22 +102,54 @@ export const api = {
     request<void>(`/providers/${providerId}`, { method: "DELETE", token }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),
   getDocuments: (token: string) => request<DocumentAsset[]>("/documents", { token }),
+  uploadDocument: (token: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<DocumentAsset>("/documents/upload", { method: "POST", token, body: formData });
+  },
   getAudioAssets: (token: string) => request<AudioAsset[]>("/audio", { token }),
+  uploadAudio: (token: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<AudioAsset>("/audio/upload", { method: "POST", token, body: formData });
+  },
   getVideos: (token: string) => request<VideoAsset[]>("/video", { token }),
+  uploadVideo: (token: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request<VideoAsset>("/video/upload", { method: "POST", token, body: formData });
+  },
   getConversations: (token: string) => request<Conversation[]>("/chat/conversations", { token }),
   createConversation: (
     token: string,
-    payload: { title: string; folder?: string; model_id?: string; initial_message?: string },
+    payload: { title: string; folder?: string; model_id?: string; initial_message?: string; initial_metadata?: Record<string, unknown> },
   ) => request<Conversation>("/chat/conversations", { method: "POST", token, body: JSON.stringify(payload) }),
   sendMessage: (
     token: string,
     conversationId: string,
-    payload: { role: string; content: string },
+    payload: { role: string; content: string; metadata?: Record<string, unknown> },
   ) =>
     request(`/chat/conversations/${conversationId}/messages`, {
       method: "POST",
       token,
       body: JSON.stringify(payload),
     }),
+  updateMessage: (
+    token: string,
+    messageId: string,
+    payload: { content: string },
+  ) => request<Message>(`/chat/messages/${messageId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  }),
+  regenerateMessage: (
+    token: string,
+    payload: { message_id: string },
+  ) => request(`/chat/messages/regenerate`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  }),
   getJobs: (token: string) => request<Job[]>("/jobs", { token }),
 };

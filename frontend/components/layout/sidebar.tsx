@@ -21,7 +21,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { useChatStore } from "@/store/chat-store";
 
 const navItems = [
-  { href: "/chat", label: "Chat", icon: MessageSquarePlus },
+  { href: "/chat", label: "New Chat", icon: MessageSquarePlus },
   { href: "/library", label: "Library", icon: LayoutDashboard },
   { href: "/processing", label: "Processing", icon: FolderKanban },
 ];
@@ -48,6 +48,7 @@ export function Sidebar({
   const token = useAuthStore((state) => state.tokens?.access_token);
   const user = useAuthStore((state) => state.user);
   const activeConversationId = useChatStore((state) => state.activeConversationId);
+  const openFreshChat = useChatStore((state) => state.openFreshChat);
   const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
@@ -103,6 +104,9 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               onClick={() => {
+                if (item.href === "/chat") {
+                  openFreshChat();
+                }
                 setSettingsOpen(false);
                 onClose?.();
               }}

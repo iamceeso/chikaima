@@ -8,6 +8,7 @@ from app.schemas.common import TimestampedResponse
 class MessageCreate(BaseModel):
     role: str = Field(pattern="^(system|user|assistant)$")
     content: str = Field(min_length=1)
+    metadata: dict = Field(default_factory=dict)
 
 
 class MessageUpdate(BaseModel):
@@ -27,6 +28,7 @@ class ConversationCreate(BaseModel):
     folder: str | None = Field(default=None, max_length=120)
     model_id: str | None = None
     initial_message: str | None = None
+    initial_metadata: dict = Field(default_factory=dict)
 
 
 class ConversationResponse(TimestampedResponse):
