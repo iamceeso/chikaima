@@ -13,6 +13,15 @@ export function AuthenticatedRoute({ children }: { children: React.ReactNode }) 
   const tokens = useAuthStore((state) => state.tokens);
   const clearSession = useAuthStore((state) => state.clearSession);
   const profileQuery = useAuthProfile();
+  const refetchProfile = profileQuery.refetch;
+
+  useEffect(() => {
+    if (!hydrated || !tokens?.access_token) {
+      return;
+    }
+
+    void refetchProfile();
+  }, [hydrated, pathname, refetchProfile, tokens?.access_token]);
 
   useEffect(() => {
     if (!hydrated) {

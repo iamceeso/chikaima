@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -20,9 +21,9 @@ import { useAuthStore } from "@/store/auth-store";
 import { useChatStore } from "@/store/chat-store";
 
 const navItems = [
+  { href: "/chat", label: "Chat", icon: MessageSquarePlus },
   { href: "/library", label: "Library", icon: LayoutDashboard },
   { href: "/processing", label: "Processing", icon: FolderKanban },
-  { href: "/chat", label: "Ask", icon: MessageSquarePlus },
 ];
 
 const settingsItems = [
@@ -58,7 +59,11 @@ export function Sidebar({
     },
   });
   const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
-  const settingsOpen = pathname.startsWith("/settings");
+  const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));
+
+  useEffect(() => {
+    setSettingsOpen(pathname.startsWith("/settings"));
+  }, [pathname]);
 
   return (
     <aside
@@ -104,25 +109,7 @@ export function Sidebar({
         </button>
       ) : null}
 
-      <Link
-        href="/chat"
-        onClick={() => {
-          setActiveConversationId(null);
-          onClose?.();
-        }}
-        className={cn(
-          "mb-4 flex items-center rounded-2xl bg-surface px-4 py-3 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] transition hover:bg-surface-raised dark:shadow-none",
-          collapsed && !mobile ? "justify-center px-0" : "gap-2.5",
-        )}
-      >
-        <MessageSquarePlus className="h-4.5 w-4.5" />
-        {!collapsed || mobile ? <span>New analysis</span> : null}
-      </Link>
-
-      {!collapsed || mobile ? (
-        <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Navigate</div>
-      ) : null}
-
+    
       <nav className="space-y-1">
         {navItems.map((item) => {
           const active = pathname === item.href;
@@ -132,7 +119,10 @@ export function Sidebar({
             <Link
               key={item.href}
               href={item.href}
-              onClick={onClose}
+              onClick={() => {
+                setSettingsOpen(false);
+                onClose?.();
+              }}
               className={cn(
                 "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150",
                 collapsed && !mobile ? "justify-center px-2" : "",
@@ -162,11 +152,11 @@ export function Sidebar({
         })}
 
         <div className="pt-1">
-          <Link
-            href="/settings/workspace"
-            onClick={onClose}
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((value) => !value)}
             className={cn(
-              "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150",
+              "group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition-colors duration-150",
               collapsed && !mobile ? "justify-center px-2" : "",
               settingsOpen
                 ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
@@ -189,7 +179,7 @@ export function Sidebar({
                 <ChevronDown className={cn("h-4 w-4 text-muted transition-transform", settingsOpen ? "rotate-180" : "")} />
               </div>
             ) : null}
-          </Link>
+          </button>
 
           {(!collapsed || mobile) && settingsOpen ? (
             <div className="mt-2 space-y-1 pl-4">
@@ -202,7 +192,9 @@ export function Sidebar({
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={onClose}
+                      onClick={() => {
+                        onClose?.();
+                      }}
                       className={cn(
                         "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150",
                         active

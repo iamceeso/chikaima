@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Shield, Trash2, UserPlus } from "lucide-react";
+import { Pencil, Shield, Trash2, UserPlus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -23,10 +24,21 @@ const createUserSchema = z.object({
 
 type CreateUserValues = z.infer<typeof createUserSchema>;
 
+const updateUserSchema = z.object({
+  email: z.string().email(),
+  full_name: z.string().min(2),
+  password: z.string().optional(),
+  is_superuser: z.boolean().default(false),
+  is_active: z.boolean().default(true),
+});
+
+type UpdateUserValues = z.infer<typeof updateUserSchema>;
+
 export default function SettingsUsersPage() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const currentUser = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const form = useForm<CreateUserValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
@@ -34,6 +46,16 @@ export default function SettingsUsersPage() {
       full_name: "",
       password: "",
       is_superuser: false,
+    },
+  });
+  const editForm = useForm<UpdateUserValues>({
+    resolver: zodResolver(updateUserSchema),
+    defaultValues: {
+      email: "",
+      full_name: "",
+      password: "",
+      is_superuser: false,
+      is_active: true,
     },
   });
 
@@ -74,6 +96,25 @@ export default function SettingsUsersPage() {
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
     },
   });
+  const updateMutation = useMutation({
+    mutationFn: async (values: UpdateUserValues) => {
+      if (!token || !editingUserId) {
+        throw new Error("Select a user first.");
+      }
+      return api.updateUser(token, editingUserId, {
+        email: values.email,
+        full_name: values.full_name,
+        password: values.password || undefined,
+        is_superuser: values.is_superuser,
+        is_active: values.is_active,
+      });
+    },
+    onSuccess: async () => {
+      setEditingUserId(null);
+      editForm.reset();
+      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
 
   if (!currentUser?.is_superuser) {
     return (
@@ -88,23 +129,27 @@ export default function SettingsUsersPage() {
     );
   }
 
+  const adminCount = usersQuery.data?.filter((user) => user.is_superuser).length ?? 0;
+  const editingUser = usersQuery.data?.find((user) => user.id === editingUserId) ?? null;
+  const editingLastAdmin = Boolean(editingUser?.is_superuser && adminCount <= 1);
+
   return (
     <SettingsShell
       title="User management"
-      description="Create accounts for teammates, grant admin access, and remove users when needed."
+      description="Manage access."
     >
-      <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-        <Card className="p-6">
-          <div className="mb-6 flex items-center gap-3">
+      <div className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
+        <Card className="p-5">
+          <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <UserPlus className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">Create user</h2>
-              <p className="mt-1 text-sm text-foreground-muted">Admins can add users even when public registration is disabled.</p>
+              <p className="mt-1 text-sm text-foreground-muted">Admins can add users directly.</p>
             </div>
           </div>
-          <form className="grid gap-4" onSubmit={form.handleSubmit((values) => createMutation.mutate(values))}>
+          <form className="grid gap-3" onSubmit={form.handleSubmit((values) => createMutation.mutate(values))}>
             <div>
               <Label htmlFor="email">Email</Label>
               <Input id="email" {...form.register("email")} placeholder="teammate@example.com" />
@@ -128,23 +173,23 @@ export default function SettingsUsersPage() {
           </form>
         </Card>
 
-        <Card className="p-6">
-          <div className="mb-6 flex items-center gap-3">
+        <Card className="p-5">
+          <div className="mb-4 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Shield className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">Workspace users</h2>
-              <p className="mt-1 text-sm text-foreground-muted">Review who has access and remove accounts that no longer need it.</p>
+              <p className="mt-1 text-sm text-foreground-muted">Edit, disable, or remove users.</p>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {usersQuery.data?.map((user) => (
-              <div key={user.id} className="flex flex-col gap-4 rounded-2xl border border-border bg-background-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div key={user.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background-secondary p-3.5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">{user.full_name}</p>
-                  <p className="mt-1 text-sm text-foreground-muted">{user.email}</p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-[0.16em] text-muted">
+                  <p className="mt-0.5 text-sm text-foreground-muted">{user.email}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-2 text-xs uppercase tracking-[0.16em] text-muted">
                     <span className="rounded-full border border-border bg-background px-2.5 py-1">
                       {user.is_superuser ? "admin" : "member"}
                     </span>
@@ -153,16 +198,40 @@ export default function SettingsUsersPage() {
                     </span>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="justify-center border border-border sm:w-auto"
-                  disabled={deleteMutation.isPending || user.id === currentUser.id}
-                  onClick={() => deleteMutation.mutate(user.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="ml-2">Remove</span>
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="justify-center border border-border sm:w-auto"
+                    onClick={() => {
+                      setEditingUserId(user.id);
+                      editForm.reset({
+                        email: user.email,
+                        full_name: user.full_name,
+                        password: "",
+                        is_superuser: user.is_superuser,
+                        is_active: user.is_active,
+                      });
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    <span className="ml-2">Edit</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="justify-center border border-border sm:w-auto"
+                    disabled={
+                      deleteMutation.isPending ||
+                      user.id === currentUser.id ||
+                      (user.is_superuser && adminCount <= 1)
+                    }
+                    onClick={() => deleteMutation.mutate(user.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="ml-2">Remove</span>
+                  </Button>
+                </div>
               </div>
             ))}
             {!usersQuery.data?.length ? (
@@ -173,6 +242,95 @@ export default function SettingsUsersPage() {
           </div>
         </Card>
       </div>
+
+      {editingUserId ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm"
+          onClick={() => {
+            setEditingUserId(null);
+            editForm.reset();
+          }}
+        >
+          <Card
+            className="w-full max-w-2xl p-5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Edit user</h2>
+                <p className="mt-1 text-sm text-foreground-muted">{editingUser?.email}</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-10 w-10 border border-border p-0"
+                onClick={() => {
+                  setEditingUserId(null);
+                  editForm.reset();
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <form className="grid gap-3 md:grid-cols-2" onSubmit={editForm.handleSubmit((values) => updateMutation.mutate(values))}>
+              <div>
+                <Label htmlFor="edit_email">Email</Label>
+                <Input id="edit_email" {...editForm.register("email")} />
+              </div>
+              <div>
+                <Label htmlFor="edit_full_name">Full name</Label>
+                <Input id="edit_full_name" {...editForm.register("full_name")} />
+              </div>
+              <div>
+                <Label htmlFor="edit_password">New password</Label>
+                <Input id="edit_password" type="password" {...editForm.register("password")} placeholder="Leave blank to keep current password" />
+              </div>
+              <div className="grid gap-2">
+                <label className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[var(--primary)]"
+                    disabled={editingLastAdmin}
+                    {...editForm.register("is_superuser")}
+                  />
+                  Administrator
+                </label>
+                <label className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[var(--primary)]"
+                    disabled={editingLastAdmin}
+                    {...editForm.register("is_active")}
+                  />
+                  Active user
+                </label>
+              </div>
+              {updateMutation.error ? <p className="text-sm text-primary md:col-span-2">{updateMutation.error.message}</p> : null}
+              {editingLastAdmin ? (
+                <p className="text-sm text-foreground-muted md:col-span-2">
+                  The last admin cannot be made inactive or changed to a non-admin user.
+                </p>
+              ) : null}
+              <div className="flex gap-3 pt-1 md:col-span-2">
+                <Button type="submit">
+                  {updateMutation.isPending ? "Saving..." : "Save changes"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="border border-border"
+                  onClick={() => {
+                    setEditingUserId(null);
+                    editForm.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      ) : null}
     </SettingsShell>
   );
 }

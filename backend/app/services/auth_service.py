@@ -14,7 +14,7 @@ from app.models.settings import Settings
 from app.models.user import User
 from app.repositories.users import UserRepository
 from app.schemas.auth import PasswordResetConfirm, UserLogin, UserRegister
-from app.schemas.user import UserAdminCreate
+from app.schemas.user import UserAdminCreate, UserAdminUpdate
 from app.services.workspace_service import WorkspaceService
 
 
@@ -62,6 +62,49 @@ class AuthService:
         )
         settings = Settings(user=user)
         self.db.add_all([user, settings])
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def update_user(self, actor: User, user_id: str, payload: UserAdminUpdate) -> User:
+        if not actor.is_superuser:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
+        user = self.users.get(user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        updates = payload.model_dump(exclude_unset=True)
+
+        next_email = updates.get("email")
+        if next_email and next_email != user.email and self.users.get_by_email(next_email):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
+        next_is_superuser = updates.get("is_superuser", user.is_superuser)
+        next_is_active = updates.get("is_active", user.is_active)
+        if user.is_superuser and not next_is_superuser and self.users.count_superusers() <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The last admin cannot be changed to a non-admin user.",
+            )
+        if user.is_superuser and not next_is_active and self.users.count_superusers() <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The last admin cannot be made inactive.",
+            )
+
+        if "email" in updates:
+            user.email = updates["email"]
+        if "full_name" in updates:
+            user.full_name = updates["full_name"]
+        if "password" in updates and updates["password"]:
+            user.hashed_password = hash_password(updates["password"])
+        if "is_superuser" in updates:
+            user.is_superuser = updates["is_superuser"]
+        if "is_active" in updates:
+            user.is_active = updates["is_active"]
+
+        self.db.add(user)
         self.db.commit()
         self.db.refresh(user)
         return user

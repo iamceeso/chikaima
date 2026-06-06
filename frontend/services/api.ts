@@ -63,6 +63,11 @@ export const api = {
     token: string,
     payload: { email: string; full_name: string; password: string; is_superuser?: boolean; is_active?: boolean },
   ) => request<User>("/users", { method: "POST", token, body: JSON.stringify(payload) }),
+  updateUser: (
+    token: string,
+    userId: string,
+    payload: { email?: string; full_name?: string; password?: string; is_superuser?: boolean; is_active?: boolean },
+  ) => request<User>(`/users/${userId}`, { method: "PATCH", token, body: JSON.stringify(payload) }),
   deleteUser: (token: string, userId: string) => request<void>(`/users/${userId}`, { method: "DELETE", token }),
   getDashboard: (token: string) => request<DashboardSummary>("/dashboard", { token }),
   getWorkspaceSettings: (token: string) => request<WorkspaceConfig>("/settings/workspace", { token }),
@@ -81,6 +86,19 @@ export const api = {
       config?: Record<string, unknown>;
     },
   ) => request<Provider>("/providers", { method: "POST", token, body: JSON.stringify(payload) }),
+  updateProvider: (
+    token: string,
+    providerId: string,
+    payload: {
+      name?: string;
+      base_url?: string;
+      is_enabled?: boolean;
+      api_key?: string;
+      config?: Record<string, unknown>;
+    },
+  ) => request<Provider>(`/providers/${providerId}`, { method: "PATCH", token, body: JSON.stringify(payload) }),
+  deleteProvider: (token: string, providerId: string) =>
+    request<void>(`/providers/${providerId}`, { method: "DELETE", token }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),
   getDocuments: (token: string) => request<DocumentAsset[]>("/documents", { token }),
   getAudioAssets: (token: string) => request<AudioAsset[]>("/audio", { token }),

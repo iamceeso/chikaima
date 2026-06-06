@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps.auth import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.user import UserAdminCreate, UserProfileUpdate, UserResponse
+from app.schemas.user import UserAdminCreate, UserAdminUpdate, UserProfileUpdate, UserResponse
 from app.services.auth_service import AuthService
 
 router = APIRouter()
@@ -73,3 +73,14 @@ def delete_user(
     db.delete(target)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.patch("/{user_id}", response_model=UserResponse)
+def update_user(
+    user_id: str,
+    payload: UserAdminUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
+    user = AuthService(db).update_user(current_user, user_id, payload)
+    return UserResponse.model_validate(user)

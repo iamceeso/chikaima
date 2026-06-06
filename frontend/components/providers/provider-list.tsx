@@ -1,13 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Power, Trash2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 
 export function ProviderList() {
   const token = useAuthStore((state) => state.tokens?.access_token);
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["providers"],
     queryFn: () => {
@@ -17,18 +20,44 @@ export function ProviderList() {
       return api.getProviders(token);
     },
   });
+  const toggleMutation = useMutation({
+    mutationFn: async ({ providerId, isEnabled }: { providerId: string; isEnabled: boolean }) => {
+      if (!token) {
+        throw new Error("Please sign in first.");
+      }
+      return api.updateProvider(token, providerId, { is_enabled: isEnabled });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["providers"] });
+      await queryClient.invalidateQueries({ queryKey: ["models"] });
+      await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: async (providerId: string) => {
+      if (!token) {
+        throw new Error("Please sign in first.");
+      }
+      return api.deleteProvider(token, providerId);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["providers"] });
+      await queryClient.invalidateQueries({ queryKey: ["models"] });
+      await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+    },
+  });
 
   return (
     <Card className="bg-[var(--surface-raised)]">
-      <div className="mb-6">
+      <div className="mb-4">
         <h2 className="text-xl font-semibold text-foreground">Connected providers</h2>
-        <p className="mt-2 text-sm text-foreground-muted">Providers and local runtimes available to the workspace.</p>
+        <p className="mt-1 text-sm text-foreground-muted">Providers available to this workspace.</p>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {isLoading ? <p className="text-sm text-foreground-muted">Loading providers...</p> : null}
         {data?.length ? (
           data.map((provider) => (
-            <div key={provider.id} className="rounded-xl border border-border bg-[var(--surface-strong)] p-4">
+            <div key={provider.id} className="rounded-xl border border-border bg-[var(--surface-strong)] p-3.5">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="font-medium text-foreground">{provider.name}</p>
@@ -39,9 +68,41 @@ export function ProviderList() {
                     <p className="mt-1 text-xs text-muted">Credential {provider.masked_secret}</p>
                   ) : null}
                 </div>
-                <span className="rounded-full border border-border bg-[var(--surface-raised)] px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">
-                  {provider.is_enabled ? "enabled" : "disabled"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-border bg-[var(--surface-raised)] px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">
+                    {provider.is_enabled ? "enabled" : "disabled"}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-9 border border-border px-3"
+                    disabled={toggleMutation.isPending || deleteMutation.isPending}
+                    onClick={() =>
+                      toggleMutation.mutate({
+                        providerId: provider.id,
+                        isEnabled: !provider.is_enabled,
+                      })
+                    }
+                  >
+                    <Power className="h-4 w-4" />
+                    <span className="ml-2">{provider.is_enabled ? "Disable" : "Enable"}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-9 border border-border px-3"
+                    disabled={deleteMutation.isPending || toggleMutation.isPending}
+                    onClick={() => {
+                      if (!window.confirm(`Delete provider "${provider.name}"?`)) {
+                        return;
+                      }
+                      deleteMutation.mutate(provider.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="ml-2">Delete</span>
+                  </Button>
+                </div>
               </div>
             </div>
           ))
@@ -50,6 +111,8 @@ export function ProviderList() {
             No providers added yet.
           </div>
         )}
+        {toggleMutation.error ? <p className="text-sm text-primary">{toggleMutation.error.message}</p> : null}
+        {deleteMutation.error ? <p className="text-sm text-primary">{deleteMutation.error.message}</p> : null}
       </div>
     </Card>
   );
