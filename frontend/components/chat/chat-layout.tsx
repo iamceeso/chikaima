@@ -7,6 +7,7 @@ import {
   Copy,
   FileImage,
   FileText,
+  Inbox,
   Paperclip,
   PencilLine,
   Sparkles,
@@ -15,7 +16,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -88,7 +89,11 @@ export function ChatLayout() {
   const [isDragging, setIsDragging] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const historyRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLDivElement | null>(null);
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
@@ -119,16 +124,33 @@ export function ChatLayout() {
     modelsQuery.data?.find((model) => model.id === selectedModelId) ??
     defaultModel;
   const canSelectModel = !conversation;
+  const hasConversation = Boolean(conversation?.messages?.length);
 
   useEffect(() => {
-    if (conversation?.model_id) {
-      setSelectedModelId(conversation.model_id);
+    const textarea = textareaRef.current;
+    if (!textarea) {
       return;
     }
-    if (!selectedModelId && defaultModel?.id) {
-      setSelectedModelId(defaultModel.id);
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+  }, [draft, hasConversation]);
+
+  useEffect(() => {
+    const historyEl = historyRef.current;
+    const composerEl = composerRef.current;
+    if (!historyEl || !composerEl) {
+      return;
     }
-  }, [conversation?.model_id, defaultModel?.id, selectedModelId]);
+
+    const applyPadding = () => {
+      historyEl.style.paddingBottom = `${composerEl.offsetHeight + 72}px`;
+    };
+
+    applyPadding();
+    const observer = new ResizeObserver(applyPadding);
+    observer.observe(composerEl);
+    return () => observer.disconnect();
+  }, [hasConversation, pendingAttachments.length, draft]);
 
   const uploadAttachment = useMutation({
     mutationFn: async (file: File) => {
@@ -216,19 +238,18 @@ export function ChatLayout() {
     },
   });
 
+  const busy = createConversation.isPending || sendMessage.isPending;
+
   const onSubmit = () => {
     if (!draft.trim() && !pendingAttachments.length) {
       return;
     }
     if (!conversation) {
-      createConversation.mutate();
+      createConversation.mutate(undefined);
       return;
     }
-    sendMessage.mutate();
+    sendMessage.mutate(undefined);
   };
-
-  const busy = createConversation.isPending || sendMessage.isPending;
-  const hasConversation = Boolean(conversation?.messages?.length);
 
   const handleFiles = async (files: FileList | File[]) => {
     const queue = Array.from(files);
@@ -255,28 +276,162 @@ export function ChatLayout() {
     createConversation.mutate({ content: prompt });
   };
 
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      onSubmit();
+    }
+  };
+
+  const renderAttachmentChips = () =>
+    pendingAttachments.length ? (
+      <div className="mb-2.5 flex flex-wrap gap-2">
+        {pendingAttachments.map((attachment) => {
+          const Icon = attachmentIcon(attachment.kind);
+          return (
+            <span
+              key={attachment.id}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-0.5 text-[11px] text-foreground-muted"
+            >
+              <Icon className="h-3 w-3" />
+              {attachment.name}
+              <button
+                type="button"
+                onClick={() => setPendingAttachments((current) => current.filter((item) => item.id !== attachment.id))}
+                className="text-muted hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          );
+        })}
+      </div>
+    ) : null;
+
+  const showDropOverlay = isDragging && !uploadAttachment.isPending;
+
+  const renderModelPicker = (className?: string) => (
+    <select
+      value={activeModel?.id ?? ""}
+      disabled={!canSelectModel || !modelsQuery.data?.length}
+      onChange={(event) => setSelectedModelId(event.target.value)}
+      className={cn(
+        "max-w-52 rounded-full border border-border bg-background-secondary/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm outline-none backdrop-blur",
+        canSelectModel ? "cursor-pointer hover:bg-surface-raised" : "cursor-default opacity-80",
+        className,
+      )}
+    >
+      {modelsQuery.data?.map((model) => (
+        <option key={model.id} value={model.id}>
+          {model.display_name}
+        </option>
+      ))}
+    </select>
+  );
+
+  const renderComposer = () => (
+    <div
+      ref={composerRef}
+      className="w-full"
+    >
+      <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-3 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.gif,audio/*,video/*"
+          onChange={(event) => {
+            if (!event.target.files?.length) {
+              return;
+            }
+            void handleFiles(event.target.files);
+            event.target.value = "";
+          }}
+        />
+        {renderAttachmentChips()}
+        <Textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleComposerKeyDown}
+          placeholder="Ask Olanma about your content"
+          className={cn(
+            "resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus:ring-0",
+            "min-h-12 max-h-40 sm:min-h-14",
+          )}
+        />
+        <div className="mt-2 flex items-center justify-between gap-3 pt-1.5">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openFilePicker}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] text-foreground-muted transition-colors hover:bg-surface-raised"
+            >
+              <Paperclip className="h-3 w-3" />
+              Attach
+            </button>
+            {renderModelPicker("max-w-44 bg-background-secondary")}
+          </div>
+          <Button
+            onClick={onSubmit}
+            disabled={busy || (!draft.trim() && !pendingAttachments.length)}
+            size="sm"
+            className="h-8 w-8 rounded-full px-0"
+          >
+            {busy ? "..." : <ArrowUp className="h-3.5 w-3.5" />}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden bg-background",
+        "relative flex h-full min-h-0 flex-col overflow-hidden bg-background",
         isDragging ? "bg-primary/5" : "",
       )}
       onDragOver={(event) => {
         event.preventDefault();
+        dragDepthRef.current = Math.max(dragDepthRef.current, 1);
         setIsDragging(true);
       }}
-      onDragLeave={(event) => {
-        if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          return;
+      onDragEnter={(event) => {
+        event.preventDefault();
+        dragDepthRef.current += 1;
+        setIsDragging(true);
+      }}
+      onDragLeave={() => {
+        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+        if (dragDepthRef.current === 0) {
+          setIsDragging(false);
         }
-        setIsDragging(false);
       }}
       onDrop={(event) => {
         event.preventDefault();
+        dragDepthRef.current = 0;
         setIsDragging(false);
         void handleFiles(event.dataTransfer.files);
       }}
     >
+      {showDropOverlay ? (
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-background/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-[1.75rem] border border-dashed border-primary/40 bg-surface/95 px-8 py-12 text-center shadow-[0_18px_60px_rgba(20,32,25,0.08)] dark:shadow-none">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/12 text-primary">
+              <Inbox className="h-6 w-6" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold text-foreground">Drop files into this chat</h3>
+            <p className="mt-2 text-sm text-foreground-muted">
+              Add PDFs, documents, images, audio, or video and Olanma will attach them to this conversation.
+            </p>
+            <div className="mt-4 inline-flex items-center rounded-full border border-border bg-background-secondary px-3 py-1 text-xs text-foreground-muted">
+              Uploads appear directly in the composer when dropped
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {!modelsQuery.data?.length ? (
         <div className="border-b border-border bg-background/90 px-4 py-2 text-center text-xs text-foreground-muted sm:px-5">
           No synced models yet. Save or refresh a provider to load available models.
@@ -284,42 +439,10 @@ export function ChatLayout() {
       ) : null}
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {!hasConversation ? null : (
-          <div className="pointer-events-none absolute left-4 right-4 top-3 z-10 flex justify-center sm:justify-start sm:left-5">
-            <div className="pointer-events-auto">
-              <select
-                value={activeModel?.id ?? ""}
-                disabled={!canSelectModel || !modelsQuery.data?.length}
-                onChange={(event) => setSelectedModelId(event.target.value)}
-                className={cn(
-                  "max-w-52 rounded-full border border-border bg-background-secondary/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm outline-none backdrop-blur",
-                  canSelectModel ? "cursor-pointer hover:bg-surface-raised" : "cursor-default opacity-80",
-                )}
-              >
-                {modelsQuery.data?.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.display_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
-        <div className="h-full min-h-0 overflow-y-auto overscroll-contain">
+        <div ref={historyRef} className="h-full min-h-0 overflow-y-auto overscroll-contain">
         {hasConversation ? (
-          <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pb-32 pt-14 sm:px-5 sm:pb-36 sm:pt-16">
-            <div className="mb-1">
-              <h1 className="truncate text-sm font-medium text-foreground">
-                {conversation?.title ?? "New chat"}
-              </h1>
-              <p className="mt-1 text-xs text-foreground-muted">
-                {conversation?.messages?.length
-                  ? `${conversation.messages.length} messages in this workspace conversation`
-                  : "Start an analysis conversation"}
-              </p>
-            </div>
-            {conversation.messages.map((message) => {
+          <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+            {conversation?.messages.map((message) => {
               const isUser = message.role === "user";
               return (
                 <article
@@ -442,104 +565,19 @@ export function ChatLayout() {
             })}
           </div>
         ) : (
-          <div className="flex min-h-full items-center justify-center px-4 py-8 sm:px-5">
-            <div className="w-full max-w-[760px]">
+          <div className="flex min-h-full items-center justify-center px-4 py-5 sm:px-5">
+            <div className="w-full max-w-190">
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary/12 text-primary">
                 <Bot className="h-5 w-5" />
               </div>
               <h2 className="mt-4 text-center text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
-                What would you like to work on?
+                How can I help?
               </h2>
               <p className="mx-auto mt-2 max-w-xl text-center text-[13px] text-foreground-muted">
                 Analyze transcripts, compare uploads, extract action items, and keep everything in one workspace thread.
               </p>
 
-              <div className="mx-auto mt-7 max-w-[750px]">
-                <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-3 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.gif,audio/*,video/*"
-                    onChange={(event) => {
-                      if (!event.target.files?.length) {
-                        return;
-                      }
-                      void handleFiles(event.target.files);
-                      event.target.value = "";
-                    }}
-                  />
-                  {pendingAttachments.length ? (
-                    <div className="mb-2.5 flex flex-wrap gap-2">
-                      {pendingAttachments.map((attachment) => {
-                        const Icon = attachmentIcon(attachment.kind);
-                        return (
-                          <span
-                            key={attachment.id}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-0.5 text-[11px] text-foreground-muted"
-                          >
-                            <Icon className="h-3 w-3" />
-                            {attachment.name}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPendingAttachments((current) => current.filter((item) => item.id !== attachment.id))
-                              }
-                              className="text-muted hover:text-foreground"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                  <Textarea
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    placeholder="Ask Olanma about your content"
-                    className="min-h-16 max-h-40 resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus:ring-0"
-                  />
-                  <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-border pt-2.5">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={openFilePicker}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] text-foreground-muted transition-colors hover:bg-surface-raised"
-                      >
-                        <Paperclip className="h-3 w-3" />
-                        Attach
-                      </button>
-                      <select
-                        value={activeModel?.id ?? ""}
-                        disabled={!canSelectModel || !modelsQuery.data?.length}
-                        onChange={(event) => setSelectedModelId(event.target.value)}
-                        className={cn(
-                          "max-w-44 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] font-medium text-foreground outline-none",
-                          canSelectModel ? "cursor-pointer" : "cursor-default opacity-80",
-                        )}
-                      >
-                        {modelsQuery.data?.map((model) => (
-                          <option key={model.id} value={model.id}>
-                            {model.display_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <Button
-                      onClick={onSubmit}
-                      disabled={busy || (!draft.trim() && !pendingAttachments.length)}
-                      size="sm"
-                      className="h-8 w-8 rounded-full px-0"
-                    >
-                      {busy ? "..." : <ArrowUp className="h-3.5 w-3.5" />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {quickActions.map((action) => (
                   <button
                     key={action.label}
@@ -552,7 +590,7 @@ export function ChatLayout() {
                 ))}
               </div>
 
-              <div className="mx-auto mt-6 max-w-[650px] rounded-2xl border border-border bg-surface">
+              <div className="mx-auto mt-4 max-w-162.5 rounded-2xl border border-border bg-surface">
                 {starterPrompts.map((prompt, index) => (
                   <div key={prompt}>
                     {index > 0 ? <div className="border-t border-border" /> : null}
@@ -572,91 +610,9 @@ export function ChatLayout() {
         </div>
       </div>
 
-      {hasConversation ? (
-      <div className="shrink-0 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-5">
+      <div className="absolute inset-x-0 bottom-0 z-20 bg-background/92 px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:px-5">
         <div className="mx-auto max-w-3xl">
-          <div className="rounded-[1.2rem] border border-border bg-surface px-3.5 py-3 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none sm:px-4 sm:py-3.5">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.gif,audio/*,video/*"
-              onChange={(event) => {
-                if (!event.target.files?.length) {
-                  return;
-                }
-                void handleFiles(event.target.files);
-                event.target.value = "";
-              }}
-            />
-            {pendingAttachments.length ? (
-              <div className="mb-2.5 flex flex-wrap gap-2">
-                {pendingAttachments.map((attachment) => {
-                  const Icon = attachmentIcon(attachment.kind);
-                  return (
-                    <span
-                      key={attachment.id}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-0.5 text-[11px] text-foreground-muted"
-                    >
-                      <Icon className="h-3 w-3" />
-                      {attachment.name}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPendingAttachments((current) => current.filter((item) => item.id !== attachment.id))
-                        }
-                        className="text-muted hover:text-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            ) : null}
-            <Textarea
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="Ask Olanma about your content"
-              className="min-h-12 max-h-40 resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus:ring-0 sm:min-h-14"
-            />
-            <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-border pt-2.5">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={openFilePicker}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] text-foreground-muted transition-colors hover:bg-surface-raised"
-                >
-                  <Paperclip className="h-3 w-3" />
-                  Attach
-                </button>
-                <select
-                  value={activeModel?.id ?? ""}
-                  disabled={!canSelectModel || !modelsQuery.data?.length}
-                  onChange={(event) => setSelectedModelId(event.target.value)}
-                  className={cn(
-                    "max-w-44 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] font-medium text-foreground outline-none",
-                    canSelectModel ? "cursor-pointer" : "cursor-default opacity-80",
-                  )}
-                >
-                  {modelsQuery.data?.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.display_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button
-                onClick={onSubmit}
-                disabled={busy || (!draft.trim() && !pendingAttachments.length)}
-                size="sm"
-                className="h-8 w-8 rounded-full px-0"
-              >
-                {busy ? "..." : <ArrowUp className="h-3.5 w-3.5" />}
-              </Button>
-            </div>
-          </div>
+          {renderComposer()}
           {createConversation.error || sendMessage.error || uploadAttachment.error || editMessage.error ? (
             <p className="mt-3 text-center text-sm text-primary">
               {(createConversation.error ?? sendMessage.error ?? uploadAttachment.error ?? editMessage.error)?.message}
@@ -664,7 +620,6 @@ export function ChatLayout() {
           ) : null}
         </div>
       </div>
-      ) : null}
     </div>
   );
 }

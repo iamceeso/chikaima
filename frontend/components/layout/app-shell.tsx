@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           }`}
         >
           <div
-            className={`flex items-center ${isChat ? "justify-start border-b border-border px-4 py-3 sm:px-5" : "mb-2 gap-3 px-1 py-0 sm:hidden"}`}
+            className={`flex items-center ${isChat ? "justify-start px-4 py-3 sm:px-5" : "mb-2 gap-3 px-1 py-0 sm:hidden"}`}
           >
             <button
               type="button"
