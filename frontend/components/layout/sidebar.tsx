@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ChevronDown,
@@ -78,11 +79,28 @@ export function Sidebar({
         )}
       >
         {!collapsed || mobile ? (
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-foreground">OLANMA</p>
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <Image
+              src="/olanma-logo.png"
+              alt="Olanma logo"
+              width={32}
+              height={32}
+              className="h-8 w-8 shrink-0 object-contain"
+              priority
+            />
+            <p className="truncate text-xs font-semibold uppercase tracking-[0.24em] text-foreground">OLANMA</p>
           </div>
         ) : (
-          <div className="flex-1" />
+          <div className="flex flex-1 justify-center">
+            <Image
+              src="/olanma-logo.png"
+              alt="Olanma logo"
+              width={28}
+              height={28}
+              className="h-7 w-7 object-contain"
+              priority
+            />
+          </div>
         )}
         {onToggleCollapse ? (
           <button
@@ -113,8 +131,8 @@ export function Sidebar({
                 onClose?.();
               }}
               className={cn(
-                "group flex items-center gap-3 rounded-2xl px-3 py-2 text-xs transition-colors duration-150",
-                collapsed && !mobile ? "justify-center px-2" : "",
+                "group flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[11px] transition-colors duration-150",
+                collapsed && !mobile ? "justify-center px-1.5" : "",
                 active
                   ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
                   : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
@@ -122,18 +140,18 @@ export function Sidebar({
             >
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-xl border border-transparent transition-colors",
+                  "flex h-7 w-7 items-center justify-center rounded-lg border border-transparent transition-colors",
                   active
                     ? "bg-background-secondary text-foreground dark:bg-surface-strong"
                     : "bg-transparent text-foreground-muted group-hover:text-foreground",
                 )}
               >
-                <Icon className="h-4.5 w-4.5" />
+                <Icon className="h-4 w-4" />
               </div>
               {!collapsed || mobile ? (
                 <div className="flex flex-1 items-center justify-between">
                   <span className={cn("font-medium", active ? "text-foreground" : "")}>{item.label}</span>
-                  {active ? <ChevronRight className="h-4 w-4 text-muted" /> : null}
+                  {active ? <ChevronRight className="h-3.5 w-3.5 text-muted" /> : null}
                 </div>
               ) : null}
             </Link>
@@ -145,8 +163,8 @@ export function Sidebar({
             type="button"
               onClick={() => setSettingsOpen((value) => !value)}
               className={cn(
-                "group flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left text-xs transition-colors duration-150",
-                collapsed && !mobile ? "justify-center px-2" : "",
+                "group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left text-[11px] transition-colors duration-150",
+                collapsed && !mobile ? "justify-center px-1.5" : "",
                 settingsOpen
                   ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
                 : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
@@ -154,18 +172,18 @@ export function Sidebar({
           >
             <div
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-xl border border-transparent transition-colors",
+                "flex h-7 w-7 items-center justify-center rounded-lg border border-transparent transition-colors",
                 settingsOpen
                   ? "bg-background-secondary text-foreground dark:bg-surface-strong"
                   : "bg-transparent text-foreground-muted group-hover:text-foreground",
               )}
             >
-              <Settings className="h-4.5 w-4.5" />
+              <Settings className="h-4 w-4" />
             </div>
             {!collapsed || mobile ? (
               <div className="flex flex-1 items-center justify-between">
                 <span className={cn("font-medium", settingsOpen ? "text-foreground" : "")}>Settings</span>
-                <ChevronDown className={cn("h-4 w-4 text-muted transition-transform", settingsOpen ? "rotate-180" : "")} />
+                <ChevronDown className={cn("h-3.5 w-3.5 text-muted transition-transform", settingsOpen ? "rotate-180" : "")} />
               </div>
             ) : null}
           </button>
@@ -185,13 +203,13 @@ export function Sidebar({
                           onClose?.();
                         }}
                         className={cn(
-                        "flex items-center gap-3 rounded-2xl px-3 py-2 text-xs transition-colors duration-150",
+                        "flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[11px] transition-colors duration-150",
                         active
                           ? "bg-background text-foreground"
                           : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
                       )}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="h-3.5 w-3.5" />
                       <span className="font-medium">{item.label}</span>
                     </Link>
                   );
