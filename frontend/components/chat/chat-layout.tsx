@@ -31,6 +31,12 @@ const starterPrompts = [
   "Draft follow-up notes for the team",
 ];
 
+const quickActions = [
+  { label: "Upload files", kind: "upload" as const },
+  { label: "Meeting recap", kind: "prompt" as const, prompt: "Summarize this meeting and list action items." },
+  { label: "Compare insights", kind: "prompt" as const, prompt: "Compare the main insights across my latest uploads." },
+];
+
 type PendingAttachment = {
   id: string;
   name: string;
@@ -151,18 +157,19 @@ export function ChatLayout() {
   });
 
   const createConversation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (override?: { content?: string; attachments?: PendingAttachment[] }) => {
       if (!token) {
         throw new Error("Please sign in first.");
       }
-      const content = draft.trim() || "Analyze the attached files.";
+      const attachments = override?.attachments ?? pendingAttachments;
+      const content = override?.content?.trim() || draft.trim() || "Analyze the attached files.";
       return api.createConversation(token, {
         title: content.slice(0, 48) || "New analysis",
         initial_message: content,
         model_id: activeModel?.id,
-        initial_metadata: pendingAttachments.length
+        initial_metadata: attachments.length
           ? {
-              attachments: pendingAttachments,
+              attachments,
             }
           : undefined,
       });
@@ -176,15 +183,16 @@ export function ChatLayout() {
   });
 
   const sendMessage = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (override?: { content?: string; attachments?: PendingAttachment[] }) => {
       if (!token || !conversation) {
         throw new Error("Create a conversation first.");
       }
-      const content = draft.trim() || "Analyze the attached files.";
+      const attachments = override?.attachments ?? pendingAttachments;
+      const content = override?.content?.trim() || draft.trim() || "Analyze the attached files.";
       return api.sendMessage(token, conversation.id, {
         role: "user",
         content,
-        metadata: pendingAttachments.length ? { attachments: pendingAttachments } : undefined,
+        metadata: attachments.length ? { attachments } : undefined,
       });
     },
     onSuccess: async () => {
@@ -220,6 +228,7 @@ export function ChatLayout() {
   };
 
   const busy = createConversation.isPending || sendMessage.isPending;
+  const hasConversation = Boolean(conversation?.messages?.length);
 
   const handleFiles = async (files: FileList | File[]) => {
     const queue = Array.from(files);
@@ -228,10 +237,28 @@ export function ChatLayout() {
     }
   };
 
+  const openFilePicker = () => fileInputRef.current?.click();
+
+  const handleQuickAction = (action: (typeof quickActions)[number]) => {
+    if (action.kind === "upload") {
+      openFilePicker();
+      return;
+    }
+    sendSuggestedPrompt(action.prompt);
+  };
+
+  const sendSuggestedPrompt = (prompt: string) => {
+    if (conversation) {
+      sendMessage.mutate({ content: prompt });
+      return;
+    }
+    createConversation.mutate({ content: prompt });
+  };
+
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col bg-background",
+        "flex h-full min-h-0 flex-col overflow-hidden bg-background",
         isDragging ? "bg-primary/5" : "",
       )}
       onDragOver={(event) => {
@@ -250,44 +277,48 @@ export function ChatLayout() {
         void handleFiles(event.dataTransfer.files);
       }}
     >
-      {modelsQuery.data?.length ? null : (
+      {!modelsQuery.data?.length ? (
         <div className="border-b border-border bg-background/90 px-4 py-2 text-center text-xs text-foreground-muted sm:px-5">
           No synced models yet. Save or refresh a provider to load available models.
         </div>
-      )}
-      <div className="border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur sm:px-5">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="truncate text-[13px] font-medium text-foreground">
-              {conversation?.title ?? "New chat"}
-            </h1>
-            <p className="mt-0.5 text-[11px] text-foreground-muted">
-              {conversation?.messages?.length
-                ? `${conversation.messages.length} messages`
-                : "Start an analysis conversation"}
-            </p>
-          </div>
-          <select
-            value={activeModel?.id ?? ""}
-            disabled={!canSelectModel || !modelsQuery.data?.length}
-            onChange={(event) => setSelectedModelId(event.target.value)}
-            className={cn(
-              "max-w-44 shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-foreground outline-none transition-colors",
-              canSelectModel ? "cursor-pointer hover:bg-surface-raised" : "cursor-default opacity-80",
-            )}
-          >
-            {modelsQuery.data?.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.display_name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {conversation?.messages?.length ? (
-          <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-4 sm:px-5 sm:py-5">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {!hasConversation ? null : (
+          <div className="pointer-events-none absolute left-4 right-4 top-3 z-10 flex justify-center sm:justify-start sm:left-5">
+            <div className="pointer-events-auto">
+              <select
+                value={activeModel?.id ?? ""}
+                disabled={!canSelectModel || !modelsQuery.data?.length}
+                onChange={(event) => setSelectedModelId(event.target.value)}
+                className={cn(
+                  "max-w-52 rounded-full border border-border bg-background-secondary/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm outline-none backdrop-blur",
+                  canSelectModel ? "cursor-pointer hover:bg-surface-raised" : "cursor-default opacity-80",
+                )}
+              >
+                {modelsQuery.data?.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.display_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        <div className="h-full min-h-0 overflow-y-auto overscroll-contain">
+        {hasConversation ? (
+          <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pb-32 pt-14 sm:px-5 sm:pb-36 sm:pt-16">
+            <div className="mb-1">
+              <h1 className="truncate text-sm font-medium text-foreground">
+                {conversation?.title ?? "New chat"}
+              </h1>
+              <p className="mt-1 text-xs text-foreground-muted">
+                {conversation?.messages?.length
+                  ? `${conversation.messages.length} messages in this workspace conversation`
+                  : "Start an analysis conversation"}
+              </p>
+            </div>
             {conversation.messages.map((message) => {
               const isUser = message.role === "user";
               return (
@@ -412,34 +443,137 @@ export function ChatLayout() {
           </div>
         ) : (
           <div className="flex min-h-full items-center justify-center px-4 py-8 sm:px-5">
-            <div className="w-full max-w-3xl">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/12 text-primary">
+            <div className="w-full max-w-[760px]">
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary/12 text-primary">
                 <Bot className="h-5 w-5" />
               </div>
-              <h2 className="mt-4 text-center text-2xl font-semibold tracking-tight text-foreground">
-                What do you want to understand?
+              <h2 className="mt-4 text-center text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
+                What would you like to work on?
               </h2>
-              <p className="mx-auto mt-2 max-w-lg text-center text-[13px] text-foreground-muted">
-                Ask about transcripts, summarize a meeting, extract actions, or compare media insights.
+              <p className="mx-auto mt-2 max-w-xl text-center text-[13px] text-foreground-muted">
+                Analyze transcripts, compare uploads, extract action items, and keep everything in one workspace thread.
               </p>
-              <div className="mx-auto mt-6 grid max-w-3xl gap-2.5 sm:grid-cols-2">
-                {starterPrompts.map((prompt) => (
+
+              <div className="mx-auto mt-7 max-w-[750px]">
+                <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-3 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.gif,audio/*,video/*"
+                    onChange={(event) => {
+                      if (!event.target.files?.length) {
+                        return;
+                      }
+                      void handleFiles(event.target.files);
+                      event.target.value = "";
+                    }}
+                  />
+                  {pendingAttachments.length ? (
+                    <div className="mb-2.5 flex flex-wrap gap-2">
+                      {pendingAttachments.map((attachment) => {
+                        const Icon = attachmentIcon(attachment.kind);
+                        return (
+                          <span
+                            key={attachment.id}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-0.5 text-[11px] text-foreground-muted"
+                          >
+                            <Icon className="h-3 w-3" />
+                            {attachment.name}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPendingAttachments((current) => current.filter((item) => item.id !== attachment.id))
+                              }
+                              className="text-muted hover:text-foreground"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  <Textarea
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder="Ask Olanma about your content"
+                    className="min-h-16 max-h-40 resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus:ring-0"
+                  />
+                  <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-border pt-2.5">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={openFilePicker}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] text-foreground-muted transition-colors hover:bg-surface-raised"
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        Attach
+                      </button>
+                      <select
+                        value={activeModel?.id ?? ""}
+                        disabled={!canSelectModel || !modelsQuery.data?.length}
+                        onChange={(event) => setSelectedModelId(event.target.value)}
+                        className={cn(
+                          "max-w-44 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] font-medium text-foreground outline-none",
+                          canSelectModel ? "cursor-pointer" : "cursor-default opacity-80",
+                        )}
+                      >
+                        {modelsQuery.data?.map((model) => (
+                          <option key={model.id} value={model.id}>
+                            {model.display_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button
+                      onClick={onSubmit}
+                      disabled={busy || (!draft.trim() && !pendingAttachments.length)}
+                      size="sm"
+                      className="h-8 w-8 rounded-full px-0"
+                    >
+                      {busy ? "..." : <ArrowUp className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {quickActions.map((action) => (
                   <button
-                    key={prompt}
+                    key={action.label}
                     type="button"
-                    onClick={() => setDraft(prompt)}
-                    className="rounded-2xl border border-border bg-surface px-3.5 py-3 text-left text-[13px] text-foreground transition-colors hover:bg-surface-raised"
+                    onClick={() => handleQuickAction(action)}
+                    className="rounded-full border border-border bg-background-secondary px-4 py-2 text-sm text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
                   >
-                    <span className="font-medium">{prompt}</span>
+                    {action.label}
                   </button>
+                ))}
+              </div>
+
+              <div className="mx-auto mt-6 max-w-[650px] rounded-2xl border border-border bg-surface">
+                {starterPrompts.map((prompt, index) => (
+                  <div key={prompt}>
+                    {index > 0 ? <div className="border-t border-border" /> : null}
+                    <button
+                      type="button"
+                      onClick={() => sendSuggestedPrompt(prompt)}
+                      className="w-full rounded-2xl px-4 py-3 text-left text-sm text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+                    >
+                      {prompt}
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
           </div>
         )}
+        </div>
       </div>
 
-      <div className="border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-5">
+      {hasConversation ? (
+      <div className="shrink-0 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-5">
         <div className="mx-auto max-w-3xl">
           <div className="rounded-[1.2rem] border border-border bg-surface px-3.5 py-3 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none sm:px-4 sm:py-3.5">
             <input
@@ -485,13 +619,13 @@ export function ChatLayout() {
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder="Ask Olanma about your content"
-              className="min-h-12 border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus:ring-0 sm:min-h-14"
+              className="min-h-12 max-h-40 resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus:ring-0 sm:min-h-14"
             />
             <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-border pt-2.5">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={openFilePicker}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] text-foreground-muted transition-colors hover:bg-surface-raised"
                 >
                   <Paperclip className="h-3 w-3" />
@@ -530,6 +664,7 @@ export function ChatLayout() {
           ) : null}
         </div>
       </div>
+      ) : null}
     </div>
   );
 }

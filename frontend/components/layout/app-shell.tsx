@@ -13,9 +13,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex min-h-screen max-w-420 flex-col gap-0 xl:flex-row">
-        <div className="hidden xl:block xl:h-screen">
+    <div className="h-screen overflow-hidden bg-background text-foreground">
+      <div className="mx-auto flex h-full max-w-420 flex-col gap-0 overflow-hidden xl:flex-row">
+        <div className="hidden h-full xl:block xl:shrink-0">
           <Sidebar
             pathname={pathname}
             collapsed={sidebarCollapsed}
@@ -32,12 +32,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ) : null}
 
         <div
-          className={`flex flex-1 flex-col overflow-hidden xl:border-l xl:border-border ${
+          className={`flex min-h-0 flex-1 flex-col overflow-hidden xl:border-l xl:border-border ${
             isChat ? "p-0" : "px-4 py-4 lg:px-6 lg:py-5"
           }`}
         >
           <div
-            className={`flex items-center ${isChat ? "justify-between border-b border-border px-4 py-4 sm:px-5" : "mb-2 gap-3 px-1 py-0 sm:hidden"}`}
+            className={`flex items-center ${isChat ? "justify-start border-b border-border px-4 py-3 sm:px-5" : "mb-2 gap-3 px-1 py-0 sm:hidden"}`}
           >
             <button
               type="button"
@@ -47,12 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {sidebarOpen ? <X className="h-4.5 w-4.5" /> : <Menu className="h-4.5 w-4.5" />}
             </button>
 
-            {isChat ? (
-              <div className="min-w-0 flex-1">
-                <p className="text-xs uppercase tracking-[0.22em] text-foreground-muted">Transcript Q&A</p>
-                <h1 className="mt-1 truncate text-lg font-medium text-foreground">Ask your content</h1>
-              </div>
-            ) : (
+            {isChat ? null : (
               <>
                 <div className="flex-1" />
                 <button
@@ -64,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </>
             )}
           </div>
-          {children}
+          <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
         </div>
       </div>
     </div>
