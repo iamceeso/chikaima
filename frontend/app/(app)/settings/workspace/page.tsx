@@ -131,7 +131,12 @@ export default function WorkspaceSettingsPage() {
           <div className="mt-5 rounded-2xl border border-border bg-background p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-medium text-foreground">Public registration</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">Public registration</p>
+                  <span className="rounded-full border border-border bg-background-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+                    {workspaceQuery.data?.public_registration_enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm text-foreground-muted">
                   {workspaceQuery.data?.public_registration_enabled ? "Enabled" : "Disabled"}
                 </p>
@@ -140,6 +145,7 @@ export default function WorkspaceSettingsPage() {
                 type="button"
                 onClick={() => setRegistrationDialogOpen(true)}
                 disabled={!user?.is_superuser || toggleRegistration.isPending || workspaceQuery.isLoading}
+                className="w-[16rem] min-w-[16rem] max-w-[16rem] justify-center whitespace-nowrap"
               >
                 {workspaceQuery.data?.public_registration_enabled ? "Disable registration" : "Enable registration"}
               </Button>
@@ -153,7 +159,12 @@ export default function WorkspaceSettingsPage() {
           <div className="mt-4 rounded-2xl border border-border bg-background p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-medium text-foreground">Authentication</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">Authentication</p>
+                  <span className="rounded-full border border-border bg-background-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+                    {workspaceQuery.data?.authentication_enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm text-foreground-muted">
                   {workspaceQuery.data?.first_user_registration_required
                     ? "Create the first user account before changing authentication rules."
@@ -166,6 +177,7 @@ export default function WorkspaceSettingsPage() {
                 type="button"
                 onClick={() => setAuthenticationDialogOpen(true)}
                 disabled={!user?.is_superuser || workspaceQuery.data?.first_user_registration_required || toggleAuthentication.isPending || workspaceQuery.isLoading}
+                className="w-[16rem] min-w-[16rem] max-w-[16rem] justify-center whitespace-nowrap"
               >
                 {workspaceQuery.data?.authentication_enabled ? "Disable authentication" : "Enable authentication"}
               </Button>
@@ -179,7 +191,12 @@ export default function WorkspaceSettingsPage() {
           <div className="mt-4 rounded-2xl border border-border bg-background p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-medium text-foreground">API docs</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">API docs</p>
+                  <span className="rounded-full border border-border bg-background-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+                    {workspaceQuery.data?.docs_enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm text-foreground-muted">
                   {workspaceQuery.data?.docs_enabled
                     ? "Swagger UI, ReDoc, and OpenAPI schema are publicly reachable."
@@ -190,6 +207,7 @@ export default function WorkspaceSettingsPage() {
                 type="button"
                 onClick={() => setDocsDialogOpen(true)}
                 disabled={!user?.is_superuser || toggleDocs.isPending || workspaceQuery.isLoading}
+                className="w-[16rem] min-w-[16rem] max-w-[16rem] justify-center whitespace-nowrap"
               >
                 {workspaceQuery.data?.docs_enabled ? "Disable docs" : "Enable docs"}
               </Button>

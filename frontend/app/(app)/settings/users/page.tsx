@@ -43,6 +43,15 @@ const updateUserSchema = z.object({
 
 type UpdateUserValues = z.infer<typeof updateUserSchema>;
 
+function maskEmail(email: string) {
+  const [localPart, domain = ""] = email.split("@");
+  const visibleLocal = localPart.slice(0, 2);
+  const hiddenLocal = localPart.length > 2 ? "*".repeat(Math.max(localPart.length - 2, 3)) : "***";
+  const [domainName, tld = ""] = domain.split(".");
+  const visibleDomain = domainName ? `${domainName.slice(0, 1)}***` : "***";
+  return `${visibleLocal}${hiddenLocal}@${visibleDomain}${tld ? `.${tld}` : ""}`;
+}
+
 export default function SettingsUsersPage() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const currentUser = useAuthStore((state) => state.user);
@@ -76,6 +85,16 @@ export default function SettingsUsersPage() {
         return Promise.reject(new Error("Please sign in first."));
       }
       return api.getUsers(token);
+    },
+    enabled: Boolean(token && currentUser?.is_superuser),
+  });
+  const workspaceQuery = useQuery({
+    queryKey: ["workspace-settings"],
+    queryFn: () => {
+      if (!token) {
+        return Promise.reject(new Error("Please sign in first."));
+      }
+      return api.getWorkspaceSettings(token);
     },
     enabled: Boolean(token && currentUser?.is_superuser),
   });
@@ -143,6 +162,36 @@ export default function SettingsUsersPage() {
   const adminCount = usersQuery.data?.filter((user) => user.is_superuser).length ?? 0;
   const editingUser = usersQuery.data?.find((user) => user.id === editingUserId) ?? null;
   const editingLastAdmin = Boolean(editingUser?.is_superuser && adminCount <= 1);
+  const userManagementLocked = workspaceQuery.data?.authentication_enabled === false;
+
+  if (userManagementLocked) {
+    return (
+      <SettingsShell
+        title="User management"
+        description="Manage access."
+      >
+        <Card className="p-6">
+          <h2 className="text-base font-semibold text-foreground">User management is disabled</h2>
+          <p className="mt-2 text-sm text-foreground-muted">
+            Authentication is currently disabled for this workspace, so the Users page is unavailable.
+          </p>
+          <p className="mt-2 text-sm text-foreground-muted">
+            Registered user values are masked while authentication is off. Re-enable authentication from Workspace settings to view or edit users again.
+          </p>
+          {usersQuery.data?.length ? (
+            <div className="mt-4 space-y-2">
+              {usersQuery.data.map((user) => (
+                <div key={user.id} className="rounded-2xl border border-border bg-background-secondary p-4">
+                  <p className="text-sm font-medium text-foreground">{user.full_name}</p>
+                  <p className="mt-1 text-sm text-foreground-muted">{maskEmail(user.email)}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </Card>
+      </SettingsShell>
+    );
+  }
 
   return (
     <SettingsShell

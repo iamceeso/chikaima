@@ -76,6 +76,16 @@ export function Sidebar({
       return api.getConversations(token);
     },
   });
+  const workspaceQuery = useQuery({
+    queryKey: ["workspace-settings"],
+    queryFn: () => {
+      if (!token) {
+        return Promise.resolve(null);
+      }
+      return api.getWorkspaceSettings(token);
+    },
+    enabled: Boolean(token && user?.is_superuser),
+  });
   const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));
   const deleteConversation = useMutation({
@@ -242,24 +252,34 @@ export function Sidebar({
               {settingsItems
                 .filter((item) => !item.adminOnly || user?.is_superuser)
                 .map((item) => {
+                  const disabled =
+                    item.href === "/settings/users" && workspaceQuery.data?.authentication_enabled === false;
                   const active = pathname === item.href;
                   const Icon = item.icon;
                   return (
                     <Link
                       key={item.href}
-                        href={item.href}
-                        onClick={() => {
+                        href={disabled ? pathname : item.href}
+                        onClick={(event) => {
+                          if (disabled) {
+                            event.preventDefault();
+                            return;
+                          }
                           onClose?.();
                         }}
                         className={cn(
                         "flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[11px] transition-colors duration-150",
+                        disabled ? "cursor-not-allowed opacity-45" : "",
                         active
                           ? "bg-background text-foreground"
                           : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
                       )}
                     >
                       <Icon className="h-3.5 w-3.5" />
-                      <span className="font-medium">{item.label}</span>
+                      <span className="font-medium">
+                        {item.label}
+                        {disabled ? " (Disabled)" : ""}
+                      </span>
                     </Link>
                   );
                 })}
