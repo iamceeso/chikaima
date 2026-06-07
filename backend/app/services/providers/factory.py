@@ -23,9 +23,9 @@ class AdapterFactory:
         elif provider_type == "openai_compatible":
             return OpenAIAdapter(api_key=api_key, base_url=provider.base_url)
         elif provider_type == "anthropic":
-            return AnthropicAdapter(api_key=api_key)
+            return AnthropicAdapter(api_key=api_key, base_url=provider.base_url)
         elif provider_type == "gemini":
-            return GeminiAdapter(api_key=api_key)
+            return GeminiAdapter(api_key=api_key, base_url=provider.base_url)
         elif provider_type == "ollama":
             base_url = provider.base_url or settings.ollama_base_url
             return OllamaAdapter(base_url=base_url)

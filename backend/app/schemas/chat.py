@@ -40,3 +40,14 @@ class ConversationResponse(TimestampedResponse):
 
 class RegenerateRequest(BaseModel):
     message_id: str
+
+
+class StreamMessage(BaseModel):
+    role: str = Field(pattern="^(system|user|assistant)$")
+    content: str = Field(min_length=1)
+
+
+class StreamChatRequest(BaseModel):
+    messages: list[StreamMessage] = Field(min_length=1)
+    model_id: str | None = None
+    use_rag: bool = True

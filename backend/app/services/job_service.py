@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.models.job import Job
 from app.repositories.jobs import JobRepository
 from app.workers.tasks import analyze_document, process_video, transcribe_audio
+
+logger = logging.getLogger(__name__)
 
 
 class JobService:
@@ -44,4 +48,11 @@ class JobService:
         }
         task = task_map.get(job.job_type)
         if task:
-            task.delay(job.id)
+            try:
+                task.delay(job.id)
+            except Exception as exc:  # noqa: BLE001
+                job.status = "failed"
+                job.error_message = f"Background dispatch failed: {exc}"
+                self.db.add(job)
+                self.db.commit()
+                logger.exception("Failed to dispatch job %s", job.id)

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Iterator
 
-import httpx
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -44,16 +43,7 @@ class LLMService:
         return model, provider
 
     def generate_reply(self, provider: Provider, model: AIModel, messages: list[dict[str, str]]) -> str:
-        encrypted_api_key = provider.encrypted_config.get("api_key")
-        if not encrypted_api_key:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"{provider.name} is missing an API key.",
-            )
-
-        api_key = secret_manager.decrypt(encrypted_api_key)
-        adapter = AdapterFactory.create(provider, api_key)
-
+        adapter = self._build_adapter(provider)
         content = adapter.generate_reply(model.model_key, messages)
         if not content:
             raise HTTPException(
@@ -61,6 +51,32 @@ class LLMService:
                 detail="The AI provider returned an empty response.",
             )
         return content
+
+    def stream_reply(self, provider: Provider, model: AIModel, messages: list[dict[str, str]]) -> Iterator[str]:
+        adapter = self._build_adapter(provider)
+        yielded = False
+        for chunk in adapter.stream_reply(model.model_key, messages):
+            if not chunk:
+                continue
+            yielded = True
+            yield chunk
+
+        if not yielded:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="The AI provider returned an empty streamed response.",
+            )
+
+    def _build_adapter(self, provider: Provider):
+        encrypted_api_key = provider.encrypted_config.get("api_key")
+        if provider.provider_type != "ollama" and not encrypted_api_key:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"{provider.name} is missing an API key.",
+            )
+
+        api_key = secret_manager.decrypt(encrypted_api_key) if encrypted_api_key else ""
+        return AdapterFactory.create(provider, api_key)
 
     def generate_reply_with_rag(
         self,
@@ -98,3 +114,33 @@ If the context doesn't contain relevant information, answer based on your knowle
         response = self.generate_reply(provider, model, messages)
         return response, context_ids
 
+    def stream_reply_with_rag(
+        self,
+        user_id: str,
+        provider: Provider,
+        model: AIModel,
+        messages: list[dict[str, str]],
+        include_context: bool = True,
+    ) -> tuple[Iterator[str], list[str]]:
+        user_message = messages[-1]["content"] if messages else ""
+        context_ids: list[str] = []
+        stream_messages = messages
+
+        if include_context and user_message:
+            similar_embeddings = self.embeddings.search_similar(user_id, user_message)
+            if similar_embeddings:
+                context = "\n\n".join([e[0].content for e in similar_embeddings])
+                context_ids = [e[0].id for e in similar_embeddings]
+                rag_system_message = f"""You are a helpful assistant with access to relevant documents and transcripts.
+Use the following context to answer the user's question:
+
+{context}
+
+---
+
+If the context doesn't contain relevant information, answer based on your knowledge."""
+                stream_messages = [{"role": "system", "content": rag_system_message}]
+                stream_messages.extend(messages[:-1])
+                stream_messages.append({"role": "user", "content": user_message})
+
+        return self.stream_reply(provider, model, stream_messages), context_ids

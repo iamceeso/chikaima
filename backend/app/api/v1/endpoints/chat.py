@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps.auth import get_current_user
@@ -11,6 +14,7 @@ from app.schemas.chat import (
     ConversationResponse,
     MessageCreate,
     MessageResponse,
+    StreamChatRequest,
     MessageUpdate,
     RegenerateRequest,
 )
@@ -71,5 +75,41 @@ def regenerate_message(
 
 
 @router.post("/stream")
-def stream_chat() -> dict[str, str]:
-    return {"message": "Streaming endpoint scaffold ready for SSE/WebSocket provider integration."}
+def stream_chat(
+    payload: StreamChatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
+    service = ChatService(db)
+    model, provider = service.llm.resolve_model_and_provider(current_user.id, payload.model_id)
+    stream, context_ids = service.llm.stream_reply_with_rag(
+        user_id=current_user.id,
+        provider=provider,
+        model=model,
+        messages=[message.model_dump() for message in payload.messages],
+        include_context=payload.use_rag,
+    )
+
+    def event_stream():
+        metadata = {
+            "provider": provider.provider_type,
+            "model": model.model_key,
+            "rag_context_ids": context_ids,
+        }
+        yield f"event: metadata\ndata: {json.dumps(metadata)}\n\n"
+        try:
+            for chunk in stream:
+                yield f"event: token\ndata: {json.dumps({'text': chunk})}\n\n"
+            yield "event: done\ndata: {}\n\n"
+        except Exception as exc:  # noqa: BLE001
+            yield f"event: error\ndata: {json.dumps({'detail': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
