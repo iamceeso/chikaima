@@ -8,8 +8,6 @@ import { FilePanel } from "./file-panel";
 import { SuggestedMessages, useSuggestedMessages } from "./suggested-messages";
 import type { Conversation, Message, DocumentAsset } from "@/types";
 import type { AttachedFile } from "@/hooks/useFileAttachments";
-import { cn } from "@/lib/utils";
-
 interface ChatViewProps {
   conversation: Conversation | null;
   messages: Message[];
@@ -50,37 +48,33 @@ export function ChatView({
     scrollToBottom();
   }, [messages]);
 
-  if (!conversation) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-foreground-muted mb-2">Select or create a conversation to start</p>
-        </div>
-      </div>
-    );
-  }
-
-  const suggestions = useSuggestedMessages(conversation.metadata?.content_type as string);
+  const contentType =
+    conversation && "metadata" in conversation
+      ? ((conversation as { metadata?: { content_type?: string } }).metadata?.content_type ?? "")
+      : "";
+  const suggestions = useSuggestedMessages(contentType);
   const emptyChat = messages.length === 0;
 
   return (
-    <div className="flex-1 flex flex-col bg-background relative">
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="border-b border-border px-6 py-4">
-        <h2 className="text-lg font-semibold text-foreground">{conversation.title}</h2>
-        {conversation.model_id && (
+      <div className="shrink-0 border-b border-border px-6 py-4">
+        <h2 className="text-lg font-semibold text-foreground">
+          {conversation?.title ?? "New conversation"}
+        </h2>
+        {conversation?.model_id && (
           <p className="text-sm text-foreground-muted mt-1">Model: {conversation.model_id}</p>
         )}
       </div>
 
       {/* Main content container */}
-      <div className="flex-1 flex relative">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {/* Messages area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto p-6">
             {emptyChat && showSuggestions ? (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex min-h-full items-center justify-center">
                 <div className="max-w-md text-center">
                   <h3 className="text-lg font-semibold text-foreground mb-2">Start a conversation</h3>
                   <p className="text-sm text-foreground-muted mb-6">
@@ -132,14 +126,16 @@ export function ChatView({
           )}
 
           {/* Input */}
-          <ChatInput
-            onSend={onSendMessage}
-            onFileUpload={onFileUpload}
-            attachedFiles={attachedFiles}
-            onRemoveFile={onRemoveAttachedFile}
-            isLoading={isLoading}
-            placeholder="Ask anything..."
-          />
+          <div className="shrink-0">
+            <ChatInput
+              onSend={onSendMessage}
+              onFileUpload={onFileUpload}
+              attachedFiles={attachedFiles}
+              onRemoveFile={onRemoveAttachedFile}
+              isLoading={isLoading}
+              placeholder="Ask anything..."
+            />
+          </div>
         </div>
 
         {/* File panel */}

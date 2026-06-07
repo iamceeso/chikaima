@@ -74,8 +74,21 @@ export default function ChatPage() {
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!currentConversation) return;
     try {
+      let conversation = currentConversation;
+
+      if (!conversation) {
+        const title = content.trim().slice(0, 48) || `Conversation ${new Date().toLocaleDateString()}`;
+        const newConversation = await createConversation(title, undefined, content);
+        if (!newConversation) {
+          return;
+        }
+        conversation = newConversation;
+        selectConversation(conversation);
+        clearFiles();
+        return;
+      }
+
       const attachmentMetadata = attachedFiles.map((file) => ({
         id: file.id,
         name: file.file.name,
@@ -87,7 +100,7 @@ export default function ChatPage() {
       }));
 
       await addMessage(
-        currentConversation.id,
+        conversation.id,
         content,
         "user",
         attachmentMetadata.length ? { attachments: attachmentMetadata } : undefined,
@@ -146,7 +159,7 @@ export default function ChatPage() {
 
   if (!initialized) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-background">
         <div className="flex items-center gap-2 text-foreground-muted">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>Loading conversations...</span>
@@ -156,9 +169,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex bg-background">
+    <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       {/* Sidebar with conversation list */}
-      <div className="w-72 hidden md:flex flex-col border-r border-border">
+      <div className="hidden w-72 min-h-0 shrink-0 md:flex md:flex-col md:border-r md:border-border">
         <ConversationList
           conversations={conversations}
           currentId={currentConversation?.id}

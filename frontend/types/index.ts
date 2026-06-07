@@ -100,6 +100,7 @@ export interface Job {
 }
 
 export interface DocumentAsset {
+  metadata: Record<string, unknown>;
   id: string;
   name: string;
   file_path: string;

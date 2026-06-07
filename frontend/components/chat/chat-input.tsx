@@ -82,14 +82,15 @@ export function ChatInput({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={isLoading || isSending || isUploading}
-            className="resize-none min-h-[80px]"
+            className="resize-none min-h-20"
           />
           <div className="flex flex-col gap-2">
             {onFileUpload && (
               <>
                 <Button
                   variant="outline"
-                  size="icon"
+                  size="sm"
+                  className="h-9 w-9 p-0"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isLoading || isSending || isUploading}
                   title="Attach file"
@@ -108,7 +109,8 @@ export function ChatInput({
             <Button
               onClick={handleSend}
               disabled={(!input.trim() && attachedFiles.length === 0) || isLoading || isSending || isUploading}
-              size="icon"
+              size="sm"
+              className="h-9 w-9 p-0"
             >
               <Send className="h-4 w-4" />
             </Button>

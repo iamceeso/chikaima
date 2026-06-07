@@ -3,8 +3,6 @@
 import { X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { DocumentAsset } from "@/types";
-import { cn } from "@/lib/utils";
-
 interface FilePanelProps {
   files: DocumentAsset[];
   isOpen: boolean;
@@ -36,6 +34,20 @@ export function FilePanel({
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  };
+
+  const getFileSize = (file: DocumentAsset) => {
+    const f = file as DocumentAsset & {
+      size?: number;
+      file_size?: number;
+      bytes?: number;
+    };
+    return f.size ?? f.file_size ?? f.bytes ?? 0;
+  };
+
+  const getPageCount = (file: DocumentAsset) => {
+    const pages = file.metadata?.pages;
+    return typeof pages === "number" ? pages : null;
   };
 
   return (
@@ -80,18 +92,21 @@ export function FilePanel({
               </div>
             ) : (
               <div className="space-y-2">
-                {files.map((file) => (
-                  <div
-                    key={file.id}
-                    className="group flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border transition-colors"
-                  >
+                {files.map((file) => {
+                  const pageCount = getPageCount(file);
+
+                  return (
+                    <div
+                      key={file.id}
+                      className="group flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 border border-transparent hover:border-border transition-colors"
+                    >
                     <div className="flex-1 min-w-0 pt-1">
                       <p className="text-sm font-medium truncate text-foreground">
                         {file.name || "Untitled"}
                       </p>
                       <div className="flex items-center gap-1 mt-0.5">
                         <p className="text-xs text-foreground-muted">
-                          {formatFileSize(file.size || 0)}
+                          {formatFileSize(getFileSize(file))}
                         </p>
                         {file.created_at && (
                           <>
@@ -102,9 +117,9 @@ export function FilePanel({
                           </>
                         )}
                       </div>
-                      {file.metadata?.pages && (
+                      {pageCount !== null && (
                         <p className="text-xs text-primary mt-1">
-                          {file.metadata.pages} pages
+                          {pageCount} pages
                         </p>
                       )}
                     </div>
@@ -112,7 +127,7 @@ export function FilePanel({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                         onClick={() => onRemove(file.id)}
                         disabled={isLoading}
                         title="Remove from chat"
@@ -121,7 +136,8 @@ export function FilePanel({
                       </Button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

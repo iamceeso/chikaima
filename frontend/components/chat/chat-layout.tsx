@@ -500,7 +500,7 @@ export function ChatLayout() {
                       </div>
                     ) : (
                       <>
-                        <p className="whitespace-pre-wrap text-[13px] leading-6 text-foreground sm:text-sm">
+                        <p className="whitespace-pre-wrap wrap-break-word text-[13px] leading-6 text-foreground sm:text-sm">
                           {message.content}
                         </p>
                         {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
