@@ -7,11 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.models.audio import AudioAsset
 from app.models.document import Document
+from app.models.embedding import Embedding
+from app.models.job import Job
 from app.models.summary import SummaryArtifact
 from app.models.transcript import Transcript
 from app.models.video import Video
 from app.services.embeddings_service import EmbeddingsService
 from app.services.llm_service import LLMService
+from app.services.storage_service import storage_service
 
 MAX_LLM_SOURCE_CHARS = 12_000
 
@@ -51,6 +54,110 @@ class TranscriptService:
         if not resource or resource.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
         return resource
+
+    def delete_resource(self, user_id: str, resource_type: str, resource_id: str) -> None:
+        resource = self.get_resource(user_id, resource_type, resource_id)
+        storage_service.delete_file(getattr(resource, "file_path", None))
+
+        transcripts = (
+            self.db.query(Transcript)
+            .filter(
+                Transcript.user_id == user_id,
+                Transcript.resource_type == resource_type,
+                Transcript.resource_id == resource_id,
+            )
+            .all()
+        )
+        transcript_ids = [item.id for item in transcripts]
+
+        summaries = (
+            self.db.query(SummaryArtifact)
+            .filter(
+                SummaryArtifact.user_id == user_id,
+                SummaryArtifact.resource_type == resource_type,
+                SummaryArtifact.resource_id == resource_id,
+            )
+            .all()
+        )
+        summary_ids = [item.id for item in summaries]
+
+        if transcript_ids:
+            (
+                self.db.query(Embedding)
+                .filter(
+                    Embedding.user_id == user_id,
+                    Embedding.source_type == "transcript",
+                    Embedding.source_id.in_(transcript_ids),
+                )
+                .delete(synchronize_session=False)
+            )
+
+        if summary_ids:
+            (
+                self.db.query(Embedding)
+                .filter(
+                    Embedding.user_id == user_id,
+                    Embedding.source_type == "summary",
+                    Embedding.source_id.in_(summary_ids),
+                )
+                .delete(synchronize_session=False)
+            )
+
+        (
+            self.db.query(Embedding)
+            .filter(
+                Embedding.user_id == user_id,
+                Embedding.source_type == resource_type,
+                Embedding.source_id == resource_id,
+            )
+            .delete(synchronize_session=False)
+        )
+        (
+            self.db.query(Job)
+            .filter(
+                Job.user_id == user_id,
+                Job.resource_type == resource_type,
+                Job.resource_id == resource_id,
+            )
+            .delete(synchronize_session=False)
+        )
+        (
+            self.db.query(Transcript)
+            .filter(
+                Transcript.user_id == user_id,
+                Transcript.resource_type == resource_type,
+                Transcript.resource_id == resource_id,
+            )
+            .delete(synchronize_session=False)
+        )
+        (
+            self.db.query(SummaryArtifact)
+            .filter(
+                SummaryArtifact.user_id == user_id,
+                SummaryArtifact.resource_type == resource_type,
+                SummaryArtifact.resource_id == resource_id,
+            )
+            .delete(synchronize_session=False)
+        )
+
+        self.db.delete(resource)
+        self.db.commit()
+
+    def delete_all_resources(self, user_id: str, resource_type: str) -> int:
+        model_map = {
+            "audio": AudioAsset,
+            "video": Video,
+            "document": Document,
+        }
+        model = model_map.get(resource_type)
+        if model is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported resource type")
+
+        resources = self.db.query(model).filter(model.user_id == user_id).all()
+        count = len(resources)
+        for resource in resources:
+            self.delete_resource(user_id, resource_type, resource.id)
+        return count
 
     def list_summaries_for_resource(
         self,

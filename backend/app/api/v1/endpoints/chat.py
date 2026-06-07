@@ -45,6 +45,15 @@ def create_conversation(
     return ConversationResponse.model_validate(conversation)
 
 
+@router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_conversation(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    ChatService(db).delete_conversation(current_user.id, conversation_id)
+
+
 @router.post("/conversations/{conversation_id}/messages", response_model=MessageResponse)
 def add_message(
     conversation_id: str,

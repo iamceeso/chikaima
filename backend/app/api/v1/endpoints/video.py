@@ -25,6 +25,23 @@ def list_videos(
     return [VideoResponse.model_validate(video) for video in videos]
 
 
+@router.delete("/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_video(
+    video_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    TranscriptService(db).delete_resource(current_user.id, "video", video_id)
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def clear_videos(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    TranscriptService(db).delete_all_resources(current_user.id, "video")
+
+
 @router.post("/upload", response_model=VideoResponse, status_code=status.HTTP_201_CREATED)
 async def upload_video(
     file: UploadFile = File(...),

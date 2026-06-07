@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -15,11 +15,22 @@ import {
   PanelLeftOpen,
   Settings,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
+import type { Conversation } from "@/types";
 import { useChatStore } from "@/store/chat-store";
 
 const navItems = [
@@ -53,6 +64,8 @@ export function Sidebar({
   const activeConversationId = useChatStore((state) => state.activeConversationId);
   const openFreshChat = useChatStore((state) => state.openFreshChat);
   const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
+  const queryClient = useQueryClient();
+  const [conversationPendingDelete, setConversationPendingDelete] = useState<Conversation | null>(null);
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
     queryFn: () => {
@@ -64,6 +77,21 @@ export function Sidebar({
   });
   const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));
+  const deleteConversation = useMutation({
+    mutationFn: async (conversationId: string) => {
+      if (!token) {
+        throw new Error("Please sign in first.");
+      }
+      await api.deleteConversation(token, conversationId);
+    },
+    onSuccess: async (_data, conversationId) => {
+      if (selectedConversationId === conversationId) {
+        openFreshChat();
+      }
+      setConversationPendingDelete(null);
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
 
   return (
     <aside
@@ -226,25 +254,46 @@ export function Sidebar({
             {conversationsQuery.data?.map((item) => {
               const active = pathname === "/chat" && selectedConversationId === item.id;
               return (
-                <Link
+                <div
                   key={item.id}
-                  href="/chat"
-                  onClick={() => {
-                    setActiveConversationId(item.id);
-                    onClose?.();
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setConversationPendingDelete(item);
                   }}
                   className={cn(
-                    "block rounded-2xl px-3 py-2 transition-colors duration-150",
+                    "group flex items-start gap-2 rounded-2xl px-3 py-2 transition-colors duration-150",
                     active
                       ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
                       : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
                   )}
                 >
-                  <p className="truncate text-xs font-medium">{item.title}</p>
-                  <p className="mt-1 truncate text-xs text-muted">
-                    {item.messages?.at(-1)?.content ?? "No messages yet"}
-                  </p>
-                </Link>
+                  <Link
+                    href="/chat"
+                    onClick={() => {
+                      setActiveConversationId(item.id);
+                      onClose?.();
+                    }}
+                    className="min-w-0 flex-1"
+                  >
+                    <p className="truncate text-xs font-medium">{item.title}</p>
+                    <p className="mt-1 truncate text-xs text-muted">
+                      {item.messages?.at(-1)?.content ?? "No messages yet"}
+                    </p>
+                  </Link>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${item.title}`}
+                    onClick={() => setConversationPendingDelete(item)}
+                    className={cn(
+                      "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity",
+                      active
+                        ? "text-foreground-muted hover:bg-background"
+                        : "text-foreground-muted hover:bg-background/80 group-hover:opacity-100",
+                    )}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               );
             })}
             {!conversationsQuery.data?.length ? (
@@ -255,6 +304,49 @@ export function Sidebar({
           </div>
         </div>
       ) : null}
+
+      <AlertDialog
+        open={Boolean(conversationPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleteConversation.isPending) {
+            setConversationPendingDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {conversationPendingDelete
+                ? `This will remove "${conversationPendingDelete.title}" and all messages in that analysis.`
+                : "This analysis will be removed from your recent chats."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-border"
+              disabled={deleteConversation.isPending}
+              onClick={() => setConversationPendingDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={deleteConversation.isPending || !conversationPendingDelete}
+              onClick={() => {
+                if (!conversationPendingDelete) {
+                  return;
+                }
+                deleteConversation.mutate(conversationPendingDelete.id);
+              }}
+            >
+              {deleteConversation.isPending ? "Deleting..." : "Delete chat"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </div>
     </aside>
   );

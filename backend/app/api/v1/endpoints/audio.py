@@ -25,6 +25,23 @@ def list_audio_assets(
     return [AudioResponse.model_validate(asset) for asset in assets]
 
 
+@router.delete("/{audio_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_audio_asset(
+    audio_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    TranscriptService(db).delete_resource(current_user.id, "audio", audio_id)
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def clear_audio_assets(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    TranscriptService(db).delete_all_resources(current_user.id, "audio")
+
+
 @router.post("/upload", response_model=AudioResponse, status_code=status.HTTP_201_CREATED)
 async def upload_audio(
     file: UploadFile = File(...),

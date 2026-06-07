@@ -121,18 +121,25 @@ export const api = {
     request<void>(`/providers/${providerId}`, { method: "DELETE", token }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),
   getDocuments: (token: string) => request<DocumentAsset[]>("/documents", { token }),
+  deleteDocument: (token: string, documentId: string) =>
+    request<void>(`/documents/${documentId}`, { method: "DELETE", token }),
+  clearDocuments: (token: string) => request<void>("/documents", { method: "DELETE", token }),
   uploadDocument: (token: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
     return request<DocumentAsset>("/documents/upload", { method: "POST", token, body: formData });
   },
   getAudioAssets: (token: string) => request<AudioAsset[]>("/audio", { token }),
+  deleteAudioAsset: (token: string, audioId: string) => request<void>(`/audio/${audioId}`, { method: "DELETE", token }),
+  clearAudioAssets: (token: string) => request<void>("/audio", { method: "DELETE", token }),
   uploadAudio: (token: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
     return request<AudioAsset>("/audio/upload", { method: "POST", token, body: formData });
   },
   getVideos: (token: string) => request<VideoAsset[]>("/video", { token }),
+  deleteVideo: (token: string, videoId: string) => request<void>(`/video/${videoId}`, { method: "DELETE", token }),
+  clearVideos: (token: string) => request<void>("/video", { method: "DELETE", token }),
   uploadVideo: (token: string, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -143,6 +150,8 @@ export const api = {
     token: string,
     payload: { title: string; folder?: string; model_id?: string; initial_message?: string; initial_metadata?: Record<string, unknown> },
   ) => request<Conversation>("/chat/conversations", { method: "POST", token, body: JSON.stringify(payload) }),
+  deleteConversation: (token: string, conversationId: string) =>
+    request<void>(`/chat/conversations/${conversationId}`, { method: "DELETE", token }),
   sendMessage: (
     token: string,
     conversationId: string,

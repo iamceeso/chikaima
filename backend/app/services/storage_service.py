@@ -58,6 +58,15 @@ class StorageService:
             "size_bytes": size,
         }
 
+    def delete_file(self, file_path: str | None) -> None:
+        if not file_path:
+            return
+        path = Path(file_path)
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            return
+
     def _sanitize_filename(self, name: str) -> str:
         sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
         return sanitized or "upload"

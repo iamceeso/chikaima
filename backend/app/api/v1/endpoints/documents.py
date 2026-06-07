@@ -26,6 +26,23 @@ def list_documents(
     return [DocumentResponse.model_validate(document) for document in documents]
 
 
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    TranscriptService(db).delete_resource(current_user.id, "document", document_id)
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+def clear_documents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    TranscriptService(db).delete_all_resources(current_user.id, "document")
+
+
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     file: UploadFile = File(...),

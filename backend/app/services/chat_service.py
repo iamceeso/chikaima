@@ -20,6 +20,13 @@ class ChatService:
     def list_conversations(self, user_id: str) -> list[Conversation]:
         return self.conversations.list_for_user(user_id)
 
+    def delete_conversation(self, user_id: str, conversation_id: str) -> None:
+        conversation = self.conversations.get(conversation_id)
+        if not conversation or conversation.user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+        self.db.delete(conversation)
+        self.db.commit()
+
     def create_conversation(self, user_id: str, payload: ConversationCreate, use_rag: bool = True) -> Conversation:
         try:
             model, provider = self.llm.resolve_model_and_provider(user_id, payload.model_id)
