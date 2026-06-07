@@ -29,6 +29,16 @@ def _extract_system_prompt(messages: list[dict[str, str]]) -> tuple[str | None, 
     return system_prompt, conversation_messages
 
 
+def _merge_consecutive_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    merged: list[dict[str, str]] = []
+    for message in _normalize_messages(messages):
+        if merged and merged[-1]["role"] == message["role"]:
+            merged[-1]["content"] = f"{merged[-1]['content']}\n\n{message['content']}".strip()
+        else:
+            merged.append(message.copy())
+    return merged
+
+
 def _iter_sse_json_events(lines: Iterator[str]) -> Iterator[dict[str, Any]]:
     data_lines: list[str] = []
 
@@ -165,11 +175,14 @@ class AnthropicAdapter(ProviderAdapter):
         self.base_url = (base_url or "https://api.anthropic.com").rstrip("/")
 
     def generate_reply(self, model_key: str, messages: list[dict[str, str]]) -> str:
-        system_prompt, conversation_messages = _extract_system_prompt(messages)
+        system_prompt, conversation_messages = _extract_system_prompt(_merge_consecutive_messages(messages))
         payload: dict[str, Any] = {
             "model": model_key,
             "max_tokens": 1024,
-            "messages": conversation_messages,
+            "messages": [
+                {"role": message["role"], "content": [{"type": "text", "text": message["content"]}]}
+                for message in conversation_messages
+            ],
         }
         if system_prompt:
             payload["system"] = system_prompt
@@ -207,11 +220,14 @@ class AnthropicAdapter(ProviderAdapter):
         return "\n".join(part for part in text_parts if part).strip()
 
     def stream_reply(self, model_key: str, messages: list[dict[str, str]]) -> Iterator[str]:
-        system_prompt, conversation_messages = _extract_system_prompt(messages)
+        system_prompt, conversation_messages = _extract_system_prompt(_merge_consecutive_messages(messages))
         payload: dict[str, Any] = {
             "model": model_key,
             "max_tokens": 1024,
-            "messages": conversation_messages,
+            "messages": [
+                {"role": message["role"], "content": [{"type": "text", "text": message["content"]}]}
+                for message in conversation_messages
+            ],
             "stream": True,
         }
         if system_prompt:
@@ -309,7 +325,7 @@ class GeminiAdapter(ProviderAdapter):
             ) from exc
 
     def _build_payload(self, messages: list[dict[str, str]]) -> dict[str, Any]:
-        system_prompt, conversation_messages = _extract_system_prompt(messages)
+        system_prompt, conversation_messages = _extract_system_prompt(_merge_consecutive_messages(messages))
         contents: list[dict[str, Any]] = []
         for message in conversation_messages:
             role = "model" if message["role"] == "assistant" else "user"
@@ -341,7 +357,7 @@ class OllamaAdapter(ProviderAdapter):
     def generate_reply(self, model_key: str, messages: list[dict[str, str]]) -> str:
         payload: dict[str, Any] = {
             "model": model_key,
-            "messages": _normalize_messages(messages),
+            "messages": _merge_consecutive_messages(messages),
             "stream": False,
         }
 
@@ -366,7 +382,7 @@ class OllamaAdapter(ProviderAdapter):
     def stream_reply(self, model_key: str, messages: list[dict[str, str]]) -> Iterator[str]:
         payload: dict[str, Any] = {
             "model": model_key,
-            "messages": _normalize_messages(messages),
+            "messages": _merge_consecutive_messages(messages),
             "stream": True,
         }
 

@@ -6,12 +6,13 @@ from sqlalchemy.orm import Session
 from app.api.deps.auth import get_current_user
 from app.core.database import get_db
 from app.models.document import Document
-from app.models.user import User
 from app.schemas.assets import AssetQuestionRequest, DocumentResponse
+from app.schemas.transcript import SummaryArtifactResponse
+from app.models.user import User
 from app.services.job_service import JobService
 from app.services.storage_service import storage_service
 from app.services.transcript_service import TranscriptService
-from app.schemas.transcript import TranscriptResponse, SummaryArtifactResponse
+from app.schemas.transcript import TranscriptResponse
 
 router = APIRouter()
 
@@ -80,11 +81,22 @@ def get_document_summaries(
     return [SummaryArtifactResponse.model_validate(item) for item in summaries]
 
 
-@router.post("/{document_id}/summarize")
-def summarize_document(document_id: str) -> dict[str, str]:
-    return {"document_id": document_id, "message": "Summarization queued"}
+@router.post("/{document_id}/summarize", response_model=list[SummaryArtifactResponse])
+def summarize_document(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[SummaryArtifactResponse]:
+    summaries = TranscriptService(db).summarize_resource(current_user.id, "document", document_id)
+    return [SummaryArtifactResponse.model_validate(item) for item in summaries]
 
 
 @router.post("/{document_id}/ask")
-def ask_document(document_id: str, payload: AssetQuestionRequest) -> dict[str, str]:
-    return {"document_id": document_id, "answer": f"Placeholder answer for: {payload.question}"}
+def ask_document(
+    document_id: str,
+    payload: AssetQuestionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    answer = TranscriptService(db).query_resource(current_user.id, "document", document_id, payload.question)
+    return {"document_id": document_id, "answer": answer}

@@ -89,7 +89,7 @@ export function ChatLayout() {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [selectedModelIds, setSelectedModelIds] = useState<Record<string, string>>({});
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamingMessages, setStreamingMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -124,16 +124,14 @@ export function ChatLayout() {
     ? undefined
     : conversationsQuery.data?.find((item) => item.id === activeConversationId);
   const defaultModel = modelsQuery.data?.find((model) => model.is_default) ?? modelsQuery.data?.[0];
+  const modelSelectionScope = conversation?.id ?? "fresh";
+  const selectedModelId = selectedModelIds[modelSelectionScope] ?? null;
   const activeModel =
     modelsQuery.data?.find((model) => model.id === selectedModelId) ??
     modelsQuery.data?.find((model) => model.id === conversation?.model_id) ??
     defaultModel;
   const displayMessages = [...(conversation?.messages ?? []), ...streamingMessages];
   const hasConversation = Boolean(displayMessages.length);
-
-  useEffect(() => {
-    setSelectedModelId(conversation?.model_id ?? defaultModel?.id ?? null);
-  }, [conversation?.id, conversation?.model_id, defaultModel?.id]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -429,7 +427,12 @@ export function ChatLayout() {
     <select
       value={activeModel?.id ?? ""}
       disabled={!modelsQuery.data?.length}
-      onChange={(event) => setSelectedModelId(event.target.value)}
+      onChange={(event) =>
+        setSelectedModelIds((current) => ({
+          ...current,
+          [modelSelectionScope]: event.target.value,
+        }))
+      }
       className={cn(
         "max-w-52 rounded-full border border-border bg-background-secondary/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm outline-none backdrop-blur",
         "cursor-pointer hover:bg-surface-raised",
