@@ -35,8 +35,11 @@ class ProviderResponse(TimestampedResponse):
 
 class AIModelResponse(TimestampedResponse):
     provider_id: str
+    provider_name: str | None = None
+    provider_type: ProviderType | None = None
     model_key: str
     display_name: str
     capabilities: dict
     is_default: bool
     is_available: bool
+    is_deprecated: bool = False

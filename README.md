@@ -1,6 +1,6 @@
-# Olanma
+# Olanma prononced OR-LAN-MA
 
-Olanma is a self-hosted AI media intelligence workspace for understanding audio, video, and documents with multiple AI providers. This monorepo contains a Next.js frontend and a FastAPI backend, plus Docker orchestration for PostgreSQL, Redis, and Celery workers.
+Olanma (or-lan-ma) is a self-hosted AI media intelligence workspace for understanding audio, video, and documents with multiple AI providers. This monorepo contains a Next.js frontend and a FastAPI backend, plus Docker orchestration for PostgreSQL, Redis, and Celery workers.
 
 ## Monorepo Structure
 

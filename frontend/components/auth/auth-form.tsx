@@ -2,9 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,46 @@ const loginSchema = z.object({
   email: z.string().email("Enter a valid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
 });
+
+function PasswordField({
+  id,
+  label,
+  required = false,
+  hint,
+  error,
+  registration,
+}: {
+  id: string;
+  label: string;
+  required?: boolean;
+  hint?: string;
+  error?: string;
+  registration: UseFormRegisterReturn;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div>
+      <Label htmlFor={id}>
+        {label} {required ? <span className="text-primary">*</span> : null}
+      </Label>
+      <div className="relative">
+        <Input id={id} type={visible ? "text" : "password"} className="pr-10" {...registration} />
+        <button
+          type="button"
+          aria-label={visible ? "Hide password" : "Show password"}
+          aria-pressed={visible}
+          onClick={() => setVisible((current) => !current)}
+          className="absolute inset-y-0 right-0 inline-flex w-10 items-center justify-center text-muted transition-colors hover:text-foreground"
+        >
+          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+      {hint ? <p className="mt-1 text-xs text-foreground-muted">{hint}</p> : null}
+      {error ? <p className="mt-1 text-sm text-primary">{error}</p> : null}
+    </div>
+  );
+}
 
 export function RegisterForm() {
   const router = useRouter();
@@ -87,16 +129,14 @@ export function RegisterForm() {
               <p className="mt-1 text-sm text-primary">{form.formState.errors.email.message}</p>
             ) : null}
           </div>
-          <div>
-            <Label htmlFor="password">
-              Password <span className="text-primary">*</span>
-            </Label>
-            <Input id="password" type="password" {...form.register("password")} />
-            <p className="mt-1 text-xs text-foreground-muted">Must be at least 8 characters.</p>
-            {form.formState.errors.password ? (
-              <p className="mt-1 text-sm text-primary">{form.formState.errors.password.message}</p>
-            ) : null}
-          </div>
+          <PasswordField
+            id="password"
+            label="Password"
+            required
+            hint="Must be at least 8 characters."
+            error={form.formState.errors.password?.message}
+            registration={form.register("password")}
+          />
           {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
           <Button type="submit" className="w-full">
             {mutation.isPending ? "Creating..." : "Create account"}
@@ -142,10 +182,12 @@ export function LoginForm() {
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" {...form.register("email")} />
         </div>
-        <div>
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" {...form.register("password")} />
-        </div>
+        <PasswordField
+          id="password"
+          label="Password"
+          error={form.formState.errors.password?.message}
+          registration={form.register("password")}
+        />
         {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
         <Button type="submit" className="w-full">
           {mutation.isPending ? "Signing in..." : "Sign in"}

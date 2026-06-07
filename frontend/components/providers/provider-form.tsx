@@ -95,7 +95,8 @@ export function ProviderForm() {
           <Input id="api_key" type="password" {...form.register("api_key")} placeholder="sk-..." />
         </div>
         <div className="rounded-xl border border-border bg-[var(--surface-strong)] p-4 text-xs leading-6 text-foreground-muted">
-          OpenAI is wired first for live chat. Add your OpenAI API key here, then pick the synced model from chat.
+          Olanma syncs the available models for each provider after you save it. OpenAI, Claude, Gemini, and Ollama
+          providers will populate their current model options automatically when the API supports model listing.
         </div>
         {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
         <Button type="submit" className="w-full">

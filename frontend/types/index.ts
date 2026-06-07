@@ -53,11 +53,14 @@ export interface Provider {
 export interface AIModel {
   id: string;
   provider_id: string;
+  provider_name?: string | null;
+  provider_type?: ProviderType | null;
   model_key: string;
   display_name: string;
   capabilities: Record<string, boolean>;
   is_default: boolean;
   is_available: boolean;
+  is_deprecated?: boolean;
   created_at: string;
   updated_at: string;
 }

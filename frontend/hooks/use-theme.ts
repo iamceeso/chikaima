@@ -5,18 +5,21 @@ import { useEffect, useState } from "react";
 type Theme = "dark" | "light";
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") {
+      return "dark";
+    }
+
+    const savedTheme = window.localStorage.getItem("olanma-theme") as Theme | null;
+    return savedTheme ?? "dark";
+  });
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem("olanma-theme") as Theme | null;
-    const nextTheme = savedTheme ?? "dark";
-    setTheme(nextTheme);
-    document.documentElement.classList.toggle("dark", nextTheme === "dark");
-  }, []);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
   const updateTheme = (nextTheme: Theme) => {
     setTheme(nextTheme);
-    document.documentElement.classList.toggle("dark", nextTheme === "dark");
     window.localStorage.setItem("olanma-theme", nextTheme);
   };
 

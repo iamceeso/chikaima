@@ -53,8 +53,7 @@ export default function WorkspaceSettingsPage() {
         throw new Error("Workspace settings are unavailable.");
       }
       return api.updateWorkspaceSettings(token, {
-        public_registration_enabled:
-          !workspaceQuery.data.public_registration_enabled,
+        public_registration_enabled: !workspaceQuery.data.public_registration_enabled,
       });
     },
     onSuccess: async () => {
@@ -63,10 +62,7 @@ export default function WorkspaceSettingsPage() {
   });
 
   return (
-    <SettingsShell
-      title="Workspace"
-      description="Manage access, jobs, and your account."
-    >
+    <SettingsShell title="Workspace" description="Manage access, jobs, and your account.">
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card className="p-6">
           <div className="mb-5 flex items-center gap-3">
@@ -78,72 +74,46 @@ export default function WorkspaceSettingsPage() {
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-2xl border border-border bg-background-secondary p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">
-                Name
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">Name</p>
               <p className="mt-2 text-lg font-semibold text-foreground">
                 {workspaceQuery.data?.name ?? "Loading..."}
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-background-secondary p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">
-                Users
-              </p>
-              <p className="mt-2 text-lg font-semibold text-foreground">
-                {workspaceQuery.data?.total_users ?? 0}
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">Users</p>
+              <p className="mt-2 text-lg font-semibold text-foreground">{workspaceQuery.data?.total_users ?? 0}</p>
             </div>
             <div className="rounded-2xl border border-border bg-background-secondary p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">
-                Providers
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">Providers</p>
               <p className="mt-2 text-lg font-semibold text-foreground">
                 {workspaceQuery.data?.total_providers ?? 0}
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-background-secondary p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">
-                Queued jobs
-              </p>
-              <p className="mt-2 text-lg font-semibold text-foreground">
-                {workspaceQuery.data?.pending_jobs ?? 0}
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">Queued jobs</p>
+              <p className="mt-2 text-lg font-semibold text-foreground">{workspaceQuery.data?.pending_jobs ?? 0}</p>
             </div>
           </div>
 
           <div className="mt-5 rounded-2xl border border-border bg-background p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-medium text-foreground">
-                  Public registration
-                </p>
+                <p className="text-sm font-medium text-foreground">Public registration</p>
                 <p className="mt-1 text-sm text-foreground-muted">
-                  {workspaceQuery.data?.public_registration_enabled
-                    ? "Enabled"
-                    : "Disabled"}
+                  {workspaceQuery.data?.public_registration_enabled ? "Enabled" : "Disabled"}
                 </p>
               </div>
               <Button
                 type="button"
                 onClick={() => setRegistrationDialogOpen(true)}
-                disabled={
-                  !user?.is_superuser ||
-                  toggleRegistration.isPending ||
-                  workspaceQuery.isLoading
-                }
+                disabled={!user?.is_superuser || toggleRegistration.isPending || workspaceQuery.isLoading}
               >
-                {workspaceQuery.data?.public_registration_enabled
-                  ? "Disable registration"
-                  : "Enable registration"}
+                {workspaceQuery.data?.public_registration_enabled ? "Disable registration" : "Enable registration"}
               </Button>
             </div>
-            {!user?.is_superuser ? (
-              <p className="mt-3 text-xs text-foreground-muted">Admin only.</p>
-            ) : null}
+            {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
             {toggleRegistration.error ? (
-              <p className="mt-3 text-sm text-primary">
-                {toggleRegistration.error.message}
-              </p>
+              <p className="mt-3 text-sm text-primary">{toggleRegistration.error.message}</p>
             ) : null}
           </div>
         </Card>
@@ -154,9 +124,7 @@ export default function WorkspaceSettingsPage() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <UserCircle2 className="h-4.5 w-4.5" />
               </div>
-              <h2 className="text-base font-semibold text-foreground">
-                Profile
-              </h2>
+              <h2 className="text-base font-semibold text-foreground">Profile</h2>
             </div>
             <div className="mb-4 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground-muted">
               {user?.full_name ?? "Your account"}
@@ -170,9 +138,7 @@ export default function WorkspaceSettingsPage() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Bell className="h-4.5 w-4.5" />
               </div>
-              <h2 className="text-base font-semibold text-foreground">
-                Background jobs
-              </h2>
+              <h2 className="text-base font-semibold text-foreground">Background jobs</h2>
             </div>
             <div className="space-y-2">
               {jobsQuery.data?.length ? (
@@ -182,12 +148,8 @@ export default function WorkspaceSettingsPage() {
                     className="flex items-center justify-between rounded-xl border border-border bg-background-secondary p-3"
                   >
                     <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {job.job_type}
-                      </p>
-                      <p className="text-xs text-foreground-muted">
-                        {job.resource_type ?? "Task"}
-                      </p>
+                      <p className="text-sm font-medium text-foreground">{job.job_type}</p>
+                      <p className="text-xs text-foreground-muted">{job.resource_type ?? "Task"}</p>
                     </div>
                     <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs uppercase text-foreground-muted">
                       {job.status}
@@ -238,12 +200,14 @@ export default function WorkspaceSettingsPage() {
             <Button
               type="button"
               disabled={toggleRegistration.isPending}
-              onClick={() => toggleRegistration.mutate(undefined, {
-                onSuccess: async () => {
-                  setRegistrationDialogOpen(false);
-                  await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
-                },
-              })}
+              onClick={() =>
+                toggleRegistration.mutate(undefined, {
+                  onSuccess: async () => {
+                    setRegistrationDialogOpen(false);
+                    await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+                  },
+                })
+              }
             >
               {toggleRegistration.isPending
                 ? "Saving..."

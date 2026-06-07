@@ -13,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  Sparkles,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ const navItems = [
 
 const settingsItems = [
   { href: "/settings/workspace", label: "Workspace", icon: Cog, adminOnly: false },
+  { href: "/settings/models", label: "Models", icon: Sparkles, adminOnly: true },
   { href: "/settings/users", label: "Users", icon: FolderKanban, adminOnly: true },
   { href: "/settings/providers", label: "Providers", icon: Settings, adminOnly: false },
 ];

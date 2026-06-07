@@ -10,6 +10,10 @@ class WorkspaceConfigUpdate(BaseModel):
     public_registration_enabled: bool | None = None
 
 
+class WorkspaceModelVisibilityUpdate(BaseModel):
+    enabled_model_ids: list[str] = Field(default_factory=list)
+
+
 class WorkspaceConfigResponse(TimestampedResponse):
     name: str
     public_registration_enabled: bool

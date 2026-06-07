@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUp,
   Bot,
-  ChevronDown,
   Copy,
   FileImage,
   FileText,
@@ -16,7 +15,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -82,6 +81,7 @@ export function ChatLayout() {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const conversationsQuery = useQuery({
@@ -107,7 +107,22 @@ export function ChatLayout() {
   const conversation = startFresh
     ? undefined
     : conversationsQuery.data?.find((item) => item.id === activeConversationId) ?? conversationsQuery.data?.[0];
-  const activeModel = modelsQuery.data?.find((model) => model.id === conversation?.model_id) ?? modelsQuery.data?.[0];
+  const defaultModel = modelsQuery.data?.find((model) => model.is_default) ?? modelsQuery.data?.[0];
+  const activeModel =
+    modelsQuery.data?.find((model) => model.id === conversation?.model_id) ??
+    modelsQuery.data?.find((model) => model.id === selectedModelId) ??
+    defaultModel;
+  const canSelectModel = !conversation;
+
+  useEffect(() => {
+    if (conversation?.model_id) {
+      setSelectedModelId(conversation.model_id);
+      return;
+    }
+    if (!selectedModelId && defaultModel?.id) {
+      setSelectedModelId(defaultModel.id);
+    }
+  }, [conversation?.model_id, defaultModel?.id, selectedModelId]);
 
   const uploadAttachment = useMutation({
     mutationFn: async (file: File) => {
@@ -235,6 +250,11 @@ export function ChatLayout() {
         void handleFiles(event.dataTransfer.files);
       }}
     >
+      {modelsQuery.data?.length ? null : (
+        <div className="border-b border-border bg-background/90 px-4 py-2 text-center text-xs text-foreground-muted sm:px-5">
+          No synced models yet. Save or refresh a provider to load available models.
+        </div>
+      )}
       <div className="border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur sm:px-5">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <div className="min-w-0">
@@ -247,13 +267,21 @@ export function ChatLayout() {
                 : "Start an analysis conversation"}
             </p>
           </div>
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-surface-raised"
+          <select
+            value={activeModel?.id ?? ""}
+            disabled={!canSelectModel || !modelsQuery.data?.length}
+            onChange={(event) => setSelectedModelId(event.target.value)}
+            className={cn(
+              "max-w-44 shrink-0 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-foreground outline-none transition-colors",
+              canSelectModel ? "cursor-pointer hover:bg-surface-raised" : "cursor-default opacity-80",
+            )}
           >
-            <span>{activeModel?.display_name ?? "No model"}</span>
-            <ChevronDown className="h-3 w-3 text-foreground-muted" />
-          </button>
+            {modelsQuery.data?.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.display_name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -400,7 +428,7 @@ export function ChatLayout() {
                     key={prompt}
                     type="button"
                     onClick={() => setDraft(prompt)}
-                    className="rounded-[1rem] border border-border bg-surface px-3.5 py-3 text-left text-[13px] text-foreground transition-colors hover:bg-surface-raised"
+                    className="rounded-2xl border border-border bg-surface px-3.5 py-3 text-left text-[13px] text-foreground transition-colors hover:bg-surface-raised"
                   >
                     <span className="font-medium">{prompt}</span>
                   </button>
@@ -469,10 +497,21 @@ export function ChatLayout() {
                   <Paperclip className="h-3 w-3" />
                   Attach
                 </button>
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] text-foreground-muted">
-                  <span className="font-medium text-foreground">{activeModel?.display_name ?? "No model"}</span>
-                  <ChevronDown className="h-3 w-3" />
-                </div>
+                <select
+                  value={activeModel?.id ?? ""}
+                  disabled={!canSelectModel || !modelsQuery.data?.length}
+                  onChange={(event) => setSelectedModelId(event.target.value)}
+                  className={cn(
+                    "max-w-44 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] font-medium text-foreground outline-none",
+                    canSelectModel ? "cursor-pointer" : "cursor-default opacity-80",
+                  )}
+                >
+                  {modelsQuery.data?.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.display_name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <Button
                 onClick={onSubmit}
