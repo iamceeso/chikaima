@@ -125,7 +125,7 @@ def stream_chat(
     db.refresh(conversation)
     db.refresh(user_message)
 
-    stream, context_ids = service.llm.stream_reply_with_rag(
+    stream, citations = service.llm.stream_reply_with_rag(
         user_id=current_user.id,
         provider=provider,
         model=model,
@@ -139,7 +139,7 @@ def stream_chat(
             "user_message_id": user_message.id,
             "provider": provider.provider_type,
             "model": model.model_key,
-            "rag_context_ids": context_ids,
+            "rag_citations": citations,
         }
         yield f"event: metadata\ndata: {json.dumps(metadata)}\n\n"
         assistant_parts: list[str] = []
@@ -156,7 +156,7 @@ def stream_chat(
                     meta={
                         "provider": provider.provider_type,
                         "model": model.model_key,
-                        "rag_context_ids": context_ids,
+                        "rag_citations": citations,
                     },
                 )
                 db.add(assistant_message)

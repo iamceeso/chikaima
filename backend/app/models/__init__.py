@@ -1,6 +1,7 @@
 from app.core.database import Base
 from app.models.ai_model import AIModel
 from app.models.audio import AudioAsset
+from app.models.asset_chunk import AssetChunk
 from app.models.conversation import Conversation
 from app.models.document import Document
 from app.models.job import Job
@@ -16,6 +17,7 @@ from app.models.workspace_config import WorkspaceConfig
 __all__ = [
     "AIModel",
     "AudioAsset",
+    "AssetChunk",
     "Base",
     "Conversation",
     "Document",

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.common import TimestampedResponse
 
@@ -25,8 +25,8 @@ class VideoResponse(TimestampedResponse):
     file_path: str
     transcript: str | None
     summary: str | None
-    chapters: list
-    action_items: list
+    chapters: list = Field(default_factory=list)
+    action_items: list = Field(default_factory=list)
     status: str
 
 

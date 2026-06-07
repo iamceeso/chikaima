@@ -8,14 +8,14 @@ from sqlalchemy.orm import Session
 from app.core.crypto import secret_manager
 from app.models.ai_model import AIModel
 from app.models.provider import Provider
-from app.services.embeddings_service import EmbeddingsService
+from app.services.asset_search_service import AssetSearchService
 from app.services.providers.factory import AdapterFactory
 
 
 class LLMService:
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.embeddings = EmbeddingsService(db)
+        self.asset_search = AssetSearchService(db)
 
     def resolve_model_and_provider(self, user_id: str, model_id: str | None) -> tuple[AIModel, Provider]:
         query = (
@@ -85,34 +85,50 @@ class LLMService:
         model: AIModel,
         messages: list[dict[str, str]],
         include_context: bool = True,
-    ) -> tuple[str, list[str]]:
+    ) -> tuple[str, list[dict[str, str | int | float]]]:
         user_message = messages[-1]["content"] if messages else ""
-        context_ids = []
+        citations: list[dict[str, str | int | float]] = []
 
         if include_context and user_message:
-            similar_embeddings = self.embeddings.search_similar(user_id, user_message)
-            if similar_embeddings:
-                context = "\n\n".join([e[0].content for e in similar_embeddings])
-                context_ids = [e[0].id for e in similar_embeddings]
+            search_results = self.asset_search.search(user_id, user_message, limit=6)
+            if search_results:
+                context_sections: list[str] = []
+                for result in search_results:
+                    for hit in result.chunks[:2]:
+                        reference = self._build_citation(result.filename, hit.chunk.meta)
+                        citations.append(
+                            {
+                                "source_type": result.source_type,
+                                "source_id": result.source_id,
+                                "filename": result.filename,
+                                "chunk_id": hit.chunk.id,
+                                "chunk_index": hit.chunk.chunk_index,
+                                "reference": reference,
+                                "score": round(hit.score, 4),
+                            }
+                        )
+                        context_sections.append(f"[{reference}]\n{hit.chunk.content}")
 
-                rag_system_message = f"""You are a helpful assistant with access to relevant documents and transcripts.
-Use the following context to answer the user's question:
+                context = "\n\n".join(context_sections)
+                rag_system_message = f"""You are a helpful assistant with access to relevant workspace assets.
+Use the provided chunk excerpts to answer the user's question.
+When you rely on a chunk, cite it using the bracketed reference already included in the context.
 
 {context}
 
 ---
 
-If the context doesn't contain relevant information, answer based on your knowledge."""
+If the context doesn't contain relevant information, answer based on your knowledge and say that no direct asset evidence was found."""
 
                 rag_messages = [{"role": "system", "content": rag_system_message}]
                 rag_messages.extend(messages[:-1])
                 rag_messages.append({"role": "user", "content": user_message})
 
                 response = self.generate_reply(provider, model, rag_messages)
-                return response, context_ids
+                return response, citations
 
         response = self.generate_reply(provider, model, messages)
-        return response, context_ids
+        return response, citations
 
     def stream_reply_with_rag(
         self,
@@ -121,26 +137,55 @@ If the context doesn't contain relevant information, answer based on your knowle
         model: AIModel,
         messages: list[dict[str, str]],
         include_context: bool = True,
-    ) -> tuple[Iterator[str], list[str]]:
+    ) -> tuple[Iterator[str], list[dict[str, str | int | float]]]:
         user_message = messages[-1]["content"] if messages else ""
-        context_ids: list[str] = []
+        citations: list[dict[str, str | int | float]] = []
         stream_messages = messages
 
         if include_context and user_message:
-            similar_embeddings = self.embeddings.search_similar(user_id, user_message)
-            if similar_embeddings:
-                context = "\n\n".join([e[0].content for e in similar_embeddings])
-                context_ids = [e[0].id for e in similar_embeddings]
-                rag_system_message = f"""You are a helpful assistant with access to relevant documents and transcripts.
-Use the following context to answer the user's question:
+            search_results = self.asset_search.search(user_id, user_message, limit=6)
+            if search_results:
+                context_sections: list[str] = []
+                for result in search_results:
+                    for hit in result.chunks[:2]:
+                        reference = self._build_citation(result.filename, hit.chunk.meta)
+                        citations.append(
+                            {
+                                "source_type": result.source_type,
+                                "source_id": result.source_id,
+                                "filename": result.filename,
+                                "chunk_id": hit.chunk.id,
+                                "chunk_index": hit.chunk.chunk_index,
+                                "reference": reference,
+                                "score": round(hit.score, 4),
+                            }
+                        )
+                        context_sections.append(f"[{reference}]\n{hit.chunk.content}")
+                context = "\n\n".join(context_sections)
+                rag_system_message = f"""You are a helpful assistant with access to relevant workspace assets.
+Use the provided chunk excerpts to answer the user's question.
+When you rely on a chunk, cite it using the bracketed reference already included in the context.
 
 {context}
 
 ---
 
-If the context doesn't contain relevant information, answer based on your knowledge."""
+If the context doesn't contain relevant information, answer based on your knowledge and say that no direct asset evidence was found."""
                 stream_messages = [{"role": "system", "content": rag_system_message}]
                 stream_messages.extend(messages[:-1])
                 stream_messages.append({"role": "user", "content": user_message})
 
-        return self.stream_reply(provider, model, stream_messages), context_ids
+        return self.stream_reply(provider, model, stream_messages), citations
+
+    def _build_citation(self, filename: str, metadata: dict) -> str:
+        if not isinstance(metadata, dict):
+            return filename
+        if "page" in metadata:
+            return f"{filename} p.{metadata['page']}"
+        if "slide" in metadata:
+            return f"{filename} slide {metadata['slide']}"
+        if "sheet" in metadata:
+            return f"{filename} sheet {metadata['sheet']}"
+        if "start_line" in metadata and "end_line" in metadata:
+            return f"{filename} lines {metadata['start_line']}-{metadata['end_line']}"
+        return f"{filename} chunk {metadata.get('chunk_index', 0)}"

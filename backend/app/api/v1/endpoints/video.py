@@ -10,8 +10,8 @@ from app.models.video import Video
 from app.schemas.assets import VideoResponse
 from app.services.job_service import JobService
 from app.services.storage_service import storage_service
-from app.services.transcript_service import TranscriptService
 from app.schemas.transcript import TranscriptResponse, SummaryArtifactResponse
+from app.services.transcript_service import TranscriptService
 
 router = APIRouter()
 

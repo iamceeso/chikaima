@@ -18,6 +18,7 @@ class User(UUIDTimestampMixin, Base):
 
     providers = relationship("Provider", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    asset_chunks = relationship("AssetChunk", back_populates="user", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")
     videos = relationship("Video", back_populates="user", cascade="all, delete-orphan")
     audio_assets = relationship("AudioAsset", back_populates="user", cascade="all, delete-orphan")

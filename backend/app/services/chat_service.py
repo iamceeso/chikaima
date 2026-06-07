@@ -50,7 +50,7 @@ class ChatService:
                 self.db.flush()
 
                 if use_rag:
-                    assistant_content, context_ids = self.llm.generate_reply_with_rag(
+                    assistant_content, citations = self.llm.generate_reply_with_rag(
                         user_id=user_id,
                         provider=provider,
                         model=model,
@@ -59,7 +59,7 @@ class ChatService:
                     meta = {
                         "provider": provider.provider_type,
                         "model": model.model_key,
-                        "rag_context_ids": context_ids,
+                        "rag_citations": citations,
                     }
                 else:
                     assistant_content = self.llm.generate_reply(
@@ -109,7 +109,7 @@ class ChatService:
             history = [*conversation.messages, message]
 
             if use_rag:
-                assistant_content, context_ids = self.llm.generate_reply_with_rag(
+                assistant_content, citations = self.llm.generate_reply_with_rag(
                     user_id=user_id,
                     provider=provider,
                     model=model,
@@ -118,7 +118,7 @@ class ChatService:
                 meta = {
                     "provider": provider.provider_type,
                     "model": model.model_key,
-                    "rag_context_ids": context_ids,
+                    "rag_citations": citations,
                 }
             else:
                 assistant_content = self.llm.generate_reply(
@@ -167,7 +167,7 @@ class ChatService:
                         history.append(item)
 
                 if use_rag:
-                    assistant_content, context_ids = self.llm.generate_reply_with_rag(
+                    assistant_content, citations = self.llm.generate_reply_with_rag(
                         user_id=user_id,
                         provider=provider,
                         model=model,
@@ -176,7 +176,7 @@ class ChatService:
                     meta = {
                         "provider": provider.provider_type,
                         "model": model.model_key,
-                        "rag_context_ids": context_ids,
+                        "rag_citations": citations,
                     }
                 else:
                     assistant_content = self.llm.generate_reply(
@@ -220,7 +220,7 @@ class ChatService:
                 history.append(item)
 
             if use_rag:
-                assistant_content, context_ids = self.llm.generate_reply_with_rag(
+                assistant_content, citations = self.llm.generate_reply_with_rag(
                     user_id=user_id,
                     provider=provider,
                     model=model,
@@ -230,7 +230,7 @@ class ChatService:
                     "regenerated_from": message.id,
                     "provider": provider.provider_type,
                     "model": model.model_key,
-                    "rag_context_ids": context_ids,
+                    "rag_citations": citations,
                 }
             else:
                 assistant_content = self.llm.generate_reply(
