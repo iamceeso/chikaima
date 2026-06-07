@@ -42,12 +42,10 @@ class RegenerateRequest(BaseModel):
     message_id: str
 
 
-class StreamMessage(BaseModel):
-    role: str = Field(pattern="^(system|user|assistant)$")
-    content: str = Field(min_length=1)
-
-
 class StreamChatRequest(BaseModel):
-    messages: list[StreamMessage] = Field(min_length=1)
+    content: str = Field(min_length=1)
+    conversation_id: str | None = None
+    title: str | None = Field(default=None, max_length=255)
     model_id: str | None = None
+    metadata: dict = Field(default_factory=dict)
     use_rag: bool = True

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps.auth import get_current_user
 from app.core.database import get_db
+from app.models.conversation import Conversation
+from app.models.message import Message
 from app.models.user import User
 from app.schemas.chat import (
     ConversationCreate,
@@ -81,27 +84,78 @@ def stream_chat(
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
     service = ChatService(db)
-    model, provider = service.llm.resolve_model_and_provider(current_user.id, payload.model_id)
+    conversation: Conversation | None = None
+    history: list[Message] = []
+
+    if payload.conversation_id:
+        conversation = service.conversations.get(payload.conversation_id)
+        if not conversation or conversation.user_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+        model, provider = service.llm.resolve_model_and_provider(current_user.id, conversation.model_id)
+        history = list(conversation.messages)
+    else:
+        model, provider = service.llm.resolve_model_and_provider(current_user.id, payload.model_id)
+        conversation = Conversation(
+            user_id=current_user.id,
+            title=(payload.title or payload.content).strip()[:48] or "New analysis",
+            model_id=model.id,
+        )
+        db.add(conversation)
+        db.flush()
+
+    user_message = Message(
+        conversation_id=conversation.id,
+        role="user",
+        content=payload.content,
+        meta=payload.metadata,
+    )
+    db.add(user_message)
+    conversation.updated_at = datetime.now(UTC)
+    db.flush()
+    db.commit()
+    db.refresh(conversation)
+    db.refresh(user_message)
+
     stream, context_ids = service.llm.stream_reply_with_rag(
         user_id=current_user.id,
         provider=provider,
         model=model,
-        messages=[message.model_dump() for message in payload.messages],
+        messages=service._serialize_messages([*history, user_message]),
         include_context=payload.use_rag,
     )
 
     def event_stream():
         metadata = {
+            "conversation_id": conversation.id,
+            "user_message_id": user_message.id,
             "provider": provider.provider_type,
             "model": model.model_key,
             "rag_context_ids": context_ids,
         }
         yield f"event: metadata\ndata: {json.dumps(metadata)}\n\n"
+        assistant_parts: list[str] = []
         try:
             for chunk in stream:
+                assistant_parts.append(chunk)
                 yield f"event: token\ndata: {json.dumps({'text': chunk})}\n\n"
+            assistant_content = "".join(assistant_parts).strip()
+            if assistant_content:
+                assistant_message = Message(
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=assistant_content,
+                    meta={
+                        "provider": provider.provider_type,
+                        "model": model.model_key,
+                        "rag_context_ids": context_ids,
+                    },
+                )
+                db.add(assistant_message)
+                conversation.updated_at = datetime.now(UTC)
+                db.commit()
             yield "event: done\ndata: {}\n\n"
         except Exception as exc:  # noqa: BLE001
+            db.rollback()
             yield f"event: error\ndata: {json.dumps({'detail': str(exc)})}\n\n"
 
     return StreamingResponse(

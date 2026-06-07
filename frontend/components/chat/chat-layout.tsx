@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
+import type { Message } from "@/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useChatStore } from "@/store/chat-store";
 
@@ -89,6 +90,9 @@ export function ChatLayout() {
   const [isDragging, setIsDragging] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [streamingMessages, setStreamingMessages] = useState<Message[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -123,7 +127,8 @@ export function ChatLayout() {
     modelsQuery.data?.find((model) => model.id === selectedModelId) ??
     modelsQuery.data?.find((model) => model.id === conversation?.model_id) ??
     defaultModel;
-  const hasConversation = Boolean(conversation?.messages?.length);
+  const displayMessages = [...(conversation?.messages ?? []), ...streamingMessages];
+  const hasConversation = Boolean(displayMessages.length);
 
   useEffect(() => {
     setSelectedModelId(conversation?.model_id ?? defaultModel?.id ?? null);
@@ -241,17 +246,109 @@ export function ChatLayout() {
     },
   });
 
-  const busy = createConversation.isPending || sendMessage.isPending;
+  const busy = createConversation.isPending || sendMessage.isPending || isStreaming;
+
+  const buildLocalMessage = (input: {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    metadata?: Record<string, unknown>;
+    status?: string;
+  }): Message => ({
+    id: input.id,
+    conversation_id: conversation?.id ?? "streaming",
+    role: input.role,
+    content: input.content,
+    status: input.status ?? "completed",
+    metadata: input.metadata ?? {},
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  const streamConversation = async (contentOverride?: string) => {
+    if (!token) {
+      setStreamError("Please sign in first.");
+      return;
+    }
+
+    const attachments = pendingAttachments;
+    const content = contentOverride?.trim() || draft.trim() || "Analyze the attached files.";
+    const shouldContinueConversation =
+      conversation && (!activeModel?.id || activeModel.id === conversation.model_id);
+    const nextConversationId = shouldContinueConversation ? conversation.id : undefined;
+    const attachmentMetadata = attachments.length ? { attachments } : undefined;
+    const userTempId = `temp-user-${crypto.randomUUID()}`;
+    const assistantTempId = `temp-assistant-${crypto.randomUUID()}`;
+
+    setStreamError(null);
+    setIsStreaming(true);
+    setStreamingMessages([
+      buildLocalMessage({
+        id: userTempId,
+        role: "user",
+        content,
+        metadata: attachmentMetadata,
+      }),
+      buildLocalMessage({
+        id: assistantTempId,
+        role: "assistant",
+        content: "",
+        status: "streaming",
+      }),
+    ]);
+
+    try {
+      await api.streamChat(
+        token,
+        {
+          content,
+          conversation_id: nextConversationId,
+          model_id: nextConversationId ? undefined : activeModel?.id,
+          title: content.slice(0, 48) || "New analysis",
+          metadata: attachmentMetadata,
+          use_rag: true,
+        },
+        {
+          onMetadata: (metadata) => {
+            const conversationId = metadata.conversation_id;
+            if (typeof conversationId === "string") {
+              setActiveConversationId(conversationId);
+            }
+          },
+          onToken: (text) => {
+            setStreamingMessages((current) =>
+              current.map((message) =>
+                message.id === assistantTempId
+                  ? {
+                      ...message,
+                      content: `${message.content}${text}`,
+                      updated_at: new Date().toISOString(),
+                    }
+                  : message,
+              ),
+            );
+          },
+          onError: (message) => {
+            setStreamError(message);
+          },
+        },
+      );
+      setDraft("");
+      setPendingAttachments([]);
+    } catch (error) {
+      setStreamError(error instanceof Error ? error.message : "Streaming request failed.");
+    } finally {
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      setStreamingMessages([]);
+      setIsStreaming(false);
+    }
+  };
 
   const onSubmit = () => {
     if (!draft.trim() && !pendingAttachments.length) {
       return;
     }
-    if (!conversation || (activeModel?.id && activeModel.id !== conversation.model_id)) {
-      createConversation.mutate(undefined);
-      return;
-    }
-    sendMessage.mutate(undefined);
+    void streamConversation();
   };
 
   const handleFiles = async (files: FileList | File[]) => {
@@ -272,11 +369,7 @@ export function ChatLayout() {
   };
 
   const sendSuggestedPrompt = (prompt: string) => {
-    if (conversation) {
-      sendMessage.mutate({ content: prompt });
-      return;
-    }
-    createConversation.mutate({ content: prompt });
+    void streamConversation(prompt);
   };
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -446,8 +539,9 @@ export function ChatLayout() {
         <div ref={historyRef} className="h-full min-h-0 overflow-y-auto overscroll-contain">
         {hasConversation ? (
           <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-            {conversation?.messages.map((message) => {
+            {displayMessages.map((message) => {
               const isUser = message.role === "user";
+              const isTransient = message.id.startsWith("temp-") || message.status === "streaming";
               return (
                 <article
                   key={message.id}
@@ -530,6 +624,7 @@ export function ChatLayout() {
                               size="xs"
                               variant="ghost"
                               className="h-7 border border-border px-2.5 text-[11px]"
+                              disabled={isTransient}
                               onClick={() => {
                                 setEditingMessageId(message.id);
                                 setEditingDraft(message.content);
@@ -544,6 +639,7 @@ export function ChatLayout() {
                               size="xs"
                               variant="ghost"
                               className="h-7 border border-border px-2.5 text-[11px]"
+                              disabled={isTransient}
                               onClick={async () => {
                                 await navigator.clipboard.writeText(message.content);
                                 setCopiedMessageId(message.id);
@@ -617,9 +713,9 @@ export function ChatLayout() {
       <div className="absolute inset-x-0 bottom-3 z-20 bg-background/88 px-4 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur sm:px-5">
         <div className="mx-auto max-w-3xl">
           {renderComposer()}
-          {createConversation.error || sendMessage.error || uploadAttachment.error || editMessage.error ? (
+          {streamError || createConversation.error || sendMessage.error || uploadAttachment.error || editMessage.error ? (
             <p className="mt-3 text-center text-sm text-primary">
-              {(createConversation.error ?? sendMessage.error ?? uploadAttachment.error ?? editMessage.error)?.message}
+              {streamError ?? (createConversation.error ?? sendMessage.error ?? uploadAttachment.error ?? editMessage.error)?.message}
             </p>
           ) : null}
         </div>

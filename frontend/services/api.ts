@@ -19,6 +19,22 @@ type RequestOptions = RequestInit & {
   token?: string | null;
 };
 
+type StreamChatPayload = {
+  content: string;
+  conversation_id?: string;
+  title?: string;
+  model_id?: string;
+  metadata?: Record<string, unknown>;
+  use_rag?: boolean;
+};
+
+type StreamChatHandlers = {
+  onMetadata?: (metadata: Record<string, unknown>) => void;
+  onToken?: (text: string) => void;
+  onDone?: () => void;
+  onError?: (message: string) => void;
+};
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
@@ -154,5 +170,92 @@ export const api = {
     token,
     body: JSON.stringify(payload),
   }),
+  streamChat: async (
+    token: string,
+    payload: StreamChatPayload,
+    handlers: StreamChatHandlers = {},
+  ) => {
+    const headers = new Headers({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" });
+    const response = await fetch(`${env.apiBaseUrl}/chat/stream`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(body || "Streaming request failed");
+    }
+
+    if (!response.body) {
+      throw new Error("Streaming response body is unavailable.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    const emitEvent = (eventName: string, data: string) => {
+      if (!data.trim()) {
+        return;
+      }
+
+      let parsed: Record<string, unknown> = {};
+      try {
+        parsed = JSON.parse(data) as Record<string, unknown>;
+      } catch {
+        parsed = { detail: data };
+      }
+
+      if (eventName === "metadata") {
+        handlers.onMetadata?.(parsed);
+        return;
+      }
+      if (eventName === "token") {
+        const text = parsed.text;
+        if (typeof text === "string") {
+          handlers.onToken?.(text);
+        }
+        return;
+      }
+      if (eventName === "done") {
+        handlers.onDone?.();
+        return;
+      }
+      if (eventName === "error") {
+        handlers.onError?.(typeof parsed.detail === "string" ? parsed.detail : "Streaming failed");
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+
+      let boundaryIndex = buffer.indexOf("\n\n");
+      while (boundaryIndex !== -1) {
+        const rawEvent = buffer.slice(0, boundaryIndex);
+        buffer = buffer.slice(boundaryIndex + 2);
+
+        const lines = rawEvent.split("\n");
+        let eventName = "message";
+        const dataLines: string[] = [];
+        for (const line of lines) {
+          if (line.startsWith("event:")) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith("data:")) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+
+        emitEvent(eventName, dataLines.join("\n"));
+        boundaryIndex = buffer.indexOf("\n\n");
+      }
+
+      if (done) {
+        break;
+      }
+    }
+  },
   getJobs: (token: string) => request<Job[]>("/jobs", { token }),
 };
