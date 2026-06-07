@@ -13,6 +13,10 @@ cleanup() {
     kill "$BACKEND_PID" 2>/dev/null || true
   fi
 
+  if [[ -n "${CELERY_PID:-}" ]]; then
+    kill "$CELERY_PID" 2>/dev/null || true
+  fi
+
   if [[ -n "${FRONTEND_PID:-}" ]]; then
     kill "$FRONTEND_PID" 2>/dev/null || true
   fi
@@ -30,6 +34,13 @@ echo "Starting Olanma backend..."
 ) &
 BACKEND_PID=$!
 
+echo "Starting Olanma Celery worker..."
+(
+  cd "$BACKEND_DIR"
+  uv run celery -A app.workers.celery_app.celery_app worker --loglevel=info
+) &
+CELERY_PID=$!
+
 echo "Starting Olanma frontend..."
 (
   cd "$FRONTEND_DIR"
@@ -40,7 +51,8 @@ FRONTEND_PID=$!
 echo "Olanma is starting:"
 echo "  Frontend: http://localhost:3000"
 echo "  Backend:  http://localhost:8000"
+echo "  Worker:   celery"
 echo
-echo "Press Ctrl+C to stop both services."
+echo "Press Ctrl+C to stop all services."
 
-wait "$BACKEND_PID" "$FRONTEND_PID"
+wait "$BACKEND_PID" "$CELERY_PID" "$FRONTEND_PID"
