@@ -93,6 +93,7 @@ export function ChatLayout() {
   const [streamError, setStreamError] = useState<string | null>(null);
   const [streamingMessages, setStreamingMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [hasReceivedStreamToken, setHasReceivedStreamToken] = useState(false);
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -265,6 +266,19 @@ export function ChatLayout() {
     updated_at: new Date().toISOString(),
   });
 
+  const scrollHistoryToBottom = () => {
+    const historyEl = historyRef.current;
+    if (!historyEl) {
+      return;
+    }
+    requestAnimationFrame(() => {
+      historyEl.scrollTo({
+        top: historyEl.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+  };
+
   const streamConversation = async (contentOverride?: string) => {
     if (!token) {
       setStreamError("Please sign in first.");
@@ -282,6 +296,9 @@ export function ChatLayout() {
 
     setStreamError(null);
     setIsStreaming(true);
+    setHasReceivedStreamToken(false);
+    setDraft("");
+    setPendingAttachments([]);
     setStreamingMessages([
       buildLocalMessage({
         id: userTempId,
@@ -296,6 +313,7 @@ export function ChatLayout() {
         status: "streaming",
       }),
     ]);
+    scrollHistoryToBottom();
 
     try {
       await api.streamChat(
@@ -316,6 +334,7 @@ export function ChatLayout() {
             }
           },
           onToken: (text) => {
+            setHasReceivedStreamToken(true);
             setStreamingMessages((current) =>
               current.map((message) =>
                 message.id === assistantTempId
@@ -327,20 +346,20 @@ export function ChatLayout() {
                   : message,
               ),
             );
+            scrollHistoryToBottom();
           },
           onError: (message) => {
             setStreamError(message);
           },
         },
       );
-      setDraft("");
-      setPendingAttachments([]);
     } catch (error) {
       setStreamError(error instanceof Error ? error.message : "Streaming request failed.");
     } finally {
       await queryClient.invalidateQueries({ queryKey: ["conversations"] });
       setStreamingMessages([]);
       setIsStreaming(false);
+      setHasReceivedStreamToken(false);
     }
   };
 
@@ -598,9 +617,20 @@ export function ChatLayout() {
                       </div>
                     ) : (
                       <>
-                        <p className="whitespace-pre-wrap wrap-break-word text-[13px] leading-6 text-foreground sm:text-sm">
-                          {message.content}
-                        </p>
+                        {message.role === "assistant" && message.status === "streaming" && !hasReceivedStreamToken ? (
+                          <div className="flex items-center gap-2 text-[13px] text-foreground-muted sm:text-sm">
+                            <span>Thinking</span>
+                            <span className="inline-flex gap-0.5">
+                              <span className="animate-pulse [animation-delay:0ms]">.</span>
+                              <span className="animate-pulse [animation-delay:150ms]">.</span>
+                              <span className="animate-pulse [animation-delay:300ms]">.</span>
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap wrap-break-word text-[13px] leading-6 text-foreground sm:text-sm">
+                            {message.content}
+                          </p>
+                        )}
                         {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
                           <div className="mt-2.5 flex flex-wrap gap-2">
                             {(message.metadata.attachments as Array<{ name: string; kind: PendingAttachment["kind"] }>).map((attachment) => {
