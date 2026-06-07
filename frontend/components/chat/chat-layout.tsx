@@ -117,14 +117,17 @@ export function ChatLayout() {
 
   const conversation = startFresh
     ? undefined
-    : conversationsQuery.data?.find((item) => item.id === activeConversationId) ?? conversationsQuery.data?.[0];
+    : conversationsQuery.data?.find((item) => item.id === activeConversationId);
   const defaultModel = modelsQuery.data?.find((model) => model.is_default) ?? modelsQuery.data?.[0];
   const activeModel =
-    modelsQuery.data?.find((model) => model.id === conversation?.model_id) ??
     modelsQuery.data?.find((model) => model.id === selectedModelId) ??
+    modelsQuery.data?.find((model) => model.id === conversation?.model_id) ??
     defaultModel;
-  const canSelectModel = !conversation;
   const hasConversation = Boolean(conversation?.messages?.length);
+
+  useEffect(() => {
+    setSelectedModelId(conversation?.model_id ?? defaultModel?.id ?? null);
+  }, [conversation?.id, conversation?.model_id, defaultModel?.id]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -132,7 +135,7 @@ export function ChatLayout() {
       return;
     }
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 28), 96)}px`;
   }, [draft, hasConversation]);
 
   useEffect(() => {
@@ -143,7 +146,7 @@ export function ChatLayout() {
     }
 
     const applyPadding = () => {
-      historyEl.style.paddingBottom = `${composerEl.offsetHeight + 72}px`;
+      historyEl.style.paddingBottom = `${composerEl.offsetHeight + 40}px`;
     };
 
     applyPadding();
@@ -244,7 +247,7 @@ export function ChatLayout() {
     if (!draft.trim() && !pendingAttachments.length) {
       return;
     }
-    if (!conversation) {
+    if (!conversation || (activeModel?.id && activeModel.id !== conversation.model_id)) {
       createConversation.mutate(undefined);
       return;
     }
@@ -313,11 +316,11 @@ export function ChatLayout() {
   const renderModelPicker = (className?: string) => (
     <select
       value={activeModel?.id ?? ""}
-      disabled={!canSelectModel || !modelsQuery.data?.length}
+      disabled={!modelsQuery.data?.length}
       onChange={(event) => setSelectedModelId(event.target.value)}
       className={cn(
         "max-w-52 rounded-full border border-border bg-background-secondary/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm outline-none backdrop-blur",
-        canSelectModel ? "cursor-pointer hover:bg-surface-raised" : "cursor-default opacity-80",
+        "cursor-pointer hover:bg-surface-raised",
         className,
       )}
     >
@@ -334,7 +337,7 @@ export function ChatLayout() {
       ref={composerRef}
       className="w-full"
     >
-      <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-3 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
+      <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-2.5 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
         <input
           ref={fileInputRef}
           type="file"
@@ -352,16 +355,17 @@ export function ChatLayout() {
         {renderAttachmentChips()}
         <Textarea
           ref={textareaRef}
+          rows={1}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleComposerKeyDown}
           placeholder="Ask Olanma about your content"
           className={cn(
-            "resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-6 shadow-none focus:ring-0",
-            "min-h-12 max-h-40 sm:min-h-14",
+            "resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-5 shadow-none focus:ring-0",
+            "min-h-0 max-h-24",
           )}
         />
-        <div className="mt-2 flex items-center justify-between gap-3 pt-1.5">
+        <div className="mt-1.5 flex items-center justify-between gap-3 pt-1">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -389,7 +393,7 @@ export function ChatLayout() {
   return (
     <div
       className={cn(
-        "relative flex h-full min-h-0 flex-col overflow-hidden bg-background",
+        "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background mb-4",
         isDragging ? "bg-primary/5" : "",
       )}
       onDragOver={(event) => {
@@ -610,7 +614,7 @@ export function ChatLayout() {
         </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 z-20 bg-background/92 px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:px-5">
+      <div className="absolute inset-x-0 bottom-3 z-20 bg-background/88 px-4 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur sm:px-5">
         <div className="mx-auto max-w-3xl">
           {renderComposer()}
           {createConversation.error || sendMessage.error || uploadAttachment.error || editMessage.error ? (
