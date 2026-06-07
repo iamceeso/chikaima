@@ -12,6 +12,7 @@ class WorkspaceConfigUpdate(BaseModel):
 
 class WorkspaceModelVisibilityUpdate(BaseModel):
     enabled_model_ids: list[str] = Field(default_factory=list)
+    default_model_id: str | None = None
 
 
 class WorkspaceConfigResponse(TimestampedResponse):

@@ -9,7 +9,12 @@ from app.models.provider import Provider
 from app.models.user import User
 from app.models.workspace_config import WorkspaceConfig
 from app.schemas.provider import AIModelResponse
-from app.schemas.workspace import WorkspaceConfigResponse, WorkspaceConfigUpdate, WorkspacePublicResponse
+from app.schemas.workspace import (
+    WorkspaceConfigResponse,
+    WorkspaceConfigUpdate,
+    WorkspaceModelVisibilityUpdate,
+    WorkspacePublicResponse,
+)
 from app.services.provider_service import build_model_response
 
 
@@ -71,14 +76,28 @@ class WorkspaceService:
         )
         return [build_model_response(model, provider) for model, provider in models]
 
-    def update_model_visibility(self, actor: User, enabled_model_ids: list[str]) -> list[AIModelResponse]:
+    def update_model_visibility(
+        self,
+        actor: User,
+        payload: WorkspaceModelVisibilityUpdate,
+    ) -> list[AIModelResponse]:
         if not actor.is_superuser:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
 
-        enabled_ids = {model_id for model_id in enabled_model_ids}
+        enabled_ids = {model_id for model_id in payload.enabled_model_ids}
+        default_model_id_supplied = "default_model_id" in payload.model_fields_set
         models = self.db.query(AIModel).all()
+        current_default_model = next((model for model in models if model.is_default), None)
+
+        if default_model_id_supplied and payload.default_model_id:
+            enabled_ids.add(payload.default_model_id)
+
         for model in models:
             model.is_available = model.id in enabled_ids
+            if default_model_id_supplied:
+                model.is_default = payload.default_model_id is not None and model.id == payload.default_model_id
+            elif current_default_model and current_default_model.id not in enabled_ids:
+                model.is_default = False
             self.db.add(model)
 
         self.db.commit()

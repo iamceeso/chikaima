@@ -289,16 +289,24 @@ class ProviderService:
             provider.provider_type,
             _dedupe_models(models) or CURATED_PROVIDER_MODELS.get(provider.provider_type, []),
         )
+        existing_default = (
+            self.db.query(AIModel)
+            .filter(AIModel.provider_id == provider.id, AIModel.is_default.is_(True))
+            .first()
+        )
+        has_global_default = self.db.query(AIModel).filter(AIModel.is_default.is_(True)).first() is not None
 
         self.db.query(AIModel).filter(AIModel.provider_id == provider.id).delete()
         for idx, model in enumerate(synced_models):
+            preserved_default = existing_default is not None and existing_default.model_key == model["key"]
+            should_be_default = preserved_default or (idx == 0 and not has_global_default)
             self.db.add(
                 AIModel(
                     provider_id=provider.id,
                     model_key=model["key"],
                     display_name=model["name"],
                     capabilities=model["capabilities"],
-                    is_default=idx == 0,
+                    is_default=should_be_default,
                     is_available=True,
                 )
             )

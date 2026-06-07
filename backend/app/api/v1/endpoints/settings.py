@@ -55,4 +55,4 @@ def update_workspace_models(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[AIModelResponse]:
-    return WorkspaceService(db).update_model_visibility(current_user, payload.enabled_model_ids)
+    return WorkspaceService(db).update_model_visibility(current_user, payload)

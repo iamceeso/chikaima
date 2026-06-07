@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Search, Sparkles } from "lucide-react";
+import { ChevronDown, Search, Sparkles, Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,11 +31,20 @@ export function ModelAccessPanel() {
   });
 
   const updateModelVisibility = useMutation({
-    mutationFn: async (enabledModelIds: string[]) => {
+    mutationFn: async ({
+      enabledModelIds,
+      defaultModelId,
+    }: {
+      enabledModelIds: string[];
+      defaultModelId?: string | null;
+    }) => {
       if (!token) {
         throw new Error("Please sign in first.");
       }
-      return api.updateWorkspaceModels(token, { enabled_model_ids: enabledModelIds });
+      return api.updateWorkspaceModels(token, {
+        enabled_model_ids: enabledModelIds,
+        ...(defaultModelId !== undefined ? { default_model_id: defaultModelId } : {}),
+      });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workspace-models"] });
@@ -91,15 +100,18 @@ export function ModelAccessPanel() {
   );
 
   const toggleModel = (modelId: string, checked: boolean) => {
-    const currentEnabled = new Set(
-      (workspaceModelsQuery.data ?? []).filter((model) => model.is_available).map((model) => model.id),
-    );
+    const currentModels = workspaceModelsQuery.data ?? [];
+    const currentEnabled = new Set(currentModels.filter((model) => model.is_available).map((model) => model.id));
+    const targetModel = currentModels.find((model) => model.id === modelId);
     if (checked) {
       currentEnabled.add(modelId);
     } else {
       currentEnabled.delete(modelId);
     }
-    updateModelVisibility.mutate(Array.from(currentEnabled));
+    updateModelVisibility.mutate({
+      enabledModelIds: Array.from(currentEnabled),
+      ...(targetModel?.is_default && !checked ? { defaultModelId: null } : {}),
+    });
   };
 
   const setProviderSearchValue = (providerId: string, value: string) => {
@@ -136,7 +148,20 @@ export function ModelAccessPanel() {
       }
     }
 
-    updateModelVisibility.mutate(Array.from(currentEnabled));
+    updateModelVisibility.mutate({ enabledModelIds: Array.from(currentEnabled) });
+  };
+
+  const toggleDefaultModel = (model: AIModel) => {
+    const enabledModelIds = (workspaceModelsQuery.data ?? [])
+      .filter((item) => item.is_available)
+      .map((item) => item.id);
+    const enabledSet = new Set(enabledModelIds);
+    enabledSet.add(model.id);
+
+    updateModelVisibility.mutate({
+      enabledModelIds: Array.from(enabledSet),
+      defaultModelId: model.is_default ? null : model.id,
+    });
   };
 
   return (
@@ -198,14 +223,14 @@ export function ModelAccessPanel() {
 
                 {isCollapsed ? null : (
                   <div className="mt-3 space-y-3">
-                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <div className="flex flex-col gap-2 sm:flex-row">
                       <div className="relative flex-1">
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
                         <Input
                           value={providerSearch[group.providerId] ?? ""}
                           onChange={(event) => setProviderSearchValue(group.providerId, event.target.value)}
                           placeholder={`Search ${group.providerName} models`}
-                          className="h-8 rounded-lg bg-background pl-9 pr-3 text-xs"
+                          className="h-7 rounded-lg bg-background pl-9 pr-3 text-xs"
                         />
                       </div>
                       <div className="flex gap-2">
@@ -213,7 +238,7 @@ export function ModelAccessPanel() {
                           type="button"
                           size="xs"
                           variant="ghost"
-                          className="h-8 border border-border px-2.5 text-[11px]"
+                          className="h-7 border border-border px-2.5 text-[11px]"
                           disabled={updateModelVisibility.isPending || visibleCount === 0}
                           onClick={() => updateProviderModels(group.providerId, true)}
                         >
@@ -223,7 +248,7 @@ export function ModelAccessPanel() {
                           type="button"
                           size="xs"
                           variant="ghost"
-                          className="h-8 border border-border px-2.5 text-[11px]"
+                          className="h-7 border border-border px-2.5 text-[11px]"
                           disabled={updateModelVisibility.isPending || visibleCount === 0}
                           onClick={() => updateProviderModels(group.providerId, false)}
                         >
@@ -233,11 +258,11 @@ export function ModelAccessPanel() {
                     </div>
 
                     {visibleCount ? (
-                      <div className="grid max-h-72 gap-1.5 overflow-y-auto pr-1 md:grid-cols-2">
+                      <div className="grid max-h-56 gap-1.5 overflow-y-auto pr-1">
                         {group.items.map((model) => (
-                          <label
+                          <div
                             key={model.id}
-                            className="flex cursor-pointer items-center justify-between rounded-lg border border-border bg-background px-3 py-2"
+                            className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-1.5"
                           >
                             <div className="min-w-0 pr-3">
                               <div className="flex items-center gap-2">
@@ -255,14 +280,30 @@ export function ModelAccessPanel() {
                               </div>
                               <p className="truncate text-[11px] text-foreground-muted">{model.model_key}</p>
                             </div>
-                            <input
-                              type="checkbox"
-                              checked={model.is_available}
-                              disabled={updateModelVisibility.isPending}
-                              onChange={(event) => toggleModel(model.id, event.target.checked)}
-                              className="h-4 w-4 cursor-pointer accent-primary"
-                            />
-                          </label>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                aria-label={model.is_default ? "Clear default model" : "Set as default model"}
+                                onClick={() => toggleDefaultModel(model)}
+                                disabled={updateModelVisibility.isPending}
+                                className={cn(
+                                  "inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+                                  model.is_default
+                                    ? "text-primary hover:bg-primary/10"
+                                    : "text-foreground-muted hover:bg-background-secondary hover:text-foreground",
+                                )}
+                              >
+                                <Star className={cn("h-4 w-4", model.is_default ? "fill-current" : "")} />
+                              </button>
+                              <input
+                                type="checkbox"
+                                checked={model.is_available}
+                                disabled={updateModelVisibility.isPending}
+                                onChange={(event) => toggleModel(model.id, event.target.checked)}
+                                className="h-4 w-4 cursor-pointer accent-primary"
+                              />
+                            </div>
+                          </div>
                         ))}
                       </div>
                     ) : (

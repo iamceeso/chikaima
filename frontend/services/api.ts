@@ -77,7 +77,7 @@ export const api = {
     payload: { name?: string; public_registration_enabled?: boolean },
   ) => request<WorkspaceConfig>("/settings/workspace", { method: "PATCH", token, body: JSON.stringify(payload) }),
   getWorkspaceModels: (token: string) => request<AIModel[]>("/settings/models", { token }),
-  updateWorkspaceModels: (token: string, payload: { enabled_model_ids: string[] }) =>
+  updateWorkspaceModels: (token: string, payload: { enabled_model_ids: string[]; default_model_id?: string | null }) =>
     request<AIModel[]>("/settings/models", { method: "PATCH", token, body: JSON.stringify(payload) }),
   getProviders: (token: string) => request<Provider[]>("/providers", { token }),
   createProvider: (
