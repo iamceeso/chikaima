@@ -244,7 +244,7 @@ export default function LibraryPage() {
         })}
       </div>
 
-      <Card className="mt-3 rounded-[1.5rem] bg-surface px-5 py-5">
+      <Card className="mt-3 flex max-h-[calc(100vh-18rem)] min-h-[32rem] flex-col rounded-[1.5rem] bg-surface px-5 py-5">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/12 text-primary">
             <Library className="h-5 w-5" />
@@ -290,7 +290,7 @@ export default function LibraryPage() {
           </Button>
         </div>
 
-        <div className="mt-4 max-h-[44rem] overflow-y-auto pr-1">
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
           <div className="grid gap-3">
             {loading ? (
               <div className="rounded-[1.5rem] border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">
