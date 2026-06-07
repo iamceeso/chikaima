@@ -19,7 +19,10 @@ export interface User {
 export interface WorkspaceConfig {
   id: string;
   name: string;
+  authentication_enabled: boolean;
+  docs_enabled: boolean;
   public_registration_enabled: boolean;
+  first_user_registration_required: boolean;
   total_users: number;
   total_providers: number;
   pending_jobs: number;
@@ -30,7 +33,10 @@ export interface WorkspaceConfig {
 
 export interface WorkspacePublicSettings {
   name: string;
+  authentication_enabled: boolean;
+  docs_enabled: boolean;
   public_registration_enabled: boolean;
+  first_user_registration_required: boolean;
 }
 
 export interface AuthTokens {

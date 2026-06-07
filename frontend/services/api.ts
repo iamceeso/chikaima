@@ -90,7 +90,7 @@ export const api = {
   getWorkspaceSettings: (token: string) => request<WorkspaceConfig>("/settings/workspace", { token }),
   updateWorkspaceSettings: (
     token: string,
-    payload: { name?: string; public_registration_enabled?: boolean },
+    payload: { name?: string; authentication_enabled?: boolean; docs_enabled?: boolean; public_registration_enabled?: boolean },
   ) => request<WorkspaceConfig>("/settings/workspace", { method: "PATCH", token, body: JSON.stringify(payload) }),
   getWorkspaceModels: (token: string) => request<AIModel[]>("/settings/models", { token }),
   updateWorkspaceModels: (token: string, payload: { enabled_model_ids: string[]; default_model_id?: string | null }) =>

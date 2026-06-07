@@ -11,4 +11,6 @@ class WorkspaceConfig(UUIDTimestampMixin, Base):
     __tablename__ = "workspace_configs"
 
     name: Mapped[str] = mapped_column(String(120), default="Olanma Workspace")
+    authentication_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    docs_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     public_registration_enabled: Mapped[bool] = mapped_column(Boolean, default=True)

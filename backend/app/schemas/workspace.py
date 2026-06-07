@@ -7,6 +7,8 @@ from app.schemas.common import TimestampedResponse
 
 class WorkspaceConfigUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
+    authentication_enabled: bool | None = None
+    docs_enabled: bool | None = None
     public_registration_enabled: bool | None = None
 
 
@@ -17,7 +19,10 @@ class WorkspaceModelVisibilityUpdate(BaseModel):
 
 class WorkspaceConfigResponse(TimestampedResponse):
     name: str
+    authentication_enabled: bool
+    docs_enabled: bool
     public_registration_enabled: bool
+    first_user_registration_required: bool
     total_users: int
     total_providers: int
     pending_jobs: int
@@ -26,4 +31,7 @@ class WorkspaceConfigResponse(TimestampedResponse):
 
 class WorkspacePublicResponse(BaseModel):
     name: str
+    authentication_enabled: bool
+    docs_enabled: bool
     public_registration_enabled: bool
+    first_user_registration_required: bool

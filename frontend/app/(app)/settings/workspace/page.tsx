@@ -24,6 +24,8 @@ export default function WorkspaceSettingsPage() {
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
   const [registrationDialogOpen, setRegistrationDialogOpen] = useState(false);
+  const [authenticationDialogOpen, setAuthenticationDialogOpen] = useState(false);
+  const [docsDialogOpen, setDocsDialogOpen] = useState(false);
 
   const workspaceQuery = useQuery({
     queryKey: ["workspace-settings"],
@@ -58,6 +60,37 @@ export default function WorkspaceSettingsPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-workspace-settings"] });
+    },
+  });
+
+  const toggleAuthentication = useMutation({
+    mutationFn: async () => {
+      if (!token || !workspaceQuery.data) {
+        throw new Error("Workspace settings are unavailable.");
+      }
+      return api.updateWorkspaceSettings(token, {
+        authentication_enabled: !workspaceQuery.data.authentication_enabled,
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-workspace-settings"] });
+    },
+  });
+
+  const toggleDocs = useMutation({
+    mutationFn: async () => {
+      if (!token || !workspaceQuery.data) {
+        throw new Error("Workspace settings are unavailable.");
+      }
+      return api.updateWorkspaceSettings(token, {
+        docs_enabled: !workspaceQuery.data.docs_enabled,
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-workspace-settings"] });
     },
   });
 
@@ -72,13 +105,13 @@ export default function WorkspaceSettingsPage() {
             <h2 className="text-base font-semibold text-foreground">Access</h2>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-border bg-background-secondary p-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {/* <div className="rounded-2xl border border-border bg-background-secondary p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-muted">Name</p>
               <p className="mt-2 text-lg font-semibold text-foreground">
                 {workspaceQuery.data?.name ?? "Loading..."}
               </p>
-            </div>
+            </div> */}
             <div className="rounded-2xl border border-border bg-background-secondary p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-muted">Users</p>
               <p className="mt-2 text-lg font-semibold text-foreground">{workspaceQuery.data?.total_users ?? 0}</p>
@@ -115,6 +148,57 @@ export default function WorkspaceSettingsPage() {
             {toggleRegistration.error ? (
               <p className="mt-3 text-sm text-primary">{toggleRegistration.error.message}</p>
             ) : null}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Authentication</p>
+                <p className="mt-1 text-sm text-foreground-muted">
+                  {workspaceQuery.data?.first_user_registration_required
+                    ? "Create the first user account before changing authentication rules."
+                    : workspaceQuery.data?.authentication_enabled
+                      ? "Sign-in is required for workspace access."
+                      : "Workspace access is open without login."}
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setAuthenticationDialogOpen(true)}
+                disabled={!user?.is_superuser || workspaceQuery.data?.first_user_registration_required || toggleAuthentication.isPending || workspaceQuery.isLoading}
+              >
+                {workspaceQuery.data?.authentication_enabled ? "Disable authentication" : "Enable authentication"}
+              </Button>
+            </div>
+            {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
+            {toggleAuthentication.error ? (
+              <p className="mt-3 text-sm text-primary">{toggleAuthentication.error.message}</p>
+            ) : null}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">API docs</p>
+                <p className="mt-1 text-sm text-foreground-muted">
+                  {workspaceQuery.data?.docs_enabled
+                    ? "Swagger UI, ReDoc, and OpenAPI schema are publicly reachable."
+                    : "Docs are hidden from public access by default."}
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setDocsDialogOpen(true)}
+                disabled={!user?.is_superuser || toggleDocs.isPending || workspaceQuery.isLoading}
+              >
+                {workspaceQuery.data?.docs_enabled ? "Disable docs" : "Enable docs"}
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-foreground-muted">
+              Paths affected: <span className="font-mono">/docs</span>, <span className="font-mono">/redoc</span>, and <span className="font-mono">/api/v1/openapi.json</span>.
+            </p>
+            {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
+            {toggleDocs.error ? <p className="mt-3 text-sm text-primary">{toggleDocs.error.message}</p> : null}
           </div>
         </Card>
 
@@ -214,6 +298,110 @@ export default function WorkspaceSettingsPage() {
                 : workspaceQuery.data?.public_registration_enabled
                   ? "Disable registration"
                   : "Enable registration"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={authenticationDialogOpen}
+        onOpenChange={(open) => {
+          if (!toggleAuthentication.isPending) {
+            setAuthenticationDialogOpen(open);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {workspaceQuery.data?.authentication_enabled
+                ? "Disable authentication?"
+                : "Enable authentication?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {workspaceQuery.data?.authentication_enabled
+                ? "Users will be able to open the workspace without signing in. Keep this disabled only for trusted private deployments."
+                : "Users will need to sign in again before accessing the workspace."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-border"
+              disabled={toggleAuthentication.isPending}
+              onClick={() => setAuthenticationDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={toggleAuthentication.isPending}
+              onClick={() =>
+                toggleAuthentication.mutate(undefined, {
+                  onSuccess: async () => {
+                    setAuthenticationDialogOpen(false);
+                    await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+                  },
+                })
+              }
+            >
+              {toggleAuthentication.isPending
+                ? "Saving..."
+                : workspaceQuery.data?.authentication_enabled
+                  ? "Disable authentication"
+                  : "Enable authentication"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={docsDialogOpen}
+        onOpenChange={(open) => {
+          if (!toggleDocs.isPending) {
+            setDocsDialogOpen(open);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {workspaceQuery.data?.docs_enabled ? "Disable API docs?" : "Enable API docs?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {workspaceQuery.data?.docs_enabled
+                ? "Swagger, ReDoc, and the OpenAPI schema will become unavailable to public visitors."
+                : "Swagger, ReDoc, and the OpenAPI schema will become reachable from the public app URLs."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-border"
+              disabled={toggleDocs.isPending}
+              onClick={() => setDocsDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={toggleDocs.isPending}
+              onClick={() =>
+                toggleDocs.mutate(undefined, {
+                  onSuccess: async () => {
+                    setDocsDialogOpen(false);
+                    await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+                  },
+                })
+              }
+            >
+              {toggleDocs.isPending
+                ? "Saving..."
+                : workspaceQuery.data?.docs_enabled
+                  ? "Disable docs"
+                  : "Enable docs"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

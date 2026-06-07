@@ -83,10 +83,15 @@ export function RegisterForm() {
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof registerSchema>) => {
       await api.register(values);
+      if (workspaceQuery.data?.authentication_enabled === false) {
+        return null;
+      }
       return api.login({ email: values.email, password: values.password });
     },
     onSuccess: (tokens) => {
-      setSession(tokens);
+      if (tokens) {
+        setSession(tokens);
+      }
       router.replace(searchParams.get("next") || "/library");
     },
   });
@@ -102,7 +107,46 @@ export function RegisterForm() {
           Set up Olanma and start processing audio, video, and documents.
         </p>
       </div>
-      {workspaceQuery.data?.public_registration_enabled === false ? (
+      {workspaceQuery.data?.first_user_registration_required ? (
+        <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
+          <div className="rounded-2xl border border-border bg-background-secondary p-4">
+            <p className="text-sm font-medium text-foreground">Create the first workspace account</p>
+            <p className="mt-2 text-sm text-foreground-muted">
+              The first account becomes the workspace administrator and unlocks the rest of setup.
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="full_name">
+              Full name <span className="text-primary">*</span>
+            </Label>
+            <Input id="full_name" {...form.register("full_name")} />
+            {form.formState.errors.full_name ? (
+              <p className="mt-1 text-sm text-primary">{form.formState.errors.full_name.message}</p>
+            ) : null}
+          </div>
+          <div>
+            <Label htmlFor="email">
+              Email <span className="text-primary">*</span>
+            </Label>
+            <Input id="email" type="email" {...form.register("email")} />
+            {form.formState.errors.email ? (
+              <p className="mt-1 text-sm text-primary">{form.formState.errors.email.message}</p>
+            ) : null}
+          </div>
+          <PasswordField
+            id="password"
+            label="Password"
+            required
+            hint="Must be at least 8 characters."
+            error={form.formState.errors.password?.message}
+            registration={form.register("password")}
+          />
+          {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
+          <Button type="submit" className="w-full">
+            {mutation.isPending ? "Creating..." : "Create admin account"}
+          </Button>
+        </form>
+      ) : workspaceQuery.data?.public_registration_enabled === false ? (
         <div className="mt-8 rounded-2xl border border-border bg-background-secondary p-4">
           <p className="text-sm font-medium text-foreground">Public registration is disabled</p>
           <p className="mt-2 text-sm text-foreground-muted">
@@ -157,6 +201,10 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setSession = useAuthStore((state) => state.setSession);
+  const workspaceQuery = useQuery({
+    queryKey: ["public-workspace-settings"],
+    queryFn: () => api.getPublicWorkspaceSettings(),
+  });
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     mode: "onChange",
@@ -177,22 +225,44 @@ export function LoginForm() {
         <h1 className="mt-2 text-3xl font-semibold text-foreground">Welcome back</h1>
         <p className="mt-2 text-sm text-foreground-muted">Sign in to manage providers, media jobs, and extracted knowledge.</p>
       </div>
-      <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" {...form.register("email")} />
+      {workspaceQuery.data?.first_user_registration_required ? (
+        <div className="mt-8 rounded-2xl border border-border bg-background-secondary p-4">
+          <p className="text-sm font-medium text-foreground">Create the first workspace account first</p>
+          <p className="mt-2 text-sm text-foreground-muted">
+            Registration is required before anyone can sign in to this workspace.
+          </p>
+          <Link href="/register" className="mt-4 inline-flex text-sm text-foreground underline decoration-primary/30 underline-offset-4">
+            Go to registration
+          </Link>
         </div>
-        <PasswordField
-          id="password"
-          label="Password"
-          error={form.formState.errors.password?.message}
-          registration={form.register("password")}
-        />
-        {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
-        <Button type="submit" className="w-full">
-          {mutation.isPending ? "Signing in..." : "Sign in"}
-        </Button>
-      </form>
+      ) : workspaceQuery.data?.authentication_enabled === false ? (
+        <div className="mt-8 rounded-2xl border border-border bg-background-secondary p-4">
+          <p className="text-sm font-medium text-foreground">Authentication is disabled</p>
+          <p className="mt-2 text-sm text-foreground-muted">
+            This workspace currently allows direct access without signing in.
+          </p>
+          <Link href="/library" className="mt-4 inline-flex text-sm text-foreground underline decoration-primary/30 underline-offset-4">
+            Open workspace
+          </Link>
+        </div>
+      ) : (
+        <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" {...form.register("email")} />
+          </div>
+          <PasswordField
+            id="password"
+            label="Password"
+            error={form.formState.errors.password?.message}
+            registration={form.register("password")}
+          />
+          {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
+          <Button type="submit" className="w-full">
+            {mutation.isPending ? "Signing in..." : "Sign in"}
+          </Button>
+        </form>
+      )}
       <p className="mt-6 text-sm text-foreground-muted">
         Need an account?{" "}
         <Link href="/register" className="text-foreground underline decoration-primary/30 underline-offset-4">

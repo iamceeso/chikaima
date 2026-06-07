@@ -110,12 +110,24 @@ class AuthService:
         return user
 
     def login(self, payload: UserLogin) -> tuple[User, str, str]:
+        workspace = WorkspaceService(self.db).get_or_create()
+        if not workspace.authentication_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Authentication is disabled for this workspace.",
+            )
         user = self.users.get_by_email(payload.email)
         if not user or not verify_password(payload.password, user.hashed_password):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
         return user, create_access_token(user.id), create_refresh_token(user.id)
 
     def refresh(self, refresh_token: str) -> str:
+        workspace = WorkspaceService(self.db).get_or_create()
+        if not workspace.authentication_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Authentication is disabled for this workspace.",
+            )
         try:
             payload = decode_token(refresh_token, refresh=True)
         except Exception as exc:  # noqa: BLE001

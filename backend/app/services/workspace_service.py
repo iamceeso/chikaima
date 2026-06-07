@@ -35,9 +35,11 @@ class WorkspaceService:
 
     def get_summary(self) -> WorkspaceConfigResponse:
         workspace = self.get_or_create()
+        total_users = self.db.query(User).count()
         return WorkspaceConfigResponse(
             **workspace.__dict__,
-            total_users=self.db.query(User).count(),
+            first_user_registration_required=total_users == 0,
+            total_users=total_users,
             total_providers=self.db.query(Provider).count(),
             pending_jobs=self.db.query(Job).filter(Job.status.in_(["pending", "running"])).count(),
             completed_jobs=self.db.query(Job).filter(Job.status == "completed").count(),
@@ -45,9 +47,13 @@ class WorkspaceService:
 
     def get_public_settings(self) -> WorkspacePublicResponse:
         workspace = self.get_or_create()
+        total_users = self.db.query(User).count()
         return WorkspacePublicResponse(
             name=workspace.name,
+            authentication_enabled=workspace.authentication_enabled,
+            docs_enabled=workspace.docs_enabled,
             public_registration_enabled=workspace.public_registration_enabled,
+            first_user_registration_required=total_users == 0,
         )
 
     def update(self, actor: User, payload: WorkspaceConfigUpdate) -> WorkspaceConfigResponse:

@@ -66,6 +66,7 @@ export function Sidebar({
   const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
   const queryClient = useQueryClient();
   const [conversationPendingDelete, setConversationPendingDelete] = useState<Conversation | null>(null);
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
     queryFn: () => {
@@ -84,11 +85,31 @@ export function Sidebar({
       }
       await api.deleteConversation(token, conversationId);
     },
-    onSuccess: async (_data, conversationId) => {
+    onMutate: async (conversationId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["conversations"] });
+      const previousConversations = queryClient.getQueryData<Conversation[]>(["conversations"]) ?? [];
+      setDeletingConversationId(conversationId);
+
+      queryClient.setQueryData<Conversation[]>(["conversations"], (current = []) =>
+        current.filter((conversation) => conversation.id !== conversationId),
+      );
+
       if (selectedConversationId === conversationId) {
         openFreshChat();
       }
+
       setConversationPendingDelete(null);
+      return { previousConversations };
+    },
+    onError: (_error, _conversationId, context) => {
+      if (context?.previousConversations) {
+        queryClient.setQueryData(["conversations"], context.previousConversations);
+      }
+      setDeletingConversationId(null);
+    },
+    onSettled: async () => {
+      setDeletingConversationId(null);
+      deleteConversation.reset();
       await queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
   });
@@ -283,7 +304,11 @@ export function Sidebar({
                   <button
                     type="button"
                     aria-label={`Delete ${item.title}`}
-                    onClick={() => setConversationPendingDelete(item)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setConversationPendingDelete(item);
+                    }}
                     className={cn(
                       "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity",
                       active
@@ -308,7 +333,7 @@ export function Sidebar({
       <AlertDialog
         open={Boolean(conversationPendingDelete)}
         onOpenChange={(open) => {
-          if (!open && !deleteConversation.isPending) {
+          if (!open && deletingConversationId !== conversationPendingDelete?.id) {
             setConversationPendingDelete(null);
           }
         }}
@@ -327,14 +352,14 @@ export function Sidebar({
               type="button"
               variant="ghost"
               className="border border-border"
-              disabled={deleteConversation.isPending}
+              disabled={deletingConversationId === conversationPendingDelete?.id}
               onClick={() => setConversationPendingDelete(null)}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              disabled={deleteConversation.isPending || !conversationPendingDelete}
+              disabled={deletingConversationId !== null || !conversationPendingDelete}
               onClick={() => {
                 if (!conversationPendingDelete) {
                   return;
@@ -342,7 +367,7 @@ export function Sidebar({
                 deleteConversation.mutate(conversationPendingDelete.id);
               }}
             >
-              {deleteConversation.isPending ? "Deleting..." : "Delete chat"}
+              {deletingConversationId === conversationPendingDelete?.id ? "Deleting..." : "Delete chat"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
