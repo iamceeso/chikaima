@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint app components lib services store types --max-warnings=0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js",
+    "test": "npm run test:unit && npm run lint && npm run typecheck"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

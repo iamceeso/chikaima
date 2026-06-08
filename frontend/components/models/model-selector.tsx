@@ -64,7 +64,7 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
           {models.map((model) => (
             <SelectItem key={model.id} value={model.id}>
               <div className="flex items-center gap-2">
-                <span>{model.name}</span>
+                <span>{model.display_name}</span>
                 {model.provider_id && (
                   <span className="text-xs text-foreground-muted">
                     ({model.provider_id})
