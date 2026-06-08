@@ -11,6 +11,9 @@ from app.models.provider import Provider
 from app.services.asset_search_service import AssetSearchService
 from app.services.providers.factory import AdapterFactory
 
+RAG_SEARCH_LIMIT = 3
+RAG_CHUNKS_PER_SOURCE = 1
+
 
 class LLMService:
     def __init__(self, db: Session) -> None:
@@ -90,20 +93,23 @@ class LLMService:
         citations: list[dict[str, str | int | float]] = []
 
         if include_context and user_message:
-            search_results = self.asset_search.search(user_id, user_message, limit=6)
+            search_results = self._search_with_fallback(user_id, user_message, limit=RAG_SEARCH_LIMIT)
             if search_results:
                 context_sections: list[str] = []
                 for result in search_results:
-                    for hit in result.chunks[:2]:
+                    for hit in result.chunks[:RAG_CHUNKS_PER_SOURCE]:
                         reference = self._build_citation(result.filename, hit.chunk.meta)
                         citations.append(
                             {
                                 "source_type": result.source_type,
                                 "source_id": result.source_id,
+                                "asset_type": result.asset_type,
                                 "filename": result.filename,
                                 "chunk_id": hit.chunk.id,
                                 "chunk_index": hit.chunk.chunk_index,
                                 "reference": reference,
+                                "excerpt": hit.chunk.content[:280],
+                                "location": self._extract_location(hit.chunk.meta),
                                 "score": round(hit.score, 4),
                             }
                         )
@@ -143,20 +149,23 @@ If the context doesn't contain relevant information, answer based on your knowle
         stream_messages = messages
 
         if include_context and user_message:
-            search_results = self.asset_search.search(user_id, user_message, limit=6)
+            search_results = self._search_with_fallback(user_id, user_message, limit=RAG_SEARCH_LIMIT)
             if search_results:
                 context_sections: list[str] = []
                 for result in search_results:
-                    for hit in result.chunks[:2]:
+                    for hit in result.chunks[:RAG_CHUNKS_PER_SOURCE]:
                         reference = self._build_citation(result.filename, hit.chunk.meta)
                         citations.append(
                             {
                                 "source_type": result.source_type,
                                 "source_id": result.source_id,
+                                "asset_type": result.asset_type,
                                 "filename": result.filename,
                                 "chunk_id": hit.chunk.id,
                                 "chunk_index": hit.chunk.chunk_index,
                                 "reference": reference,
+                                "excerpt": hit.chunk.content[:280],
+                                "location": self._extract_location(hit.chunk.meta),
                                 "score": round(hit.score, 4),
                             }
                         )
@@ -177,6 +186,18 @@ If the context doesn't contain relevant information, answer based on your knowle
 
         return self.stream_reply(provider, model, stream_messages), citations
 
+    def _search_with_fallback(
+        self,
+        user_id: str,
+        query: str,
+        *,
+        limit: int,
+    ) -> list:
+        try:
+            return self.asset_search.search(user_id, query, limit=limit)
+        except Exception:
+            return []
+
     def _build_citation(self, filename: str, metadata: dict) -> str:
         if not isinstance(metadata, dict):
             return filename
@@ -189,3 +210,14 @@ If the context doesn't contain relevant information, answer based on your knowle
         if "start_line" in metadata and "end_line" in metadata:
             return f"{filename} lines {metadata['start_line']}-{metadata['end_line']}"
         return f"{filename} chunk {metadata.get('chunk_index', 0)}"
+
+    def _extract_location(self, metadata: dict) -> dict[str, str | int]:
+        if not isinstance(metadata, dict):
+            return {}
+
+        location: dict[str, str | int] = {}
+        for key in ("page", "slide", "sheet", "start_line", "end_line", "chunk_index", "section_index"):
+            value = metadata.get(key)
+            if isinstance(value, (str, int)):
+                location[key] = value
+        return location

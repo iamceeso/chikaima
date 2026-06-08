@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Message } from "@/types";
 import { cn } from "@/lib/utils";
+import { RAGReferences } from "./rag-references";
 
 interface MessageItemProps {
   message: Message;
@@ -117,6 +118,7 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
                 {new Date(message.created_at).toLocaleTimeString()}
               </p>
             )}
+            {!isUserMessage ? <RAGReferences message={message} /> : null}
           </>
         )}
       </div>

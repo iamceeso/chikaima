@@ -82,6 +82,19 @@ export interface Message {
   updated_at: string;
 }
 
+export interface RAGCitation {
+  source_type: string;
+  source_id: string;
+  asset_type?: string;
+  filename: string;
+  chunk_id: string;
+  chunk_index: number;
+  reference: string;
+  excerpt?: string;
+  location?: Record<string, string | number>;
+  score: number;
+}
+
 export interface Conversation {
   id: string;
   title: string;

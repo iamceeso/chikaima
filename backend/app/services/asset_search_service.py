@@ -40,6 +40,9 @@ class AssetSearchService:
         asset_types: set[str] | None = None,
         limit: int | None = None,
     ) -> list[RetrievalSource]:
+        if not query.strip():
+            return []
+
         limit = limit or settings.rag_top_k
         query_vector = self.embeddings.generate_embedding(query)
 

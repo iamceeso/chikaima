@@ -4,6 +4,7 @@ from app.models.audio import AudioAsset
 from app.models.asset_chunk import AssetChunk
 from app.models.conversation import Conversation
 from app.models.document import Document
+from app.models.embedding import Embedding
 from app.models.job import Job
 from app.models.message import Message
 from app.models.provider import Provider
@@ -21,6 +22,7 @@ __all__ = [
     "Base",
     "Conversation",
     "Document",
+    "Embedding",
     "Job",
     "Message",
     "Provider",

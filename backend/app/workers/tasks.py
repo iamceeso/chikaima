@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
+import app.models  # noqa: F401  Ensures SQLAlchemy relationship targets are registered for workers.
 from app.models.audio import AudioAsset
 from app.models.document import Document
 from app.models.job import Job

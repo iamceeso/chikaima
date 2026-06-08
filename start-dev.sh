@@ -6,6 +6,27 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 FRONTEND_DIR="$ROOT_DIR/frontend"
 
+port_owner() {
+  local port="$1"
+  lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | tail -n +2 || true
+}
+
+ensure_port_available() {
+  local port="$1"
+  local service_name="$2"
+  local owner
+  owner="$(port_owner "$port")"
+
+  if [[ -n "$owner" ]]; then
+    echo "Cannot start $service_name on port $port because it is already in use."
+    echo
+    echo "$owner"
+    echo
+    echo "Stop the existing process using port $port, then run ./start-dev.sh again."
+    exit 1
+  fi
+}
+
 cleanup() {
   local exit_code=$?
 
@@ -26,6 +47,9 @@ cleanup() {
 }
 
 trap cleanup EXIT INT TERM
+
+ensure_port_available 8000 "Olanma backend"
+ensure_port_available 3000 "Olanma frontend"
 
 echo "Starting Olanma backend..."
 (

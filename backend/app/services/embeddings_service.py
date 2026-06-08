@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 from sentence_transformers import SentenceTransformer
 from sqlalchemy.orm import Session
 
@@ -7,13 +9,18 @@ from app.core.config import settings
 from app.models.asset_chunk import AssetChunk
 
 
+@lru_cache(maxsize=1)
+def get_embedding_model() -> SentenceTransformer:
+    return SentenceTransformer(settings.embedding_model)
+
+
 class EmbeddingsService:
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.model = SentenceTransformer(settings.embedding_model)
+        self.model = get_embedding_model()
 
     def generate_embedding(self, text: str) -> list[float]:
-        embedding = self.model.encode(text or "", convert_to_numpy=True)
+        embedding = self.model.encode(text or "", convert_to_numpy=True, show_progress_bar=False)
         return embedding.tolist()
 
     def replace_chunks_for_source(

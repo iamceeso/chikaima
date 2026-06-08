@@ -8,7 +8,7 @@ export default function SettingsProvidersPage() {
       title="Providers"
       description="Connect transcription and analysis providers."
     >
-      <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+      <div className="mx-auto grid w-full max-w-6xl gap-4 lg:gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <ProviderForm />
         <ProviderList />
       </div>

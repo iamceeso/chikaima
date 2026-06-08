@@ -51,37 +51,42 @@ const kindMeta = {
 
 function toLibraryAsset(asset: AudioAsset | VideoAsset | DocumentAsset, kind: LibraryAsset["kind"]): LibraryAsset {
   if (kind === "audio") {
+    const audioAsset = asset as AudioAsset;
     return {
-      id: asset.id,
-      name: asset.name,
+      id: audioAsset.id,
+      name: audioAsset.name,
       kind,
-      status: asset.status,
-      created_at: asset.created_at,
-      summary: asset.transcript ? `${asset.transcript.slice(0, 180)}${asset.transcript.length > 180 ? "..." : ""}` : null,
+      status: audioAsset.status,
+      created_at: audioAsset.created_at,
+      summary: audioAsset.transcript
+        ? `${audioAsset.transcript.slice(0, 180)}${audioAsset.transcript.length > 180 ? "..." : ""}`
+        : null,
       detail: "Transcript-ready audio workspace",
     };
   }
 
   if (kind === "video") {
+    const videoAsset = asset as VideoAsset;
     return {
-      id: asset.id,
-      name: asset.name,
+      id: videoAsset.id,
+      name: videoAsset.name,
       kind,
-      status: asset.status,
-      created_at: asset.created_at,
-      summary: asset.summary,
-      detail: `${Array.isArray(asset.action_items) ? asset.action_items.length : 0} action items`,
+      status: videoAsset.status,
+      created_at: videoAsset.created_at,
+      summary: videoAsset.summary,
+      detail: `${Array.isArray(videoAsset.action_items) ? videoAsset.action_items.length : 0} action items`,
     };
   }
 
+  const documentAsset = asset as DocumentAsset;
   return {
-    id: asset.id,
-    name: asset.name,
+    id: documentAsset.id,
+    name: documentAsset.name,
     kind,
-    status: asset.status,
-    created_at: asset.created_at,
-    summary: asset.summary,
-    detail: asset.mime_type,
+    status: documentAsset.status,
+    created_at: documentAsset.created_at,
+    summary: documentAsset.summary,
+    detail: documentAsset.mime_type,
   };
 }
 

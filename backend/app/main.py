@@ -1,13 +1,18 @@
+import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.services.workspace_service import WorkspaceService
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title=settings.app_name,
@@ -26,6 +31,18 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+
+def _ensure_vector_extension() -> None:
+    db = SessionLocal()
+    try:
+        db.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        db.commit()
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        logger.warning("Could not enable pgvector extension automatically: %s", exc)
+    finally:
+        db.close()
 
 
 def _docs_enabled() -> bool:
@@ -75,3 +92,8 @@ def openapi_schema() -> JSONResponse:
 @app.get("/health", tags=["health"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.on_event("startup")
+def startup_checks() -> None:
+    _ensure_vector_extension()

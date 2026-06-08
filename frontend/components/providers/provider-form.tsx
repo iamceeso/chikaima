@@ -52,30 +52,32 @@ export function ProviderForm() {
   });
 
   return (
-    <Card className="bg-[var(--surface-raised)]">
+    <Card className="min-w-0 overflow-hidden bg-[var(--surface-raised)] p-5 sm:p-6">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-foreground">Add provider</h2>
-        <p className="mt-2 text-sm text-foreground-muted">Connect cloud APIs, local runtimes, or compatible gateways.</p>
+        <p className="mt-2 text-sm text-foreground-muted">
+          Connect cloud APIs, local runtimes, or compatible gateways.
+        </p>
       </div>
       <form
-        className="grid gap-4"
+        className="grid min-w-0 gap-4"
         onSubmit={form.handleSubmit((values) => {
           mutation.mutate(values);
         })}
       >
-        <div>
+        <div className="min-w-0">
           <Label htmlFor="name">
             Name <span className="text-primary">*</span>
           </Label>
           <Input id="name" {...form.register("name")} placeholder="Primary OpenAI" />
         </div>
-        <div>
+        <div className="min-w-0">
           <Label htmlFor="provider_type">
             Provider type <span className="text-primary">*</span>
           </Label>
           <select
             id="provider_type"
-            className="h-11 w-full rounded-xl border border-border bg-[var(--surface-raised)] px-4 text-sm text-foreground"
+            className="h-11 w-full min-w-0 rounded-xl border border-border bg-[var(--surface-raised)] px-4 text-sm text-foreground"
             {...form.register("provider_type")}
           >
             <option value="openai">OpenAI</option>
@@ -86,20 +88,17 @@ export function ProviderForm() {
             <option value="local">Local model host</option>
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <Label htmlFor="base_url">Base URL</Label>
           <Input id="base_url" {...form.register("base_url")} placeholder="http://localhost:11434" />
         </div>
-        <div>
+        <div className="min-w-0">
           <Label htmlFor="api_key">API key</Label>
           <Input id="api_key" type="password" {...form.register("api_key")} placeholder="sk-..." />
         </div>
-        <div className="rounded-xl border border-border bg-[var(--surface-strong)] p-4 text-xs leading-6 text-foreground-muted">
-          Olanma syncs the available models for each provider after you save it. OpenAI, Claude, Gemini, and Ollama
-          providers will populate their current model options automatically when the API supports model listing.
-        </div>
+       
         {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
-        <Button type="submit" className="w-full">
+        <Button type="submit" className="w-full sm:w-auto">
           {mutation.isPending ? "Saving..." : "Save provider"}
         </Button>
       </form>

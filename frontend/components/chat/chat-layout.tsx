@@ -25,6 +25,7 @@ import { api } from "@/services/api";
 import type { Message } from "@/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useChatStore } from "@/store/chat-store";
+import { RAGReferences } from "./rag-references";
 
 const starterPrompts = [
   "Summarize the latest transcript",
@@ -330,6 +331,21 @@ export function ChatLayout() {
             if (typeof conversationId === "string") {
               setActiveConversationId(conversationId);
             }
+            setStreamingMessages((current) =>
+              current.map((message) =>
+                message.id === assistantTempId
+                  ? {
+                      ...message,
+                      metadata: {
+                        ...message.metadata,
+                        provider: metadata.provider,
+                        model: metadata.model,
+                        rag_citations: Array.isArray(metadata.rag_citations) ? metadata.rag_citations : [],
+                      },
+                    }
+                  : message,
+              ),
+            );
           },
           onToken: (text) => {
             setHasReceivedStreamToken(true);
@@ -650,6 +666,7 @@ export function ChatLayout() {
                             })}
                           </div>
                         ) : null}
+                        {!isUser ? <RAGReferences message={message} /> : null}
                         <div className="mt-2.5 flex gap-2">
                           {isUser ? (
                             <Button

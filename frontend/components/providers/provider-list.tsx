@@ -60,7 +60,7 @@ export function ProviderList() {
   });
 
   return (
-    <Card className="bg-[var(--surface-raised)]">
+    <Card className="min-w-0 overflow-hidden bg-[var(--surface-raised)] p-5 sm:p-6">
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-foreground">Connected providers</h2>
         <p className="mt-1 text-sm text-foreground-muted">Providers available to this workspace.</p>
@@ -70,24 +70,24 @@ export function ProviderList() {
         {data?.length ? (
           data.map((provider) => (
             <div key={provider.id} className="rounded-xl border border-border bg-[var(--surface-strong)] p-3.5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-medium text-foreground">{provider.name}</p>
-                  <p className="text-sm text-foreground-muted">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <p className="break-words font-medium text-foreground">{provider.name}</p>
+                  <p className="break-words text-sm text-foreground-muted">
                     {provider.provider_type} {provider.base_url ? `• ${provider.base_url}` : ""}
                   </p>
                   {provider.masked_secret ? (
                     <p className="mt-1 text-xs text-muted">Credential {provider.masked_secret}</p>
                   ) : null}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-stretch gap-2 lg:justify-end">
                   <span className="rounded-full border border-border bg-[var(--surface-raised)] px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">
                     {provider.is_enabled ? "enabled" : "disabled"}
                   </span>
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-9 border border-border px-3"
+                    className="h-9 min-w-28 border border-border px-3"
                     disabled={toggleMutation.isPending || deleteMutation.isPending}
                     onClick={() =>
                       toggleMutation.mutate({
@@ -102,7 +102,7 @@ export function ProviderList() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-9 border border-border px-3"
+                    className="h-9 min-w-28 border border-border px-3"
                     disabled={deleteMutation.isPending || toggleMutation.isPending}
                     onClick={() => setProviderPendingDelete(provider)}
                   >

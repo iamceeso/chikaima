@@ -64,7 +64,7 @@ services:
       - media_storage:/app/storage
 
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: olanma-postgres
     environment:
       POSTGRES_DB: olanma
