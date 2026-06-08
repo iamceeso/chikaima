@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Shield, Trash2, UserPlus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -20,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createFormResolver } from "@/lib/form-resolver";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 import type { User } from "@/types";
@@ -59,7 +59,7 @@ export default function SettingsUsersPage() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userPendingDelete, setUserPendingDelete] = useState<User | null>(null);
   const form = useForm<CreateUserValues>({
-    resolver: zodResolver(createUserSchema),
+    resolver: createFormResolver<CreateUserValues>(createUserSchema),
     defaultValues: {
       email: "",
       full_name: "",
@@ -68,7 +68,7 @@ export default function SettingsUsersPage() {
     },
   });
   const editForm = useForm<UpdateUserValues>({
-    resolver: zodResolver(updateUserSchema),
+    resolver: createFormResolver<UpdateUserValues>(updateUserSchema),
     defaultValues: {
       email: "",
       full_name: "",

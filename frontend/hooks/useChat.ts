@@ -88,14 +88,26 @@ export function useChat(token: string | null) {
     async (messageId: string, content: string) => {
       if (!token) return;
       try {
+        setIsLoading(true);
         setError(null);
         const updated = await api.updateMessage(token, messageId, { content });
-        setMessages((prev) => prev.map((m) => (m.id === messageId ? updated : m)));
+        const refreshedConversations = await api.getConversations(token);
+        setConversations(refreshedConversations);
+        setCurrentConversation((current) => {
+          if (!current) {
+            return current;
+          }
+          const refreshed = refreshedConversations.find((conversation) => conversation.id === current.id) ?? current;
+          setMessages(refreshed.messages || []);
+          return refreshed;
+        });
         return updated;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to update message";
         setError(message);
         throw err;
+      } finally {
+        setIsLoading(false);
       }
     },
     [token],

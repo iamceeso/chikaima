@@ -231,7 +231,7 @@ export default function LibraryPage() {
         {sections.map((section) => {
           const Icon = section.icon;
           return (
-            <Card key={section.title} className="rounded-[1.5rem] bg-surface px-5 py-4">
+            <Card key={section.title} className="rounded-3xl bg-surface px-5 py-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">{section.title}</p>
@@ -249,7 +249,7 @@ export default function LibraryPage() {
         })}
       </div>
 
-      <Card className="mt-3 flex max-h-[calc(100vh-18rem)] min-h-[32rem] flex-col rounded-[1.5rem] bg-surface px-5 py-5">
+      <Card className="mt-3 flex max-h-[calc(100vh-18rem)] min-h-128 flex-col rounded-3xl bg-surface px-5 py-5">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/12 text-primary">
             <Library className="h-5 w-5" />
@@ -263,7 +263,7 @@ export default function LibraryPage() {
         </div>
 
         <div className="mt-4 flex flex-nowrap items-center gap-2">
-          <div className="relative min-w-[15rem] flex-1">
+          <div className="relative min-w-60 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <Input value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9" placeholder="Search your library" />
           </div>
@@ -298,7 +298,7 @@ export default function LibraryPage() {
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
           <div className="grid gap-3">
             {loading ? (
-              <div className="rounded-[1.5rem] border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">
+              <div className="rounded-3xl border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">
                 Loading library assets...
               </div>
             ) : filteredAssets.length ? (
@@ -346,7 +346,7 @@ export default function LibraryPage() {
                 );
               })
             ) : (
-              <div className="rounded-[1.5rem] border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">
+              <div className="rounded-3xl border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">
                 No assets match this filter yet.
               </div>
             )}

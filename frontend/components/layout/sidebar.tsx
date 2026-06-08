@@ -85,6 +85,7 @@ export function Sidebar({
       return api.getWorkspaceSettings(token);
     },
     enabled: Boolean(token && user?.is_superuser),
+    staleTime: 5 * 60_000,
   });
   const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));

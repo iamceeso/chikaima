@@ -12,14 +12,14 @@ export function StatCard({
   trend?: string;
 }) {
   return (
-    <Card className="rounded-[1.5rem] bg-surface p-5">
+    <Card className="rounded-3xlurface p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">{label}</p>
           <p className="mt-3 text-3xl font-semibold text-foreground">{value}</p>
         </div>
         {trend ? (
-          <span className="rounded-full border border-border bg-[var(--surface-raised)] px-3 py-1 text-[11px] font-medium text-foreground-muted">
+          <span className="rounded-full border border-border bg-surface-raised px-3 py-1 text-[11px] font-medium text-foreground-muted">
             {trend}
           </span>
         ) : null}

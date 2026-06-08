@@ -19,6 +19,8 @@ type RequestOptions = RequestInit & {
   token?: string | null;
 };
 
+const REQUEST_TIMEOUT_MS = 10_000;
+
 type StreamChatPayload = {
   content: string;
   conversation_id?: string;
@@ -36,6 +38,7 @@ type StreamChatHandlers = {
 };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const method = (options.method ?? "GET").toUpperCase();
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -44,11 +47,25 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers.set("Authorization", `Bearer ${options.token}`);
   }
 
-  const response = await fetch(`${env.apiBaseUrl}${path}`, {
-    ...options,
-    headers,
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${env.apiBaseUrl}${path}`, {
+      ...options,
+      headers,
+      cache: options.cache ?? (method === "GET" ? "default" : "no-store"),
+      signal: options.signal ?? controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Request timed out. Check that the backend is running.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const body = await response.text();
@@ -157,7 +174,7 @@ export const api = {
     conversationId: string,
     payload: { role: string; content: string; metadata?: Record<string, unknown> },
   ) =>
-    request(`/chat/conversations/${conversationId}/messages`, {
+    request<Message>(`/chat/conversations/${conversationId}/messages`, {
       method: "POST",
       token,
       body: JSON.stringify(payload),
@@ -174,7 +191,7 @@ export const api = {
   regenerateMessage: (
     token: string,
     payload: { message_id: string },
-  ) => request(`/chat/messages/regenerate`, {
+  ) => request<Message>(`/chat/messages/regenerate`, {
     method: "POST",
     token,
     body: JSON.stringify(payload),

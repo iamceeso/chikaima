@@ -28,6 +28,7 @@ export function ModelAccessPanel() {
       return api.getWorkspaceModels(token);
     },
     enabled: Boolean(token) && Boolean(user?.is_superuser),
+    staleTime: 5 * 60_000,
   });
 
   const updateModelVisibility = useMutation({

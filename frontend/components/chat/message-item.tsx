@@ -61,13 +61,15 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
       <div className="flex-1 min-w-0">
         {isEditing ? (
           <div className="space-y-2">
-            <Textarea
-              value={editedContent}
-              onChange={(e) => setEditedContent(e.target.value)}
-              disabled={isSaving}
-              className="min-h-[100px] resize-none"
-              placeholder="Edit your message..."
-            />
+            <div className="rounded-[1.1rem] border border-border bg-background px-3.5 py-2.5">
+              <Textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                disabled={isSaving}
+                className="min-h-25 resize-none border-0 bg-transparent px-0 py-0 shadow-none focus:ring-0"
+                placeholder="Edit your message..."
+              />
+            </div>
             <div className="flex gap-2 justify-end">
               <Button
                 size="sm"

@@ -30,6 +30,7 @@ export function ProviderList() {
       }
       return api.getProviders(token);
     },
+    staleTime: 5 * 60_000,
   });
   const toggleMutation = useMutation({
     mutationFn: async ({ providerId, isEnabled }: { providerId: string; isEnabled: boolean }) => {
@@ -60,7 +61,7 @@ export function ProviderList() {
   });
 
   return (
-    <Card className="min-w-0 overflow-hidden bg-[var(--surface-raised)] p-5 sm:p-6">
+    <Card className="min-w-0 overflow-hidden bg-surface-raised p-5 sm:p-6">
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-foreground">Connected providers</h2>
         <p className="mt-1 text-sm text-foreground-muted">Providers available to this workspace.</p>
@@ -69,11 +70,11 @@ export function ProviderList() {
         {isLoading ? <p className="text-sm text-foreground-muted">Loading providers...</p> : null}
         {data?.length ? (
           data.map((provider) => (
-            <div key={provider.id} className="rounded-xl border border-border bg-[var(--surface-strong)] p-3.5">
+            <div key={provider.id} className="rounded-xl border border-border bg-surface-strong p-3.5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
-                  <p className="break-words font-medium text-foreground">{provider.name}</p>
-                  <p className="break-words text-sm text-foreground-muted">
+                  <p className="wrap-break-word font-medium text-foreground">{provider.name}</p>
+                  <p className="wrap-break-word text-sm text-foreground-muted">
                     {provider.provider_type} {provider.base_url ? `• ${provider.base_url}` : ""}
                   </p>
                   {provider.masked_secret ? (
@@ -81,7 +82,7 @@ export function ProviderList() {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-stretch gap-2 lg:justify-end">
-                  <span className="rounded-full border border-border bg-[var(--surface-raised)] px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">
+                  <span className="rounded-full border border-border bg-surface-raised px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">
                     {provider.is_enabled ? "enabled" : "disabled"}
                   </span>
                   <Button
@@ -114,7 +115,7 @@ export function ProviderList() {
             </div>
           ))
         ) : (
-          <div className="rounded-xl border border-dashed border-border bg-[var(--surface-strong)] p-4 text-sm text-foreground-muted">
+          <div className="rounded-xl border border-dashed border-border bg-surface-strong-sm text-foreground-muted">
             No providers added yet.
           </div>
         )}

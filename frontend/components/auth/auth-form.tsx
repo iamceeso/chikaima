@@ -1,6 +1,5 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createFormResolver } from "@/lib/form-resolver";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -72,12 +72,14 @@ export function RegisterForm() {
   const searchParams = useSearchParams();
   const setSession = useAuthStore((state) => state.setSession);
   const form = useForm<z.infer<typeof registerSchema>>({
-    resolver: zodResolver(registerSchema),
+    resolver: createFormResolver<z.infer<typeof registerSchema>>(registerSchema),
     mode: "onChange",
   });
   const workspaceQuery = useQuery({
     queryKey: ["public-workspace-settings"],
     queryFn: () => api.getPublicWorkspaceSettings(),
+    staleTime: 5 * 60_000,
+    retry: false,
   });
 
   const mutation = useMutation({
@@ -97,7 +99,7 @@ export function RegisterForm() {
   });
 
   return (
-    <Card className="w-full max-w-md bg-[var(--surface-raised)] p-8">
+    <Card className="w-full max-w-md bg-surface-raised p-8">
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Olanma</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">
@@ -204,9 +206,11 @@ export function LoginForm() {
   const workspaceQuery = useQuery({
     queryKey: ["public-workspace-settings"],
     queryFn: () => api.getPublicWorkspaceSettings(),
+    staleTime: 5 * 60_000,
+    retry: false,
   });
   const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
+    resolver: createFormResolver<z.infer<typeof loginSchema>>(loginSchema),
     mode: "onChange",
   });
 
@@ -219,7 +223,7 @@ export function LoginForm() {
   });
 
   return (
-    <Card className="w-full max-w-md bg-[var(--surface-raised)] p-8">
+    <Card className="w-full max-w-md bg-surface-raised p-8">
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Olanma</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">Welcome back</h1>

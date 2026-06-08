@@ -95,6 +95,7 @@ export function ChatLayout() {
   const [streamingMessages, setStreamingMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [hasReceivedStreamToken, setHasReceivedStreamToken] = useState(false);
+  const [branchResetFromMessageId, setBranchResetFromMessageId] = useState<string | null>(null);
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -119,6 +120,7 @@ export function ChatLayout() {
       }
       return api.getModels(token);
     },
+    staleTime: 5 * 60_000,
   });
 
   const conversation = startFresh
@@ -132,6 +134,16 @@ export function ChatLayout() {
     modelsQuery.data?.find((model) => model.id === conversation?.model_id) ??
     defaultModel;
   const displayMessages = [...(conversation?.messages ?? []), ...streamingMessages];
+  const visibleMessages = (() => {
+    if (!branchResetFromMessageId) {
+      return displayMessages;
+    }
+    const cutoffIndex = displayMessages.findIndex((message) => message.id === branchResetFromMessageId);
+    if (cutoffIndex === -1) {
+      return displayMessages;
+    }
+    return displayMessages.slice(0, cutoffIndex + 1);
+  })();
   const hasConversation = Boolean(displayMessages.length);
 
   useEffect(() => {
@@ -242,7 +254,8 @@ export function ChatLayout() {
     onSuccess: async () => {
       setEditingMessageId(null);
       setEditingDraft("");
-      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      await queryClient.refetchQueries({ queryKey: ["conversations"] });
+      setBranchResetFromMessageId(null);
     },
   });
 
@@ -577,7 +590,7 @@ export function ChatLayout() {
         <div ref={historyRef} className="h-full min-h-0 overflow-y-auto overscroll-contain">
         {hasConversation ? (
           <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-            {displayMessages.map((message) => {
+            {visibleMessages.map((message) => {
               const isUser = message.role === "user";
               const isTransient = message.id.startsWith("temp-") || message.status === "streaming";
               return (
@@ -606,16 +619,21 @@ export function ChatLayout() {
                     </div>
                     {editingMessageId === message.id ? (
                       <div className="space-y-2.5">
-                        <Textarea
-                          value={editingDraft}
-                          onChange={(event) => setEditingDraft(event.target.value)}
-                          className="min-h-20 border border-border bg-background text-sm"
-                        />
+                        <div className="rounded-[1.1rem] border border-border bg-background-secondary/70 px-3 py-2.5">
+                          <Textarea
+                            value={editingDraft}
+                            onChange={(event) => setEditingDraft(event.target.value)}
+                            className="min-h-20 border-0 bg-transparent px-0 py-0 text-[13px] leading-6 shadow-none focus:ring-0 sm:text-sm"
+                          />
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             type="button"
                             size="xs"
-                            onClick={() => editMessage.mutate(message.id)}
+                            onClick={() => {
+                              setBranchResetFromMessageId(message.id);
+                              editMessage.mutate(message.id);
+                            }}
                             disabled={editMessage.isPending || !editingDraft.trim()}
                           >
                             Save
@@ -628,6 +646,7 @@ export function ChatLayout() {
                             onClick={() => {
                               setEditingMessageId(null);
                               setEditingDraft("");
+                              setBranchResetFromMessageId(null);
                             }}
                           >
                             Cancel

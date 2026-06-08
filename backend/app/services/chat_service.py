@@ -151,20 +151,32 @@ class ChatService:
 
         try:
             conversation = message.conversation
+            cutoff = message.created_at
             message.content = content
             message.meta = {**message.meta, "edited": True}
             self.db.add(message)
             self.db.flush()
 
             if message.role == "user":
+                (
+                    self.db.query(Message)
+                    .filter(
+                        Message.conversation_id == message.conversation_id,
+                        Message.id != message.id,
+                        Message.created_at > cutoff,
+                    )
+                    .delete(synchronize_session=False)
+                )
                 model, provider = self.llm.resolve_model_and_provider(user_id, conversation.model_id)
-                history: list[Message] = []
-                for item in conversation.messages:
-                    if item.id == message.id:
-                        history.append(message)
-                        continue
-                    if item.created_at <= message.created_at:
-                        history.append(item)
+                history = list(
+                    self.db.query(Message)
+                    .filter(
+                        Message.conversation_id == message.conversation_id,
+                        Message.created_at <= cutoff,
+                    )
+                    .order_by(Message.created_at.asc())
+                    .all()
+                )
 
                 if use_rag:
                     assistant_content, citations = self.llm.generate_reply_with_rag(

@@ -36,6 +36,7 @@ export default function WorkspaceSettingsPage() {
       return api.getWorkspaceSettings(token);
     },
     enabled: Boolean(token),
+    staleTime: 5 * 60_000,
   });
 
   const jobsQuery = useQuery({

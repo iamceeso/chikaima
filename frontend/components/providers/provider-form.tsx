@@ -1,6 +1,5 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createFormResolver } from "@/lib/form-resolver";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -25,7 +25,7 @@ export function ProviderForm() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const queryClient = useQueryClient();
   const form = useForm<ProviderValues>({
-    resolver: zodResolver(providerSchema),
+    resolver: createFormResolver<ProviderValues>(providerSchema),
     defaultValues: {
       name: "",
       provider_type: "openai",
@@ -52,7 +52,7 @@ export function ProviderForm() {
   });
 
   return (
-    <Card className="min-w-0 overflow-hidden bg-[var(--surface-raised)] p-5 sm:p-6">
+    <Card className="min-w-0 overflow-hidden bg-surface-raised p-5 sm:p-6">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-foreground">Add provider</h2>
         <p className="mt-2 text-sm text-foreground-muted">
@@ -77,7 +77,7 @@ export function ProviderForm() {
           </Label>
           <select
             id="provider_type"
-            className="h-11 w-full min-w-0 rounded-xl border border-border bg-[var(--surface-raised)] px-4 text-sm text-foreground"
+            className="h-11 w-full min-w-0 rounded-xl border border-border bg-surface-raised px-4 text-sm text-foreground"
             {...form.register("provider_type")}
           >
             <option value="openai">OpenAI</option>

@@ -15,21 +15,14 @@ export function AuthenticatedRoute({ children }: { children: React.ReactNode }) 
   const tokens = useAuthStore((state) => state.tokens);
   const clearSession = useAuthStore((state) => state.clearSession);
   const profileQuery = useAuthProfile();
-  const refetchProfile = profileQuery.refetch;
   const publicWorkspaceQuery = useQuery({
     queryKey: ["public-workspace-settings"],
     queryFn: () => api.getPublicWorkspaceSettings(),
+    retry: false,
+    staleTime: 5 * 60_000,
   });
   const authRequired = publicWorkspaceQuery.data?.authentication_enabled !== false;
   const firstUserRequired = publicWorkspaceQuery.data?.first_user_registration_required === true;
-
-  useEffect(() => {
-    if (!hydrated || !authRequired || !tokens?.access_token) {
-      return;
-    }
-
-    void refetchProfile();
-  }, [authRequired, hydrated, pathname, refetchProfile, tokens?.access_token]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -60,6 +53,34 @@ export function AuthenticatedRoute({ children }: { children: React.ReactNode }) 
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <p className="text-sm text-foreground-muted">Loading workspace...</p>
+      </div>
+    );
+  }
+
+  if (publicWorkspaceQuery.isError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+        <div className="max-w-md text-center">
+          <p className="text-sm font-medium text-foreground">Could not load workspace.</p>
+          <p className="mt-2 text-sm text-foreground-muted">
+            {publicWorkspaceQuery.error instanceof Error
+              ? publicWorkspaceQuery.error.message
+              : "Check that the backend is running and try again."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authRequired && tokens?.access_token && profileQuery.isError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+        <div className="max-w-md text-center">
+          <p className="text-sm font-medium text-foreground">Could not load your session.</p>
+          <p className="mt-2 text-sm text-foreground-muted">
+            {profileQuery.error instanceof Error ? profileQuery.error.message : "Please sign in again."}
+          </p>
+        </div>
       </div>
     );
   }

@@ -15,6 +15,8 @@ export function GuestRoute({ children }: { children: React.ReactNode }) {
   const workspaceQuery = useQuery({
     queryKey: ["public-workspace-settings"],
     queryFn: () => api.getPublicWorkspaceSettings(),
+    staleTime: 5 * 60_000,
+    retry: false,
   });
   const authRequired = workspaceQuery.data?.authentication_enabled !== false;
   const firstUserRequired = workspaceQuery.data?.first_user_registration_required === true;
