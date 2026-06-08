@@ -99,6 +99,7 @@ export function ChatLayout() {
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editingTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const historyRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLDivElement | null>(null);
 
@@ -154,6 +155,16 @@ export function ChatLayout() {
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 28), 96)}px`;
   }, [draft, hasConversation]);
+
+  useEffect(() => {
+    const textarea = editingTextareaRef.current;
+    if (!textarea || !editingMessageId) {
+      return;
+    }
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 28), 192)}px`;
+  }, [editingDraft, editingMessageId]);
 
   useEffect(() => {
     const historyEl = historyRef.current;
@@ -425,6 +436,20 @@ export function ChatLayout() {
     }
   };
 
+  const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>, messageId: string) => {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    if (editMessage.isPending || !editingDraft.trim()) {
+      return;
+    }
+
+    setBranchResetFromMessageId(messageId);
+    editMessage.mutate(messageId);
+  };
+
   const renderAttachmentChips = () =>
     pendingAttachments.length ? (
       <div className="mb-2.5 flex flex-wrap gap-2">
@@ -619,38 +644,51 @@ export function ChatLayout() {
                     </div>
                     {editingMessageId === message.id ? (
                       <div className="space-y-2.5">
-                        <div className="rounded-[1.1rem] border border-border bg-background-secondary/70 px-3 py-2.5">
+                        <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-2.5 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
                           <Textarea
+                            ref={editingTextareaRef}
+                            rows={1}
                             value={editingDraft}
                             onChange={(event) => setEditingDraft(event.target.value)}
-                            className="min-h-20 border-0 bg-transparent px-0 py-0 text-[13px] leading-6 shadow-none focus:ring-0 sm:text-sm"
+                            onKeyDown={(event) => handleEditKeyDown(event, message.id)}
+                            placeholder="Edit your message..."
+                            className={cn(
+                              "resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-[13px] leading-6 shadow-none focus:ring-0 sm:text-sm",
+                              "min-h-0 max-h-48",
+                            )}
                           />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="xs"
-                            onClick={() => {
-                              setBranchResetFromMessageId(message.id);
-                              editMessage.mutate(message.id);
-                            }}
-                            disabled={editMessage.isPending || !editingDraft.trim()}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            type="button"
-                            size="xs"
-                            variant="ghost"
-                            className="border border-border"
-                            onClick={() => {
-                              setEditingMessageId(null);
-                              setEditingDraft("");
-                              setBranchResetFromMessageId(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
+                          <div className="mt-1.5 flex items-center justify-between gap-3 border-t border-border/70 pt-2">
+                            <p className="text-[11px] text-foreground-muted">
+                              Press Enter to save and Shift + Enter for a new line
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                size="xs"
+                                variant="ghost"
+                                className="h-7 border border-border px-2.5 text-[11px]"
+                                onClick={() => {
+                                  setEditingMessageId(null);
+                                  setEditingDraft("");
+                                  setBranchResetFromMessageId(null);
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                size="xs"
+                                className="h-7 px-2.5 text-[11px]"
+                                onClick={() => {
+                                  setBranchResetFromMessageId(message.id);
+                                  editMessage.mutate(message.id);
+                                }}
+                                disabled={editMessage.isPending || !editingDraft.trim()}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ) : (
