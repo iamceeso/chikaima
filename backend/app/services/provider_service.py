@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from typing import Any
 from urllib.parse import urljoin
 
@@ -53,6 +52,16 @@ CURATED_PROVIDER_MODELS: dict[str, list[dict[str, Any]]] = {
         {"key": "gpt-4.1", "name": "GPT-4.1 compatible", "capabilities": {"chat": True, "vision": True}},
         {"key": "custom-chat-model", "name": "Custom chat model", "capabilities": {"chat": True}},
     ],
+    "openrouter": [
+        {"key": "~openai/gpt-latest", "name": "OpenAI latest alias", "capabilities": {"chat": True, "vision": True}},
+        {"key": "~anthropic/claude-sonnet-latest", "name": "Claude Sonnet latest alias", "capabilities": {"chat": True, "vision": True}},
+        {"key": "openai/gpt-4o-mini", "name": "GPT-4o mini via OpenRouter", "capabilities": {"chat": True, "vision": True}},
+    ],
+    "litellm": [
+        {"key": "gpt-4o-mini", "name": "GPT-4o mini via LiteLLM", "capabilities": {"chat": True, "vision": True}},
+        {"key": "claude-3-5-haiku-20241022", "name": "Claude Haiku via LiteLLM", "capabilities": {"chat": True, "vision": True}},
+        {"key": "gemini-2.5-flash", "name": "Gemini Flash via LiteLLM", "capabilities": {"chat": True, "vision": True, "audio": True}},
+    ],
     "local": [
         {"key": "local-foundation", "name": "Local foundation model", "capabilities": {"chat": True, "local": True}},
     ],
@@ -63,6 +72,8 @@ DEFAULT_BASE_URLS: dict[str, str] = {
     "anthropic": "https://api.anthropic.com",
     "gemini": "https://generativelanguage.googleapis.com/v1beta",
     "ollama": "http://localhost:11434",
+    "openrouter": "https://openrouter.ai/api/v1",
+    "litellm": "http://localhost:4000/v1",
 }
 
 OPENAI_EXCLUDED_MODEL_TOKENS = (
@@ -130,7 +141,6 @@ DEPRECATED_MODEL_KEYS: dict[str, set[str]] = {
     },
 }
 
-
 def _dedupe_models(models: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     deduped: list[dict[str, Any]] = []
@@ -165,6 +175,10 @@ def _openai_capabilities(model_id: str) -> dict[str, bool]:
     capabilities = {"chat": True}
     if lowered.startswith(("gpt-", "chatgpt-")) or lowered in {"o3", "o3-mini", "o4-mini", "o1", "o1-pro"}:
         capabilities["vision"] = any(token in lowered for token in ("gpt-4", "gpt-5", "gpt-4o"))
+    if any(token in lowered for token in ("vision", "vl", "multimodal", "gemini", "claude", "gpt-4o", "gpt-4.1", "gpt-5")):
+        capabilities["vision"] = True
+    if any(token in lowered for token in ("audio", "speech", "realtime")):
+        capabilities["audio"] = True
     return capabilities
 
 
@@ -193,6 +207,14 @@ def _should_include_openai_model(model_id: str) -> bool:
     if any(token in lowered for token in OPENAI_EXCLUDED_MODEL_TOKENS):
         return False
     return lowered.startswith(("gpt-", "o1", "o3", "o4", "chatgpt-", "gpt-oss-"))
+
+
+def _should_include_openrouter_model(model_id: str) -> bool:
+    lowered = model_id.lower()
+    excluded_tokens = ("embedding", "moderation", "image", "transcribe", "tts", "rerank")
+    if any(token in lowered for token in excluded_tokens):
+        return False
+    return True
 
 
 def _sort_models(provider_type: str, models: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -326,17 +348,18 @@ class ProviderService:
             return self._fetch_gemini_models(provider, resolved_api_key)
         if provider.provider_type == "ollama":
             return self._fetch_ollama_models(provider)
-        if provider.provider_type == "openai_compatible":
+        if provider.provider_type in {"openai_compatible", "openrouter", "litellm"}:
             return self._fetch_openai_models(provider, resolved_api_key)
         return CURATED_PROVIDER_MODELS.get(provider.provider_type, [])
 
     def _fetch_openai_models(self, provider: Provider, api_key: str | None) -> list[dict[str, Any]]:
+        fallback_key = provider.provider_type if provider.provider_type in CURATED_PROVIDER_MODELS else "openai_compatible"
         if not api_key:
-            return CURATED_PROVIDER_MODELS["openai" if provider.provider_type == "openai" else "openai_compatible"]
+            return CURATED_PROVIDER_MODELS["openai" if provider.provider_type == "openai" else fallback_key]
 
         base_url = _resolve_base_url(provider.provider_type, provider.base_url)
         if not base_url:
-            return CURATED_PROVIDER_MODELS["openai" if provider.provider_type == "openai" else "openai_compatible"]
+            return CURATED_PROVIDER_MODELS["openai" if provider.provider_type == "openai" else fallback_key]
 
         try:
             with httpx.Client(timeout=12.0) as client:
@@ -346,7 +369,7 @@ class ProviderService:
                 )
                 response.raise_for_status()
         except httpx.HTTPError:
-            return CURATED_PROVIDER_MODELS["openai" if provider.provider_type == "openai" else "openai_compatible"]
+            return CURATED_PROVIDER_MODELS["openai" if provider.provider_type == "openai" else fallback_key]
 
         data = response.json().get("data", [])
         models = [
@@ -356,7 +379,13 @@ class ProviderService:
                 "capabilities": _openai_capabilities(item["id"]),
             }
             for item in data
-            if isinstance(item, dict) and isinstance(item.get("id"), str) and _should_include_openai_model(item["id"])
+            if isinstance(item, dict)
+            and isinstance(item.get("id"), str)
+            and (
+                _should_include_openrouter_model(item["id"])
+                if provider.provider_type == "openrouter"
+                else _should_include_openai_model(item["id"])
+            )
         ]
         return sorted(models, key=lambda item: item["name"].lower())
 

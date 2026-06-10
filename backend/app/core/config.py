@@ -2,8 +2,12 @@ import json
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import Field, computed_field, field_validator
+from pydantic import Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+PLACEHOLDER_JWT_SECRET = "change-me"
+PLACEHOLDER_JWT_REFRESH_SECRET = "change-me-too"
+PLACEHOLDER_PROVIDER_SECRET = "replace-with-32-char-secret"
 
 
 class Settings(BaseSettings):
@@ -13,12 +17,12 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+psycopg://olanma:olanma@localhost:5432/olanma"
     redis_url: str = "redis://localhost:6379/0"
-    jwt_secret_key: str = "change-me"
-    jwt_refresh_secret_key: str = "change-me-too"
+    jwt_secret_key: str = Field(..., min_length=16)
+    jwt_refresh_secret_key: str = Field(..., min_length=16)
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
-    provider_secret_key: str = Field(default="replace-with-32-char-secret", min_length=16)
+    provider_secret_key: str = Field(..., min_length=16)
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:3000"])
     media_root: str = "storage"
     embedding_model: str = "all-MiniLM-L6-v2"
@@ -56,6 +60,25 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    @model_validator(mode="after")
+    def validate_secrets_for_environment(self) -> "Settings":
+        placeholder_values = {
+            "jwt_secret_key": PLACEHOLDER_JWT_SECRET,
+            "jwt_refresh_secret_key": PLACEHOLDER_JWT_REFRESH_SECRET,
+            "provider_secret_key": PLACEHOLDER_PROVIDER_SECRET,
+        }
+        insecure_fields = [
+            field_name for field_name, placeholder in placeholder_values.items() if getattr(self, field_name) == placeholder
+        ]
+
+        if self.is_production and insecure_fields:
+            raise ValueError(
+                "Production settings require real secret values for: "
+                + ", ".join(sorted(insecure_fields))
+            )
+
+        return self
 
 
 @lru_cache

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from app.schemas.common import TimestampedResponse
 
-ProviderType = Literal["openai", "anthropic", "gemini", "ollama", "openai_compatible", "local"]
+ProviderType = Literal["openai", "anthropic", "gemini", "ollama", "openai_compatible", "openrouter", "litellm", "local"]
 
 
 class ProviderCreate(BaseModel):

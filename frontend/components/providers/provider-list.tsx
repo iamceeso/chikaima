@@ -18,6 +18,17 @@ import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 import type { Provider } from "@/types";
 
+const providerLabels: Record<Provider["provider_type"], string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  gemini: "Gemini",
+  ollama: "Ollama",
+  openai_compatible: "OpenAI-compatible",
+  openrouter: "OpenRouter",
+  litellm: "LiteLLM",
+  local: "Local model host",
+};
+
 export function ProviderList() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const queryClient = useQueryClient();
@@ -75,7 +86,7 @@ export function ProviderList() {
                 <div className="min-w-0">
                   <p className="wrap-break-word font-medium text-foreground">{provider.name}</p>
                   <p className="wrap-break-word text-sm text-foreground-muted">
-                    {provider.provider_type} {provider.base_url ? `• ${provider.base_url}` : ""}
+                    {providerLabels[provider.provider_type]} {provider.base_url ? `- ${provider.base_url}` : ""}
                   </p>
                   {provider.masked_secret ? (
                     <p className="mt-1 text-xs text-muted">Credential {provider.masked_secret}</p>

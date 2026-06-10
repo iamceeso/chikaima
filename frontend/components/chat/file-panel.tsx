@@ -115,7 +115,7 @@ export function FilePanel({
                         </p>
                         {file.created_at && (
                           <>
-                            <span className="text-xs text-foreground-muted">•</span>
+                            <span className="text-xs text-foreground-muted">-</span>
                             <p className="text-xs text-foreground-muted">
                               {formatDate(file.created_at)}
                             </p>

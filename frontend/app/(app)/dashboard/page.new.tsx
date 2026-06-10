@@ -207,8 +207,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-foreground-muted">
-        <p>Live data • Updates every 5 seconds</p>
-        <p>Providers: {data?.providers ?? 0} • Models: {data?.models ?? 0} • Docs: {data?.documents ?? 0}</p>
+        <p>Live data - Updates every 5 seconds</p>
+        <p>Providers: {data?.providers ?? 0} - Models: {data?.models ?? 0} - Docs: {data?.documents ?? 0}</p>
       </div>
     </>
   );

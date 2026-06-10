@@ -4,6 +4,8 @@ export type ProviderType =
   | "gemini"
   | "ollama"
   | "openai_compatible"
+  | "openrouter"
+  | "litellm"
   | "local";
 
 export interface User {
