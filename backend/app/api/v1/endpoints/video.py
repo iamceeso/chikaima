@@ -9,6 +9,7 @@ from app.models.user import User
 from app.models.video import Video
 from app.schemas.assets import VideoResponse
 from app.services.job_service import JobService
+from app.services.library_service import LibraryService
 from app.services.storage_service import storage_service
 from app.schemas.transcript import TranscriptResponse, SummaryArtifactResponse
 from app.services.transcript_service import TranscriptService
@@ -32,6 +33,7 @@ def delete_video(
     current_user: User = Depends(get_current_user),
 ) -> None:
     TranscriptService(db).delete_resource(current_user.id, "video", video_id)
+    LibraryService.invalidate_user_cache(current_user.id)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
@@ -40,6 +42,7 @@ def clear_videos(
     current_user: User = Depends(get_current_user),
 ) -> None:
     TranscriptService(db).delete_all_resources(current_user.id, "video")
+    LibraryService.invalidate_user_cache(current_user.id)
 
 
 @router.post("/upload", response_model=VideoResponse, status_code=status.HTTP_201_CREATED)
@@ -69,6 +72,7 @@ async def upload_video(
     db.commit()
     db.refresh(video)
     JobService(db).create_job(current_user.id, "video_analysis", "video", video.id)
+    LibraryService.invalidate_user_cache(current_user.id)
     return VideoResponse.model_validate(video)
 
 

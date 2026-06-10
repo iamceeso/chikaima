@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createFormResolver } from "@/lib/form-resolver";
+import { prefetchLibrary } from "@/lib/library";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -202,7 +203,9 @@ export function RegisterForm() {
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const setSession = useAuthStore((state) => state.setSession);
+  const setUser = useAuthStore((state) => state.setUser);
   const workspaceQuery = useQuery({
     queryKey: ["public-workspace-settings"],
     queryFn: () => api.getPublicWorkspaceSettings(),
@@ -216,9 +219,20 @@ export function LoginForm() {
 
   const mutation = useMutation({
     mutationFn: api.login,
-    onSuccess: (tokens) => {
+    onSuccess: async (tokens) => {
       setSession(tokens);
-      router.replace(searchParams.get("next") || "/library");
+      const next = searchParams.get("next") || "/library";
+      router.prefetch(next);
+      const profilePromise = api.getProfile(tokens.access_token).then((user) => {
+        setUser(user);
+        queryClient.setQueryData(["profile", tokens.access_token], user);
+        return user;
+      });
+      await Promise.allSettled([
+        profilePromise,
+        prefetchLibrary(queryClient, tokens.access_token),
+      ]);
+      router.replace(next);
     },
   });
 

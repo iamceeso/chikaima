@@ -10,6 +10,7 @@ from app.schemas.assets import AssetQuestionRequest, DocumentResponse
 from app.schemas.transcript import SummaryArtifactResponse
 from app.models.user import User
 from app.services.job_service import JobService
+from app.services.library_service import LibraryService
 from app.services.storage_service import storage_service
 from app.services.transcript_service import TranscriptService
 from app.schemas.transcript import TranscriptResponse
@@ -33,6 +34,7 @@ def delete_document(
     current_user: User = Depends(get_current_user),
 ) -> None:
     TranscriptService(db).delete_resource(current_user.id, "document", document_id)
+    LibraryService.invalidate_user_cache(current_user.id)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
@@ -41,6 +43,7 @@ def clear_documents(
     current_user: User = Depends(get_current_user),
 ) -> None:
     TranscriptService(db).delete_all_resources(current_user.id, "document")
+    LibraryService.invalidate_user_cache(current_user.id)
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -85,6 +88,7 @@ async def upload_document(
     db.commit()
     db.refresh(document)
     JobService(db).create_job(current_user.id, "document_analysis", "document", document.id)
+    LibraryService.invalidate_user_cache(current_user.id)
     return DocumentResponse.model_validate(document)
 
 

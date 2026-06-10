@@ -16,10 +16,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { libraryQueryKey } from "@/lib/library";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
-import type { AudioAsset, DocumentAsset, VideoAsset } from "@/types";
+import type { AudioAsset, DocumentAsset, LibraryBundle, VideoAsset } from "@/types";
 
 type LibraryAsset = {
   id: string;
@@ -48,6 +49,12 @@ const kindMeta = {
     empty: "Document summaries and extracted text become searchable here.",
   },
 } as const;
+
+const EMPTY_LIBRARY: LibraryBundle = {
+  audio: [],
+  videos: [],
+  documents: [],
+};
 
 function toLibraryAsset(asset: AudioAsset | VideoAsset | DocumentAsset, kind: LibraryAsset["kind"]): LibraryAsset {
   if (kind === "audio") {
@@ -111,35 +118,28 @@ export default function LibraryPage() {
   const [assetPendingDelete, setAssetPendingDelete] = useState<LibraryAsset | null>(null);
   const [clearAllOpen, setClearAllOpen] = useState(false);
 
-  const documentsQuery = useQuery({
-    queryKey: ["documents"],
-    queryFn: () => (token ? api.getDocuments(token) : Promise.resolve([])),
+  const libraryQuery = useQuery({
+    queryKey: libraryQueryKey,
+    queryFn: () => (token ? api.getLibraryBundle(token) : Promise.resolve(EMPTY_LIBRARY)),
   });
-  const audioQuery = useQuery({
-    queryKey: ["audio-assets"],
-    queryFn: () => (token ? api.getAudioAssets(token) : Promise.resolve([])),
-  });
-  const videosQuery = useQuery({
-    queryKey: ["videos"],
-    queryFn: () => (token ? api.getVideos(token) : Promise.resolve([])),
-  });
+  const libraryData = libraryQuery.data ?? EMPTY_LIBRARY;
 
   const sections = [
     {
       title: "Audio",
-      count: audioQuery.data?.length ?? 0,
+      count: libraryData.audio.length,
       detail: "Meetings, voice notes, podcasts, and interviews ready for transcription.",
       icon: AudioLines,
     },
     {
       title: "Video",
-      count: videosQuery.data?.length ?? 0,
+      count: libraryData.videos.length,
       detail: "Recorded meetings, YouTube exports, and long-form media waiting for analysis.",
       icon: Video,
     },
     {
       title: "Documents",
-      count: documentsQuery.data?.length ?? 0,
+      count: libraryData.documents.length,
       detail: "PDFs and text files available for summarization and knowledge extraction.",
       icon: FileText,
     },
@@ -147,13 +147,13 @@ export default function LibraryPage() {
 
   const assets = useMemo(() => {
     const merged = [
-      ...(audioQuery.data ?? []).map((item) => toLibraryAsset(item, "audio")),
-      ...(videosQuery.data ?? []).map((item) => toLibraryAsset(item, "video")),
-      ...(documentsQuery.data ?? []).map((item) => toLibraryAsset(item, "document")),
+      ...libraryData.audio.map((item) => toLibraryAsset(item, "audio")),
+      ...libraryData.videos.map((item) => toLibraryAsset(item, "video")),
+      ...libraryData.documents.map((item) => toLibraryAsset(item, "document")),
     ];
 
     return merged.sort((left, right) => right.created_at.localeCompare(left.created_at));
-  }, [audioQuery.data, documentsQuery.data, videosQuery.data]);
+  }, [libraryData]);
 
   const filteredAssets = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -171,14 +171,10 @@ export default function LibraryPage() {
     });
   }, [activeKind, assets, query]);
 
-  const loading = documentsQuery.isLoading || audioQuery.isLoading || videosQuery.isLoading;
+  const loading = libraryQuery.isLoading;
 
   const refreshAssets = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["documents"] }),
-      queryClient.invalidateQueries({ queryKey: ["audio-assets"] }),
-      queryClient.invalidateQueries({ queryKey: ["videos"] }),
-    ]);
+    await queryClient.invalidateQueries({ queryKey: libraryQueryKey });
   };
 
   const deleteAsset = useMutation({

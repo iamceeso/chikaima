@@ -32,3 +32,9 @@ class VideoResponse(TimestampedResponse):
 
 class AssetQuestionRequest(BaseModel):
     question: str
+
+
+class LibraryBundleResponse(BaseModel):
+    audio: list[AudioResponse]
+    videos: list[VideoResponse]
+    documents: list[DocumentResponse]

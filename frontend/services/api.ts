@@ -7,6 +7,7 @@ import type {
   DashboardSummary,
   DocumentAsset,
   Job,
+  LibraryBundle,
   Message,
   Provider,
   User,
@@ -137,6 +138,7 @@ export const api = {
   deleteProvider: (token: string, providerId: string) =>
     request<void>(`/providers/${providerId}`, { method: "DELETE", token }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),
+  getLibraryBundle: (token: string) => request<LibraryBundle>("/library", { token }),
   getDocuments: (token: string) => request<DocumentAsset[]>("/documents", { token }),
   deleteDocument: (token: string, documentId: string) =>
     request<void>(`/documents/${documentId}`, { method: "DELETE", token }),

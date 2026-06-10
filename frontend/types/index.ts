@@ -153,6 +153,12 @@ export interface VideoAsset {
   updated_at: string;
 }
 
+export interface LibraryBundle {
+  audio: AudioAsset[];
+  videos: VideoAsset[];
+  documents: DocumentAsset[];
+}
+
 export interface DashboardSummary {
   providers: number;
   models: number;
