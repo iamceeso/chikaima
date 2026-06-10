@@ -45,7 +45,10 @@ class TranscriptService:
         model_map = {"audio": AudioAsset, "video": Video, "document": Document}
         model = model_map.get(resource_type)
         if model is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported resource type")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported resource type",
+            )
         resource = self.db.get(model, resource_id)
         if not resource or resource.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
@@ -148,7 +151,10 @@ class TranscriptService:
         model_map = {"audio": AudioAsset, "video": Video, "document": Document}
         model = model_map.get(resource_type)
         if model is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported resource type")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported resource type",
+            )
         resources = self.db.query(model).filter(model.user_id == user_id).all()
         for resource in resources:
             self.delete_resource(user_id, resource_type, resource.id)
@@ -211,15 +217,19 @@ class TranscriptService:
         summaries = self.list_summaries_for_resource(user_id, resource_type, resource_id)
 
         grouped_hits: dict[tuple[str, str], list[tuple[str, dict]]] = defaultdict(list)
-        search_results = self.search.search(user_id, question, source_type=resource_type, source_ids={resource_id}, limit=5)
+        search_results = self.search.search(
+            user_id,
+            question,
+            source_type=resource_type,
+            source_ids={resource_id},
+            limit=5,
+        )
         for result in search_results:
             for hit in result.chunks[:2]:
                 grouped_hits[(result.source_type, result.source_id)].append((hit.chunk.content, hit.chunk.meta))
 
         relevant_context = "\n\n".join(
-            f"[{self._format_citation(resource.name, meta)}]\n{content}"
-            for hits in grouped_hits.values()
-            for content, meta in hits
+            f"[{self._format_citation(resource.name, meta)}]\n{content}" for hits in grouped_hits.values() for content, meta in hits
         ).strip()
 
         summary_text = ""
@@ -269,8 +279,14 @@ class TranscriptService:
             provider=provider,
             model=model,
             messages=[
-                {"role": "system", "content": "Answer using only the transcript content provided. Be concise and factual."},
-                {"role": "user", "content": f"Transcript:\n{transcript.content}\n\nQuestion: {question}"},
+                {
+                    "role": "system",
+                    "content": "Answer using only the transcript content provided. Be concise and factual.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Transcript:\n{transcript.content}\n\nQuestion: {question}",
+                },
             ],
         )
 
@@ -289,8 +305,14 @@ class TranscriptService:
                 provider,
                 model,
                 [
-                    {"role": "system", "content": "Summarize the provided source in 2-4 concise sentences. Be factual and specific."},
-                    {"role": "user", "content": f"Resource: {asset_name}\nType: {resource_type}\n\nSource:\n{source_excerpt}"},
+                    {
+                        "role": "system",
+                        "content": "Summarize the provided source in 2-4 concise sentences. Be factual and specific.",
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Resource: {asset_name}\nType: {resource_type}\n\nSource:\n{source_excerpt}",
+                    },
                 ],
             ).strip()
             key_points = self._parse_bullets(
@@ -298,8 +320,14 @@ class TranscriptService:
                     provider,
                     model,
                     [
-                        {"role": "system", "content": "Extract 3 to 5 key points from the source. Return one bullet per line starting with '- '."},
-                        {"role": "user", "content": f"Resource: {asset_name}\nType: {resource_type}\n\nSource:\n{source_excerpt}"},
+                        {
+                            "role": "system",
+                            "content": "Extract 3 to 5 key points from the source. Return one bullet per line starting with '- '.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Resource: {asset_name}\nType: {resource_type}\n\nSource:\n{source_excerpt}",
+                        },
                     ],
                 )
             )
@@ -311,8 +339,15 @@ class TranscriptService:
                         provider,
                         model,
                         [
-                            {"role": "system", "content": "Extract explicit action items from the source. Return one bullet per line. If there are none, return 'No action items.'"},
-                            {"role": "user", "content": f"Resource: {asset_name}\nType: {resource_type}\n\nSource:\n{source_excerpt}"},
+                            {
+                                "role": "system",
+                                "content": "Extract explicit action items from the source. "
+                                "Return one bullet per line. If there are none, return 'No action items.'",
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Resource: {asset_name}\nType: {resource_type}\n\nSource:\n{source_excerpt}",
+                            },
                         ],
                     )
                 )
@@ -322,8 +357,14 @@ class TranscriptService:
                         provider,
                         model,
                         [
-                            {"role": "system", "content": "Create 3 to 6 short chapter headings for the source. Return one bullet per line."},
-                            {"role": "user", "content": f"Resource: {asset_name}\nType: {resource_type}\n\nSource:\n{source_excerpt}"},
+                            {
+                                "role": "system",
+                                "content": "Create 3 to 6 short chapter headings for the source. Return one bullet per line.",
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Resource: {asset_name}\nType: {resource_type}\n\nSource:\n{source_excerpt}",
+                            },
                         ],
                     )
                 )
@@ -338,8 +379,17 @@ class TranscriptService:
 
     def _fallback_summary_bundle(self, resource_type: str, asset_name: str, transcript_text: str) -> dict[str, list[str] | str]:
         excerpt = " ".join(transcript_text.split())[:280]
-        summary = f"{asset_name} contains extracted {resource_type} content. {excerpt}" if excerpt else f"{asset_name} was processed as a {resource_type}, but no text could be extracted."
-        return {"summary": summary, "key_points": [summary], "action_items": [], "chapters": []}
+        summary = (
+            f"{asset_name} contains extracted {resource_type} content. {excerpt}"
+            if excerpt
+            else f"{asset_name} was processed as a {resource_type}, but no text could be extracted."
+        )
+        return {
+            "summary": summary,
+            "key_points": [summary],
+            "action_items": [],
+            "chapters": [],
+        }
 
     def _parse_bullets(self, text: str) -> list[str]:
         return [line.removeprefix("-").removeprefix("*").strip() for line in text.splitlines() if line.strip()]

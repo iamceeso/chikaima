@@ -125,13 +125,16 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
                         variant="ghost"
                         size="sm"
                         className="h-6 px-2"
-                        onClick={() =>
+                        onClick={() => {
+                          if (!attachment.id) {
+                            return;
+                          }
                           setPreviewAttachment({
                             id: attachment.id,
                             name: attachment.name ?? "Attachment",
                             kind: "document",
-                          })
-                        }
+                          });
+                        }}
                         title="Preview document"
                       >
                         <Eye className="h-3.5 w-3.5" />

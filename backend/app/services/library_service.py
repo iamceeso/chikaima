@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session
 from app.models.audio import AudioAsset
 from app.models.document import Document
 from app.models.video import Video
-from app.schemas.assets import AudioResponse, DocumentResponse, LibraryBundleResponse, VideoResponse
+from app.schemas.assets import (
+    AudioResponse,
+    DocumentResponse,
+    LibraryBundleResponse,
+    VideoResponse,
+)
 from app.services.cache_service import get_cache_service
 
 LIBRARY_CACHE_TTL_SECONDS = 15
@@ -31,18 +36,9 @@ class LibraryService:
             return LibraryBundleResponse.model_validate(cached)
 
         bundle = LibraryBundleResponse(
-            audio=[
-                AudioResponse.model_validate(asset)
-                for asset in self.db.query(AudioAsset).filter(AudioAsset.user_id == user_id).all()
-            ],
-            videos=[
-                VideoResponse.model_validate(video)
-                for video in self.db.query(Video).filter(Video.user_id == user_id).all()
-            ],
-            documents=[
-                DocumentResponse.model_validate(document)
-                for document in self.db.query(Document).filter(Document.user_id == user_id).all()
-            ],
+            audio=[AudioResponse.model_validate(asset) for asset in self.db.query(AudioAsset).filter(AudioAsset.user_id == user_id).all()],
+            videos=[VideoResponse.model_validate(video) for video in self.db.query(Video).filter(Video.user_id == user_id).all()],
+            documents=[DocumentResponse.model_validate(document) for document in self.db.query(Document).filter(Document.user_id == user_id).all()],
         )
         cache.set_json(cache_key, bundle.model_dump(mode="json"), LIBRARY_CACHE_TTL_SECONDS)
         return bundle

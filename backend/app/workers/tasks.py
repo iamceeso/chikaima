@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.core.database import SessionLocal
 import app.models  # noqa: F401  Ensures SQLAlchemy relationship targets are registered for workers.
+from app.core.database import SessionLocal
 from app.models.audio import AudioAsset
 from app.models.document import Document
 from app.models.job import Job
@@ -46,7 +46,11 @@ def _process_resource_job(job_id: str, model: type[AudioAsset | Video | Document
             job.error_message = "Resource not found"
             db.add(job)
             db.commit()
-            return {"job_id": job_id, "status": "failed", "message": "Resource not found"}
+            return {
+                "job_id": job_id,
+                "status": "failed",
+                "message": "Resource not found",
+            }
 
         job.status = "running"
         resource.status = "processing"
@@ -74,7 +78,11 @@ def _process_resource_job(job_id: str, model: type[AudioAsset | Video | Document
 
         resource.status = "completed"
         job.status = "completed"
-        job.result = {"resource_type": resource_type, "resource_id": resource.id, "transcript_id": transcript.id}
+        job.result = {
+            "resource_type": resource_type,
+            "resource_id": resource.id,
+            "transcript_id": transcript.id,
+        }
         db.add_all([resource, job])
         db.commit()
         return {"job_id": job.id, "status": "completed", "resource_id": resource.id}
@@ -95,7 +103,12 @@ def _process_resource_job(job_id: str, model: type[AudioAsset | Video | Document
         db.close()
 
 
-def _upsert_transcript(db: Session, resource: AudioAsset | Video | Document, resource_type: str, content: str) -> Transcript:
+def _upsert_transcript(
+    db: Session,
+    resource: AudioAsset | Video | Document,
+    resource_type: str,
+    content: str,
+) -> Transcript:
     transcript = (
         db.query(Transcript)
         .filter(
@@ -179,8 +192,14 @@ def _generate_summary_bundle(
             provider,
             model,
             [
-                {"role": "system", "content": "Summarize the provided source in 2-4 concise sentences. Be factual and specific."},
-                {"role": "user", "content": f"Resource: {resource.name}\nType: {resource_type}\n\nSource:\n{excerpt}"},
+                {
+                    "role": "system",
+                    "content": "Summarize the provided source in 2-4 concise sentences. Be factual and specific.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Resource: {resource.name}\nType: {resource_type}\n\nSource:\n{excerpt}",
+                },
             ],
         ).strip()
         key_points = _parse_bullets(
@@ -188,8 +207,14 @@ def _generate_summary_bundle(
                 provider,
                 model,
                 [
-                    {"role": "system", "content": "Extract 3 to 5 key points from the source. Return one bullet per line starting with '- '."},
-                    {"role": "user", "content": f"Resource: {resource.name}\nType: {resource_type}\n\nSource:\n{excerpt}"},
+                    {
+                        "role": "system",
+                        "content": "Extract 3 to 5 key points from the source. Return one bullet per line starting with '- '.",
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Resource: {resource.name}\nType: {resource_type}\n\nSource:\n{excerpt}",
+                    },
                 ],
             )
         )
@@ -201,8 +226,15 @@ def _generate_summary_bundle(
                     provider,
                     model,
                     [
-                        {"role": "system", "content": "Extract explicit action items from the source. Return one bullet per line. If there are none, return 'No action items.'"},
-                        {"role": "user", "content": f"Resource: {resource.name}\nType: {resource_type}\n\nSource:\n{excerpt}"},
+                        {
+                            "role": "system",
+                            "content": "Extract explicit action items from the source. "
+                            "Return one bullet per line. If there are none, return 'No action items.'",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Resource: {resource.name}\nType: {resource_type}\n\nSource:\n{excerpt}",
+                        },
                     ],
                 )
             )
@@ -212,8 +244,14 @@ def _generate_summary_bundle(
                     provider,
                     model,
                     [
-                        {"role": "system", "content": "Create 3 to 6 short chapter headings for the source. Return one bullet per line."},
-                        {"role": "user", "content": f"Resource: {resource.name}\nType: {resource_type}\n\nSource:\n{excerpt}"},
+                        {
+                            "role": "system",
+                            "content": "Create 3 to 6 short chapter headings for the source. Return one bullet per line.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Resource: {resource.name}\nType: {resource_type}\n\nSource:\n{excerpt}",
+                        },
                     ],
                 )
             )
@@ -229,8 +267,17 @@ def _generate_summary_bundle(
 
 def _fallback_summary_bundle(name: str, resource_type: str, content: str) -> dict[str, list[str] | str]:
     excerpt = " ".join(content.split())[:280]
-    summary = f"{name} contains extracted {resource_type} content. {excerpt}" if excerpt else f"{name} was processed as a {resource_type}, but no text could be extracted."
-    return {"summary": summary, "key_points": [summary], "action_items": [], "chapters": []}
+    summary = (
+        f"{name} contains extracted {resource_type} content. {excerpt}"
+        if excerpt
+        else f"{name} was processed as a {resource_type}, but no text could be extracted."
+    )
+    return {
+        "summary": summary,
+        "key_points": [summary],
+        "action_items": [],
+        "chapters": [],
+    }
 
 
 def _parse_bullets(text: str) -> list[str]:

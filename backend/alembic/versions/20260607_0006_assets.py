@@ -7,9 +7,10 @@ Create Date: 2026-06-07 18:10:00.000000
 
 from __future__ import annotations
 
-from alembic import op
-from pgvector.sqlalchemy import Vector
 import sqlalchemy as sa
+from pgvector.sqlalchemy import Vector
+
+from alembic import op
 
 revision = "20260607_0006"
 down_revision = "20260607_0005"
@@ -46,10 +47,7 @@ def upgrade() -> None:
         "asset_chunks",
         ["user_id", "source_type", "source_id", "chunk_index"],
     )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_asset_chunks_embedding "
-        "ON asset_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)"
-    )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_asset_chunks_embedding ON asset_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)")
 
 
 def downgrade() -> None:

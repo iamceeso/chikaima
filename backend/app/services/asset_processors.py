@@ -122,7 +122,11 @@ class PdfProcessor:
                 pages.append(page_text)
                 chunks.extend(chunk_text(page_text, base_metadata={"page": page_index}))
 
-        return ExtractedAsset(content="\n\n".join(pages).strip(), metadata={"page_count": page_count}, chunks=chunks)
+        return ExtractedAsset(
+            content="\n\n".join(pages).strip(),
+            metadata={"page_count": page_count},
+            chunks=chunks,
+        )
 
 
 class TextProcessor:
@@ -134,9 +138,7 @@ class TextProcessor:
     }
 
     def supports(self, resource: IngestibleResource, mime_type: str | None = None) -> bool:
-        return (mime_type or "") in self.supported_mime_types or resource.name.lower().endswith(
-            (".txt", ".md", ".json", ".xml")
-        )
+        return (mime_type or "") in self.supported_mime_types or resource.name.lower().endswith((".txt", ".md", ".json", ".xml"))
 
     def extract(self, resource: IngestibleResource, mime_type: str | None = None) -> ExtractedAsset:
         path = Path(resource.file_path)
@@ -181,7 +183,7 @@ class CodeProcessor:
                     metadata={
                         "file_path": filename,
                         "symbol": node.name,
-                        "symbol_type": "class" if isinstance(node, ast.ClassDef) else "function",
+                        "symbol_type": ("class" if isinstance(node, ast.ClassDef) else "function"),
                         "start_line": start + 1,
                         "end_line": end,
                     },
@@ -192,7 +194,10 @@ class CodeProcessor:
     def _chunk_generic(self, text: str, filename: str) -> list[ChunkPayload]:
         sections = re.split(r"\n(?=(?:export\s+)?(?:class|function|interface|type|struct|impl)\b)", text)
         return [
-            ChunkPayload(content=section.strip(), metadata={"file_path": filename, "section_index": index})
+            ChunkPayload(
+                content=section.strip(),
+                metadata={"file_path": filename, "section_index": index},
+            )
             for index, section in enumerate(sections)
             if section.strip()
         ]
@@ -324,7 +329,20 @@ class VideoProcessor:
         transcript = ""
         try:
             result = subprocess.run(
-                ["ffmpeg", "-i", str(path), "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", str(audio_path), "-y"],
+                [
+                    "ffmpeg",
+                    "-i",
+                    str(path),
+                    "-vn",
+                    "-acodec",
+                    "pcm_s16le",
+                    "-ar",
+                    "16000",
+                    "-ac",
+                    "1",
+                    str(audio_path),
+                    "-y",
+                ],
                 capture_output=True,
                 check=False,
                 text=True,

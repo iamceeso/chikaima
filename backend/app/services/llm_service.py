@@ -216,7 +216,15 @@ If the context doesn't contain relevant information, answer based on your knowle
             return {}
 
         location: dict[str, str | int] = {}
-        for key in ("page", "slide", "sheet", "start_line", "end_line", "chunk_index", "section_index"):
+        for key in (
+            "page",
+            "slide",
+            "sheet",
+            "start_line",
+            "end_line",
+            "chunk_index",
+            "section_index",
+        ):
             value = metadata.get(key)
             if isinstance(value, (str, int)):
                 location[key] = value

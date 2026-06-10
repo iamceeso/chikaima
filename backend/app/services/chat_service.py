@@ -67,7 +67,10 @@ class ChatService:
                         model=model,
                         messages=self._serialize_messages([user_message]),
                     )
-                    meta = {"provider": provider.provider_type, "model": model.model_key}
+                    meta = {
+                        "provider": provider.provider_type,
+                        "model": model.model_key,
+                    }
 
                 self.db.add(
                     Message(
@@ -85,7 +88,13 @@ class ChatService:
             self.db.rollback()
             raise
 
-    def add_message(self, user_id: str, conversation_id: str, payload: MessageCreate, use_rag: bool = True) -> Message:
+    def add_message(
+        self,
+        user_id: str,
+        conversation_id: str,
+        payload: MessageCreate,
+        use_rag: bool = True,
+    ) -> Message:
         conversation = self.conversations.get(conversation_id)
         if not conversation or conversation.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
@@ -101,7 +110,11 @@ class ChatService:
                 conversation_id=conversation_id,
                 role=payload.role,
                 content=payload.content,
-                meta={**payload.metadata, "provider": provider.provider_type, "model": model.model_key},
+                meta={
+                    **payload.metadata,
+                    "provider": provider.provider_type,
+                    "model": model.model_key,
+                },
             )
             self.db.add(message)
             self.db.flush()
@@ -196,7 +209,10 @@ class ChatService:
                         model=model,
                         messages=self._serialize_messages(history),
                     )
-                    meta = {"provider": provider.provider_type, "model": model.model_key}
+                    meta = {
+                        "provider": provider.provider_type,
+                        "model": model.model_key,
+                    }
 
                 self.db.add(
                     Message(

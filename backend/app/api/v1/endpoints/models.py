@@ -23,7 +23,11 @@ def list_models(
     models = (
         db.query(AIModel, Provider)
         .join(Provider, Provider.id == AIModel.provider_id)
-        .filter(Provider.user_id == current_user.id, Provider.is_enabled.is_(True), AIModel.is_available.is_(True))
+        .filter(
+            Provider.user_id == current_user.id,
+            Provider.is_enabled.is_(True),
+            AIModel.is_available.is_(True),
+        )
         .order_by(desc(AIModel.is_default))
         .order_by(AIModel.display_name.asc())
         .all()

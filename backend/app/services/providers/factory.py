@@ -23,9 +23,15 @@ class AdapterFactory:
         elif provider_type == "openai_compatible":
             return OpenAIAdapter(api_key=api_key, base_url=provider.base_url)
         elif provider_type == "openrouter":
-            return OpenAIAdapter(api_key=api_key, base_url=provider.base_url or "https://openrouter.ai/api/v1")
+            return OpenAIAdapter(
+                api_key=api_key,
+                base_url=provider.base_url or "https://openrouter.ai/api/v1",
+            )
         elif provider_type == "litellm":
-            return OpenAIAdapter(api_key=api_key, base_url=provider.base_url or "http://localhost:4000/v1")
+            return OpenAIAdapter(
+                api_key=api_key,
+                base_url=provider.base_url or "http://localhost:4000/v1",
+            )
         elif provider_type == "anthropic":
             return AnthropicAdapter(api_key=api_key, base_url=provider.base_url)
         elif provider_type == "gemini":

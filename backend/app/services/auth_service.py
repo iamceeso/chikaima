@@ -25,7 +25,10 @@ class AuthService:
 
     def register(self, payload: UserRegister) -> User:
         if self.users.get_by_email(payload.email):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
 
         is_first_user = self.users.count() == 0
         workspace = WorkspaceService(self.db).get_or_create()
@@ -51,7 +54,10 @@ class AuthService:
         if not actor.is_superuser:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
         if self.users.get_by_email(payload.email):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
 
         user = User(
             email=payload.email,
@@ -78,7 +84,10 @@ class AuthService:
 
         next_email = updates.get("email")
         if next_email and next_email != user.email and self.users.get_by_email(next_email):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
 
         next_is_superuser = updates.get("is_superuser", user.is_superuser)
         next_is_active = updates.get("is_active", user.is_active)
@@ -139,7 +148,10 @@ class AuthService:
         if not user:
             return {"message": "If the account exists, a reset token has been generated."}
         token = create_access_token(user.id)
-        return {"message": "Reset token generated for development use.", "reset_token": token}
+        return {
+            "message": "Reset token generated for development use.",
+            "reset_token": token,
+        }
 
     def confirm_password_reset(self, payload: PasswordResetConfirm) -> dict[str, str]:
         try:

@@ -28,7 +28,9 @@ def get_workspace_settings(
 
 
 @router.get("/public", response_model=WorkspacePublicResponse)
-def get_public_workspace_settings(db: Session = Depends(get_db)) -> WorkspacePublicResponse:
+def get_public_workspace_settings(
+    db: Session = Depends(get_db),
+) -> WorkspacePublicResponse:
     return WorkspaceService(db).get_public_settings()
 
 

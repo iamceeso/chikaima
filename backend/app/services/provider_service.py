@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Any
 from urllib.parse import urljoin
 
@@ -14,56 +15,180 @@ from app.schemas.provider import AIModelResponse, ProviderCreate, ProviderUpdate
 
 CURATED_PROVIDER_MODELS: dict[str, list[dict[str, Any]]] = {
     "openai": [
-        {"key": "gpt-5.2", "name": "GPT-5.2", "capabilities": {"chat": True, "vision": True}},
-        {"key": "gpt-5", "name": "GPT-5", "capabilities": {"chat": True, "vision": True}},
-        {"key": "gpt-5-mini", "name": "GPT-5 mini", "capabilities": {"chat": True, "vision": True}},
+        {
+            "key": "gpt-5.2",
+            "name": "GPT-5.2",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "gpt-5",
+            "name": "GPT-5",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "gpt-5-mini",
+            "name": "GPT-5 mini",
+            "capabilities": {"chat": True, "vision": True},
+        },
         {"key": "gpt-5-nano", "name": "GPT-5 nano", "capabilities": {"chat": True}},
-        {"key": "gpt-4.1", "name": "GPT-4.1", "capabilities": {"chat": True, "vision": True}},
-        {"key": "gpt-4.1-mini", "name": "GPT-4.1 mini", "capabilities": {"chat": True, "vision": True}},
+        {
+            "key": "gpt-4.1",
+            "name": "GPT-4.1",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "gpt-4.1-mini",
+            "name": "GPT-4.1 mini",
+            "capabilities": {"chat": True, "vision": True},
+        },
         {"key": "gpt-4.1-nano", "name": "GPT-4.1 nano", "capabilities": {"chat": True}},
-        {"key": "gpt-4o", "name": "GPT-4o", "capabilities": {"chat": True, "vision": True, "audio": True}},
-        {"key": "gpt-4o-mini", "name": "GPT-4o mini", "capabilities": {"chat": True, "vision": True}},
+        {
+            "key": "gpt-4o",
+            "name": "GPT-4o",
+            "capabilities": {"chat": True, "vision": True, "audio": True},
+        },
+        {
+            "key": "gpt-4o-mini",
+            "name": "GPT-4o mini",
+            "capabilities": {"chat": True, "vision": True},
+        },
         {"key": "o4-mini", "name": "o4-mini", "capabilities": {"chat": True}},
         {"key": "o3", "name": "o3", "capabilities": {"chat": True}},
         {"key": "o3-mini", "name": "o3-mini", "capabilities": {"chat": True}},
     ],
     "anthropic": [
-        {"key": "claude-sonnet-4-5-20250929", "name": "Claude Sonnet 4.5", "capabilities": {"chat": True, "vision": True}},
-        {"key": "claude-sonnet-4-20250514", "name": "Claude Sonnet 4", "capabilities": {"chat": True, "vision": True}},
-        {"key": "claude-opus-4-1-20250805", "name": "Claude Opus 4.1", "capabilities": {"chat": True, "vision": True}},
-        {"key": "claude-opus-4-20250514", "name": "Claude Opus 4", "capabilities": {"chat": True, "vision": True}},
-        {"key": "claude-3-7-sonnet-20250219", "name": "Claude Sonnet 3.7", "capabilities": {"chat": True, "vision": True}},
-        {"key": "claude-3-5-haiku-20241022", "name": "Claude Haiku 3.5", "capabilities": {"chat": True, "vision": True}},
+        {
+            "key": "claude-sonnet-4-5-20250929",
+            "name": "Claude Sonnet 4.5",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "claude-sonnet-4-20250514",
+            "name": "Claude Sonnet 4",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "claude-opus-4-1-20250805",
+            "name": "Claude Opus 4.1",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "claude-opus-4-20250514",
+            "name": "Claude Opus 4",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "claude-3-7-sonnet-20250219",
+            "name": "Claude Sonnet 3.7",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "claude-3-5-haiku-20241022",
+            "name": "Claude Haiku 3.5",
+            "capabilities": {"chat": True, "vision": True},
+        },
     ],
     "gemini": [
-        {"key": "gemini-2.5-pro", "name": "Gemini 2.5 Pro", "capabilities": {"chat": True, "vision": True, "audio": True}},
-        {"key": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "capabilities": {"chat": True, "vision": True, "audio": True}},
-        {"key": "gemini-2.5-flash-lite", "name": "Gemini 2.5 Flash-Lite", "capabilities": {"chat": True, "vision": True, "audio": True}},
-        {"key": "gemini-3-pro-preview", "name": "Gemini 3 Pro Preview", "capabilities": {"chat": True, "vision": True, "audio": True}},
-        {"key": "gemini-3-flash-preview", "name": "Gemini 3 Flash Preview", "capabilities": {"chat": True, "vision": True, "audio": True}},
+        {
+            "key": "gemini-2.5-pro",
+            "name": "Gemini 2.5 Pro",
+            "capabilities": {"chat": True, "vision": True, "audio": True},
+        },
+        {
+            "key": "gemini-2.5-flash",
+            "name": "Gemini 2.5 Flash",
+            "capabilities": {"chat": True, "vision": True, "audio": True},
+        },
+        {
+            "key": "gemini-2.5-flash-lite",
+            "name": "Gemini 2.5 Flash-Lite",
+            "capabilities": {"chat": True, "vision": True, "audio": True},
+        },
+        {
+            "key": "gemini-3-pro-preview",
+            "name": "Gemini 3 Pro Preview",
+            "capabilities": {"chat": True, "vision": True, "audio": True},
+        },
+        {
+            "key": "gemini-3-flash-preview",
+            "name": "Gemini 3 Flash Preview",
+            "capabilities": {"chat": True, "vision": True, "audio": True},
+        },
     ],
     "ollama": [
-        {"key": "llama3.1", "name": "Llama 3.1", "capabilities": {"chat": True, "local": True}},
-        {"key": "gemma3", "name": "Gemma 3", "capabilities": {"chat": True, "local": True}},
-        {"key": "qwen3", "name": "Qwen 3", "capabilities": {"chat": True, "local": True}},
+        {
+            "key": "llama3.1",
+            "name": "Llama 3.1",
+            "capabilities": {"chat": True, "local": True},
+        },
+        {
+            "key": "gemma3",
+            "name": "Gemma 3",
+            "capabilities": {"chat": True, "local": True},
+        },
+        {
+            "key": "qwen3",
+            "name": "Qwen 3",
+            "capabilities": {"chat": True, "local": True},
+        },
     ],
     "openai_compatible": [
-        {"key": "gpt-4o", "name": "GPT-4o compatible", "capabilities": {"chat": True, "vision": True}},
-        {"key": "gpt-4.1", "name": "GPT-4.1 compatible", "capabilities": {"chat": True, "vision": True}},
-        {"key": "custom-chat-model", "name": "Custom chat model", "capabilities": {"chat": True}},
+        {
+            "key": "gpt-4o",
+            "name": "GPT-4o compatible",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "gpt-4.1",
+            "name": "GPT-4.1 compatible",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "custom-chat-model",
+            "name": "Custom chat model",
+            "capabilities": {"chat": True},
+        },
     ],
     "openrouter": [
-        {"key": "~openai/gpt-latest", "name": "OpenAI latest alias", "capabilities": {"chat": True, "vision": True}},
-        {"key": "~anthropic/claude-sonnet-latest", "name": "Claude Sonnet latest alias", "capabilities": {"chat": True, "vision": True}},
-        {"key": "openai/gpt-4o-mini", "name": "GPT-4o mini via OpenRouter", "capabilities": {"chat": True, "vision": True}},
+        {
+            "key": "~openai/gpt-latest",
+            "name": "OpenAI latest alias",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "~anthropic/claude-sonnet-latest",
+            "name": "Claude Sonnet latest alias",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "openai/gpt-4o-mini",
+            "name": "GPT-4o mini via OpenRouter",
+            "capabilities": {"chat": True, "vision": True},
+        },
     ],
     "litellm": [
-        {"key": "gpt-4o-mini", "name": "GPT-4o mini via LiteLLM", "capabilities": {"chat": True, "vision": True}},
-        {"key": "claude-3-5-haiku-20241022", "name": "Claude Haiku via LiteLLM", "capabilities": {"chat": True, "vision": True}},
-        {"key": "gemini-2.5-flash", "name": "Gemini Flash via LiteLLM", "capabilities": {"chat": True, "vision": True, "audio": True}},
+        {
+            "key": "gpt-4o-mini",
+            "name": "GPT-4o mini via LiteLLM",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "claude-3-5-haiku-20241022",
+            "name": "Claude Haiku via LiteLLM",
+            "capabilities": {"chat": True, "vision": True},
+        },
+        {
+            "key": "gemini-2.5-flash",
+            "name": "Gemini Flash via LiteLLM",
+            "capabilities": {"chat": True, "vision": True, "audio": True},
+        },
     ],
     "local": [
-        {"key": "local-foundation", "name": "Local foundation model", "capabilities": {"chat": True, "local": True}},
+        {
+            "key": "local-foundation",
+            "name": "Local foundation model",
+            "capabilities": {"chat": True, "local": True},
+        },
     ],
 }
 
@@ -141,6 +266,7 @@ DEPRECATED_MODEL_KEYS: dict[str, set[str]] = {
     },
 }
 
+
 def _dedupe_models(models: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     deduped: list[dict[str, Any]] = []
@@ -160,22 +286,33 @@ def _dedupe_models(models: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _titleize_model_name(model_key: str) -> str:
-    return (
-        model_key.replace("-", " ")
-        .replace("_", " ")
-        .replace(".", ". ")
-        .replace("  ", " ")
-        .title()
-        .replace(". ", ".")
-    )
+    return model_key.replace("-", " ").replace("_", " ").replace(".", ". ").replace("  ", " ").title().replace(". ", ".")
 
 
 def _openai_capabilities(model_id: str) -> dict[str, bool]:
     lowered = model_id.lower()
     capabilities = {"chat": True}
-    if lowered.startswith(("gpt-", "chatgpt-")) or lowered in {"o3", "o3-mini", "o4-mini", "o1", "o1-pro"}:
+    if lowered.startswith(("gpt-", "chatgpt-")) or lowered in {
+        "o3",
+        "o3-mini",
+        "o4-mini",
+        "o1",
+        "o1-pro",
+    }:
         capabilities["vision"] = any(token in lowered for token in ("gpt-4", "gpt-5", "gpt-4o"))
-    if any(token in lowered for token in ("vision", "vl", "multimodal", "gemini", "claude", "gpt-4o", "gpt-4.1", "gpt-5")):
+    if any(
+        token in lowered
+        for token in (
+            "vision",
+            "vl",
+            "multimodal",
+            "gemini",
+            "claude",
+            "gpt-4o",
+            "gpt-4.1",
+            "gpt-5",
+        )
+    ):
         capabilities["vision"] = True
     if any(token in lowered for token in ("audio", "speech", "realtime")):
         capabilities["audio"] = True
@@ -211,7 +348,14 @@ def _should_include_openai_model(model_id: str) -> bool:
 
 def _should_include_openrouter_model(model_id: str) -> bool:
     lowered = model_id.lower()
-    excluded_tokens = ("embedding", "moderation", "image", "transcribe", "tts", "rerank")
+    excluded_tokens = (
+        "embedding",
+        "moderation",
+        "image",
+        "transcribe",
+        "tts",
+        "rerank",
+    )
     if any(token in lowered for token in excluded_tokens):
         return False
     return True
@@ -311,11 +455,7 @@ class ProviderService:
             provider.provider_type,
             _dedupe_models(models) or CURATED_PROVIDER_MODELS.get(provider.provider_type, []),
         )
-        existing_default = (
-            self.db.query(AIModel)
-            .filter(AIModel.provider_id == provider.id, AIModel.is_default.is_(True))
-            .first()
-        )
+        existing_default = self.db.query(AIModel).filter(AIModel.provider_id == provider.id, AIModel.is_default.is_(True)).first()
         has_global_default = self.db.query(AIModel).filter(AIModel.is_default.is_(True)).first() is not None
 
         self.db.query(AIModel).filter(AIModel.provider_id == provider.id).delete()
@@ -381,11 +521,7 @@ class ProviderService:
             for item in data
             if isinstance(item, dict)
             and isinstance(item.get("id"), str)
-            and (
-                _should_include_openrouter_model(item["id"])
-                if provider.provider_type == "openrouter"
-                else _should_include_openai_model(item["id"])
-            )
+            and (_should_include_openrouter_model(item["id"]) if provider.provider_type == "openrouter" else _should_include_openai_model(item["id"]))
         ]
         return sorted(models, key=lambda item: item["name"].lower())
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy import JSON, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config import settings
@@ -25,5 +25,11 @@ class AssetChunk(UUIDTimestampMixin, Base):
     user = relationship("User", back_populates="asset_chunks")
 
     __table_args__ = (
-        Index("idx_asset_chunk_source_order", "user_id", "source_type", "source_id", "chunk_index"),
+        Index(
+            "idx_asset_chunk_source_order",
+            "user_id",
+            "source_type",
+            "source_id",
+            "chunk_index",
+        ),
     )

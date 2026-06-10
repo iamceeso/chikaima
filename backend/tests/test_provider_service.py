@@ -24,12 +24,20 @@ class ProviderServiceTests(unittest.TestCase):
     def test_openrouter_models_use_openai_fetch_path(self) -> None:
         service = object.__new__(ProviderService)
 
-        with patch.object(service, "_fetch_openai_models", return_value=CURATED_PROVIDER_MODELS["openrouter"]) as fetcher:
+        with patch.object(
+            service,
+            "_fetch_openai_models",
+            return_value=CURATED_PROVIDER_MODELS["openrouter"],
+        ) as fetcher:
             models = service._load_provider_models(
                 type(
                     "Provider",
                     (),
-                    {"provider_type": "openrouter", "encrypted_config": {}, "base_url": "https://openrouter.ai/api/v1"},
+                    {
+                        "provider_type": "openrouter",
+                        "encrypted_config": {},
+                        "base_url": "https://openrouter.ai/api/v1",
+                    },
                 )(),
                 api_key="sk-or-test",
             )

@@ -2,8 +2,8 @@ import sys
 
 from celery import Celery
 
-from app.core.config import settings
 import app.models  # noqa: F401  Ensure all SQLAlchemy models are registered before worker tasks run.
+from app.core.config import settings
 
 celery_app = Celery(
     "olanma",

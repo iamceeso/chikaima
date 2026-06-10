@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 import httpx
 from fastapi import HTTPException, status
 
 
 def _normalize_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-    return [
-        {"role": str(message["role"]), "content": str(message["content"])}
-        for message in messages
-        if message.get("content")
-    ]
+    return [{"role": str(message["role"]), "content": str(message["content"])} for message in messages if message.get("content")]
 
 
-def _extract_system_prompt(messages: list[dict[str, str]]) -> tuple[str | None, list[dict[str, str]]]:
+def _extract_system_prompt(
+    messages: list[dict[str, str]],
+) -> tuple[str | None, list[dict[str, str]]]:
     system_parts: list[str] = []
     conversation_messages: list[dict[str, str]] = []
 
@@ -159,11 +158,7 @@ class OpenAIAdapter(ProviderAdapter):
             return content.strip()
 
         if isinstance(content, list):
-            text_parts = [
-                part.get("text", "").strip()
-                for part in content
-                if isinstance(part, dict) and part.get("type") == "text"
-            ]
+            text_parts = [part.get("text", "").strip() for part in content if isinstance(part, dict) and part.get("type") == "text"]
             return "\n".join(part for part in text_parts if part).strip()
 
         return ""
@@ -180,7 +175,10 @@ class AnthropicAdapter(ProviderAdapter):
             "model": model_key,
             "max_tokens": 1024,
             "messages": [
-                {"role": message["role"], "content": [{"type": "text", "text": message["content"]}]}
+                {
+                    "role": message["role"],
+                    "content": [{"type": "text", "text": message["content"]}],
+                }
                 for message in conversation_messages
             ],
         }
@@ -212,11 +210,7 @@ class AnthropicAdapter(ProviderAdapter):
             ) from exc
 
         content = response.json().get("content") or []
-        text_parts = [
-            block.get("text", "").strip()
-            for block in content
-            if isinstance(block, dict) and block.get("type") == "text"
-        ]
+        text_parts = [block.get("text", "").strip() for block in content if isinstance(block, dict) and block.get("type") == "text"]
         return "\n".join(part for part in text_parts if part).strip()
 
     def stream_reply(self, model_key: str, messages: list[dict[str, str]]) -> Iterator[str]:
@@ -225,7 +219,10 @@ class AnthropicAdapter(ProviderAdapter):
             "model": model_key,
             "max_tokens": 1024,
             "messages": [
-                {"role": message["role"], "content": [{"type": "text", "text": message["content"]}]}
+                {
+                    "role": message["role"],
+                    "content": [{"type": "text", "text": message["content"]}],
+                }
                 for message in conversation_messages
             ],
             "stream": True,
@@ -342,11 +339,7 @@ class GeminiAdapter(ProviderAdapter):
             return ""
         content = candidates[0].get("content") or {}
         parts = content.get("parts") or []
-        text_parts = [
-            part.get("text", "").strip()
-            for part in parts
-            if isinstance(part, dict) and isinstance(part.get("text"), str)
-        ]
+        text_parts = [part.get("text", "").strip() for part in parts if isinstance(part, dict) and isinstance(part.get("text"), str)]
         return "\n".join(part for part in text_parts if part).strip()
 
 

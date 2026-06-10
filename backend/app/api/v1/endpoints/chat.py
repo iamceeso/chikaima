@@ -17,9 +17,9 @@ from app.schemas.chat import (
     ConversationResponse,
     MessageCreate,
     MessageResponse,
-    StreamChatRequest,
     MessageUpdate,
     RegenerateRequest,
+    StreamChatRequest,
 )
 from app.services.chat_service import ChatService
 

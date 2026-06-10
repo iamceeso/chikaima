@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, Text, JSON, Index
+from sqlalchemy import JSON, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -19,9 +19,4 @@ class Embedding(UUIDTimestampMixin, Base):
 
     user = relationship("User", back_populates="embeddings")
 
-    __table_args__ = (
-        Index("idx_user_source", "user_id", "source_type", "source_id"),
-    )
-
-
-
+    __table_args__ = (Index("idx_user_source", "user_id", "source_type", "source_id"),)

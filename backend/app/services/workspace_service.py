@@ -77,7 +77,11 @@ class WorkspaceService:
         models = (
             self.db.query(AIModel, Provider)
             .join(Provider, Provider.id == AIModel.provider_id)
-            .order_by(Provider.name.asc(), AIModel.is_default.desc(), AIModel.display_name.asc())
+            .order_by(
+                Provider.name.asc(),
+                AIModel.is_default.desc(),
+                AIModel.display_name.asc(),
+            )
             .all()
         )
         return [build_model_response(model, provider) for model, provider in models]

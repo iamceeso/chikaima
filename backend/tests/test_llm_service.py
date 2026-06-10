@@ -52,7 +52,10 @@ class LLMServiceTests(unittest.TestCase):
             list(service.stream_reply(SimpleNamespace(), SimpleNamespace(model_key="model"), []))
 
         self.assertEqual(context.exception.status_code, 502)
-        self.assertEqual(context.exception.detail, "The AI provider returned an empty streamed response.")
+        self.assertEqual(
+            context.exception.detail,
+            "The AI provider returned an empty streamed response.",
+        )
 
     def test_generate_reply_with_rag_builds_citations_and_context(self) -> None:
         service = make_service()
@@ -74,10 +77,13 @@ class LLMServiceTests(unittest.TestCase):
             )
         ]
 
-        with patch.object(service, "_search_with_fallback", return_value=search_results), patch.object(
-            service,
-            "generate_reply",
-            side_effect=lambda provider, model, messages: captured_messages.extend(messages) or "Answer with citation",
+        with (
+            patch.object(service, "_search_with_fallback", return_value=search_results),
+            patch.object(
+                service,
+                "generate_reply",
+                side_effect=lambda provider, model, messages: captured_messages.extend(messages) or "Answer with citation",
+            ),
         ):
             answer, citations = service.generate_reply_with_rag(
                 "user-1",
@@ -106,18 +112,27 @@ class LLMServiceTests(unittest.TestCase):
         )
         self.assertEqual(captured_messages[0]["role"], "system")
         self.assertIn("report.pdf p.2", captured_messages[0]["content"])
-        self.assertIn("Workspace revenue grew 25 percent year over year.", captured_messages[0]["content"])
-        self.assertEqual(captured_messages[-1], {"role": "user", "content": "How did revenue change?"})
+        self.assertIn(
+            "Workspace revenue grew 25 percent year over year.",
+            captured_messages[0]["content"],
+        )
+        self.assertEqual(
+            captured_messages[-1],
+            {"role": "user", "content": "How did revenue change?"},
+        )
 
     def test_generate_reply_with_rag_falls_back_when_search_finds_nothing(self) -> None:
         service = make_service()
         captured_messages: list[dict[str, str]] = []
         original_messages = [{"role": "user", "content": "Hello"}]
 
-        with patch.object(service, "_search_with_fallback", return_value=[]), patch.object(
-            service,
-            "generate_reply",
-            side_effect=lambda provider, model, messages: captured_messages.extend(messages) or "Plain answer",
+        with (
+            patch.object(service, "_search_with_fallback", return_value=[]),
+            patch.object(
+                service,
+                "generate_reply",
+                side_effect=lambda provider, model, messages: captured_messages.extend(messages) or "Plain answer",
+            ),
         ):
             answer, citations = service.generate_reply_with_rag(
                 "user-1",

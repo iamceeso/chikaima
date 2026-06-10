@@ -87,8 +87,8 @@ export function ProviderForm() {
 
   useEffect(() => {
     const previousDefaults = providerDefaults[previousProviderType.current];
-    const currentName = form.getValues("name").trim();
-    const currentBaseUrl = form.getValues("base_url").trim();
+    const currentName = (form.getValues("name") ?? "").trim();
+    const currentBaseUrl = (form.getValues("base_url") ?? "").trim();
 
     if (!currentName || currentName === previousDefaults.name) {
       form.setValue("name", defaults.name, { shouldValidate: true, shouldDirty: true });

@@ -6,14 +6,13 @@ from sqlalchemy.orm import Session
 from app.api.deps.auth import get_current_user
 from app.core.database import get_db
 from app.models.document import Document
-from app.schemas.assets import AssetQuestionRequest, DocumentResponse
-from app.schemas.transcript import SummaryArtifactResponse
 from app.models.user import User
+from app.schemas.assets import AssetQuestionRequest, DocumentResponse
+from app.schemas.transcript import SummaryArtifactResponse, TranscriptResponse
 from app.services.job_service import JobService
 from app.services.library_service import LibraryService
 from app.services.storage_service import storage_service
 from app.services.transcript_service import TranscriptService
-from app.schemas.transcript import TranscriptResponse
 
 router = APIRouter()
 

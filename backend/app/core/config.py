@@ -68,15 +68,10 @@ class Settings(BaseSettings):
             "jwt_refresh_secret_key": PLACEHOLDER_JWT_REFRESH_SECRET,
             "provider_secret_key": PLACEHOLDER_PROVIDER_SECRET,
         }
-        insecure_fields = [
-            field_name for field_name, placeholder in placeholder_values.items() if getattr(self, field_name) == placeholder
-        ]
+        insecure_fields = [field_name for field_name, placeholder in placeholder_values.items() if getattr(self, field_name) == placeholder]
 
         if self.is_production and insecure_fields:
-            raise ValueError(
-                "Production settings require real secret values for: "
-                + ", ".join(sorted(insecure_fields))
-            )
+            raise ValueError("Production settings require real secret values for: " + ", ".join(sorted(insecure_fields)))
 
         return self
 

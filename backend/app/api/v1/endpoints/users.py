@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 from app.api.deps.auth import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.user import UserAdminCreate, UserAdminUpdate, UserProfileUpdate, UserResponse
+from app.schemas.user import (
+    UserAdminCreate,
+    UserAdminUpdate,
+    UserProfileUpdate,
+    UserResponse,
+)
 from app.services.auth_service import AuthService
 
 router = APIRouter()
@@ -66,9 +71,15 @@ def delete_user(
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     if target.id == current_user.id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot delete your own account")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own account",
+        )
     if target.is_superuser and AuthService(db).users.count_superusers() <= 1:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one admin account is required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one admin account is required",
+        )
 
     db.delete(target)
     db.commit()

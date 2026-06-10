@@ -8,11 +8,11 @@ from app.core.database import get_db
 from app.models.audio import AudioAsset
 from app.models.user import User
 from app.schemas.assets import AudioResponse
+from app.schemas.transcript import SummaryArtifactResponse, TranscriptResponse
 from app.services.job_service import JobService
 from app.services.library_service import LibraryService
 from app.services.storage_service import storage_service
 from app.services.transcript_service import TranscriptService
-from app.schemas.transcript import TranscriptResponse, SummaryArtifactResponse
 
 router = APIRouter()
 

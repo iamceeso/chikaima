@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
-    audio,
     assets,
+    audio,
     auth,
     chat,
     dashboard,
