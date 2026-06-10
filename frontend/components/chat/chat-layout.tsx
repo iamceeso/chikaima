@@ -5,6 +5,7 @@ import {
   ArrowUp,
   Bot,
   Copy,
+  Eye,
   FileImage,
   FileText,
   Inbox,
@@ -19,10 +20,11 @@ import {
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { AssetPreviewDialog } from "@/components/assets/asset-preview-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
-import type { Message } from "@/types";
+import type { AssetResourceType, Message } from "@/types";
 import { useAuthStore } from "@/store/auth-store";
 import { useChatStore } from "@/store/chat-store";
 import { RAGReferences } from "./rag-references";
@@ -96,6 +98,11 @@ export function ChatLayout() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [hasReceivedStreamToken, setHasReceivedStreamToken] = useState(false);
   const [branchResetFromMessageId, setBranchResetFromMessageId] = useState<string | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<{
+    id: string;
+    name: string;
+    kind: AssetResourceType;
+  } | null>(null);
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -709,16 +716,32 @@ export function ChatLayout() {
                         )}
                         {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
                           <div className="mt-2.5 flex flex-wrap gap-2">
-                            {(message.metadata.attachments as Array<{ name: string; kind: PendingAttachment["kind"] }>).map((attachment) => {
+                            {(message.metadata.attachments as Array<{ id?: string; name: string; kind: PendingAttachment["kind"] }>).map((attachment) => {
                               const Icon = attachmentIcon(attachment.kind);
                               return (
-                                <span
+                                <div
                                   key={`${message.id}-${attachment.name}`}
                                   className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-0.5 text-[11px] text-foreground-muted"
                                 >
                                   <Icon className="h-3 w-3" />
                                   {attachment.name}
-                                </span>
+                                  {attachment.id && attachment.kind === "document" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setPreviewAttachment({
+                                          id: attachment.id!,
+                                          name: attachment.name,
+                                          kind: "document",
+                                        })
+                                      }
+                                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-foreground-muted transition hover:bg-background hover:text-foreground"
+                                      title="Preview document"
+                                    >
+                                      <Eye className="h-3 w-3" />
+                                    </button>
+                                  ) : null}
+                                </div>
                               );
                             })}
                           </div>
@@ -827,6 +850,20 @@ export function ChatLayout() {
           ) : null}
         </div>
       </div>
+
+      {previewAttachment ? (
+        <AssetPreviewDialog
+          open={Boolean(previewAttachment)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPreviewAttachment(null);
+            }
+          }}
+          resourceType={previewAttachment.kind}
+          resourceId={previewAttachment.id}
+          name={previewAttachment.name}
+        />
+      ) : null}
     </div>
   );
 }

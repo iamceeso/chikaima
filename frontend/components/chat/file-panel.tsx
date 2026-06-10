@@ -1,6 +1,9 @@
 "use client";
 
-import { X, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Eye, Trash2, X } from "lucide-react";
+
+import { AssetPreviewDialog } from "@/components/assets/asset-preview-dialog";
 import { Button } from "@/components/ui/button";
 import type { DocumentAsset } from "@/types";
 interface FilePanelProps {
@@ -18,6 +21,8 @@ export function FilePanel({
   onRemove,
   isLoading,
 }: FilePanelProps) {
+  const [previewFile, setPreviewFile] = useState<DocumentAsset | null>(null);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -123,6 +128,15 @@ export function FilePanel({
                         </p>
                       )}
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 shrink-0"
+                      onClick={() => setPreviewFile(file)}
+                      title="Preview file"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
                     {onRemove && (
                       <Button
                         variant="ghost"
@@ -143,6 +157,21 @@ export function FilePanel({
           </div>
         </div>
       )}
+
+      {previewFile ? (
+        <AssetPreviewDialog
+          open={Boolean(previewFile)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPreviewFile(null);
+            }
+          }}
+          resourceType="document"
+          resourceId={previewFile.id}
+          name={previewFile.name}
+          mimeType={previewFile.mime_type}
+        />
+      ) : null}
     </>
   );
 }

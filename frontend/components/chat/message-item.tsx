@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Edit2, FileText, RotateCcw } from "lucide-react";
+import { Edit2, Eye, FileText, RotateCcw } from "lucide-react";
+
+import { AssetPreviewDialog } from "@/components/assets/asset-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { Message } from "@/types";
+import type { AssetResourceType, Message } from "@/types";
 import { cn } from "@/lib/utils";
 import { RAGReferences } from "./rag-references";
 
@@ -19,6 +21,11 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(message.content);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<{
+    id: string;
+    name: string;
+    kind: AssetResourceType;
+  } | null>(null);
 
   const isUserMessage = message.role === "user";
 
@@ -46,6 +53,7 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
     ? (message.metadata.attachments as Array<{
         id?: string;
         name?: string;
+        kind?: AssetResourceType;
         size?: number;
         status?: string;
       }>)
@@ -111,6 +119,24 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
                         {attachment.status}
                       </span>
                     ) : null}
+                    {attachment.id && attachment.kind === "document" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        onClick={() =>
+                          setPreviewAttachment({
+                            id: attachment.id,
+                            name: attachment.name ?? "Attachment",
+                            kind: "document",
+                          })
+                        }
+                        title="Preview document"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -167,6 +193,20 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
           </Button>
         </div>
       )}
+
+      {previewAttachment ? (
+        <AssetPreviewDialog
+          open={Boolean(previewAttachment)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setPreviewAttachment(null);
+            }
+          }}
+          resourceType={previewAttachment.kind}
+          resourceId={previewAttachment.id}
+          name={previewAttachment.name}
+        />
+      ) : null}
     </div>
   );
 }

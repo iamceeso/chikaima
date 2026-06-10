@@ -291,7 +291,7 @@ export function Sidebar({
 
       {!collapsed || mobile ? (
         <div className="mt-auto min-h-0 border-t border-border pt-4">
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Recent analyses</div>
+          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Recents</div>
           <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
             {conversationsQuery.data?.map((item) => {
               const active = pathname === "/chat" && selectedConversationId === item.id;

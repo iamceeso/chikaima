@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AudioLines, FileText, Library, Search, Trash2, Video } from "lucide-react";
+import { AudioLines, Eye, FileText, Library, Search, Trash2, Video } from "lucide-react";
 
+import { AssetPreviewDialog } from "@/components/assets/asset-preview-dialog";
 import { Topbar } from "@/components/layout/topbar";
 import {
   AlertDialog,
@@ -30,6 +31,7 @@ type LibraryAsset = {
   created_at: string;
   summary: string | null;
   detail: string;
+  mime_type?: string | null;
 };
 
 const kindMeta = {
@@ -69,6 +71,7 @@ function toLibraryAsset(asset: AudioAsset | VideoAsset | DocumentAsset, kind: Li
         ? `${audioAsset.transcript.slice(0, 180)}${audioAsset.transcript.length > 180 ? "..." : ""}`
         : null,
       detail: "Transcript-ready audio workspace",
+      mime_type: null,
     };
   }
 
@@ -82,6 +85,7 @@ function toLibraryAsset(asset: AudioAsset | VideoAsset | DocumentAsset, kind: Li
       created_at: videoAsset.created_at,
       summary: videoAsset.summary,
       detail: `${Array.isArray(videoAsset.action_items) ? videoAsset.action_items.length : 0} action items`,
+      mime_type: null,
     };
   }
 
@@ -94,6 +98,7 @@ function toLibraryAsset(asset: AudioAsset | VideoAsset | DocumentAsset, kind: Li
     created_at: documentAsset.created_at,
     summary: documentAsset.summary,
     detail: documentAsset.mime_type,
+    mime_type: documentAsset.mime_type,
   };
 }
 
@@ -117,6 +122,7 @@ export default function LibraryPage() {
   const [activeKind, setActiveKind] = useState<LibraryAsset["kind"] | "all">("all");
   const [assetPendingDelete, setAssetPendingDelete] = useState<LibraryAsset | null>(null);
   const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [assetPreview, setAssetPreview] = useState<LibraryAsset | null>(null);
 
   const libraryQuery = useQuery({
     queryKey: libraryQueryKey,
@@ -325,6 +331,18 @@ export default function LibraryPage() {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-start">
+                        {asset.kind === "document" ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setAssetPreview(asset)}
+                            className="text-foreground-muted hover:text-foreground"
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Preview
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
                           variant="ghost"
@@ -441,6 +459,21 @@ export default function LibraryPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {assetPreview ? (
+        <AssetPreviewDialog
+          open={Boolean(assetPreview)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAssetPreview(null);
+            }
+          }}
+          resourceType="document"
+          resourceId={assetPreview.id}
+          name={assetPreview.name}
+          mimeType={assetPreview.mime_type}
+        />
+      ) : null}
     </>
   );
 }

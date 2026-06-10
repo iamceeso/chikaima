@@ -95,6 +95,8 @@ export interface RAGCitation {
   score: number;
 }
 
+export type AssetResourceType = "document" | "audio" | "video";
+
 export interface Conversation {
   id: string;
   title: string;

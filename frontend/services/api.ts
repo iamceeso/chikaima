@@ -1,6 +1,7 @@
 import { env } from "@/lib/env";
 import type {
   AIModel,
+  AssetResourceType,
   AudioAsset,
   AuthTokens,
   Conversation,
@@ -85,6 +86,41 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
+async function requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const method = (options.method ?? "GET").toUpperCase();
+  const headers = new Headers(options.headers);
+  if (options.token) {
+    headers.set("Authorization", `Bearer ${options.token}`);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${env.apiBaseUrl}${path}`, {
+      ...options,
+      headers,
+      cache: options.cache ?? (method === "GET" ? "default" : "no-store"),
+      signal: options.signal ?? controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Request timed out. Check that the backend is running.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || "Request failed");
+  }
+
+  return response.blob();
+}
+
 export const api = {
   getPublicWorkspaceSettings: () => request<WorkspacePublicSettings>("/settings/public"),
   register: (payload: { email: string; full_name: string; password: string }) =>
@@ -139,6 +175,8 @@ export const api = {
     request<void>(`/providers/${providerId}`, { method: "DELETE", token }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),
   getLibraryBundle: (token: string) => request<LibraryBundle>("/library", { token }),
+  getAssetFile: (token: string, resourceType: AssetResourceType, resourceId: string) =>
+    requestBlob(`/assets/${resourceType}/${resourceId}/file`, { token }),
   getDocuments: (token: string) => request<DocumentAsset[]>("/documents", { token }),
   deleteDocument: (token: string, documentId: string) =>
     request<void>(`/documents/${documentId}`, { method: "DELETE", token }),
@@ -157,6 +195,15 @@ export const api = {
     return request<AudioAsset>("/audio/upload", { method: "POST", token, body: formData });
   },
   getVideos: (token: string) => request<VideoAsset[]>("/video", { token }),
+  getTranscript: (token: string, resourceType: AssetResourceType, resourceId: string) => {
+    if (resourceType === "document") {
+      return request<{ content: string }>(`/documents/${resourceId}/transcript`, { token });
+    }
+    if (resourceType === "audio") {
+      return request<{ content: string }>(`/audio/${resourceId}/transcript`, { token });
+    }
+    return request<{ content: string }>(`/video/${resourceId}/transcript`, { token });
+  },
   deleteVideo: (token: string, videoId: string) => request<void>(`/video/${videoId}`, { method: "DELETE", token }),
   clearVideos: (token: string) => request<void>("/video", { method: "DELETE", token }),
   uploadVideo: (token: string, file: File) => {

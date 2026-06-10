@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, ShieldCheck, UserCircle2 } from "lucide-react";
+import { Bell, ShieldCheck, Trash2, UserCircle2 } from "lucide-react";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { libraryQueryKey } from "@/lib/library";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ export default function WorkspaceSettingsPage() {
   const [registrationDialogOpen, setRegistrationDialogOpen] = useState(false);
   const [authenticationDialogOpen, setAuthenticationDialogOpen] = useState(false);
   const [docsDialogOpen, setDocsDialogOpen] = useState(false);
+  const [clearAnalysisDialogOpen, setClearAnalysisDialogOpen] = useState(false);
 
   const workspaceQuery = useQuery({
     queryKey: ["workspace-settings"],
@@ -92,6 +94,30 @@ export default function WorkspaceSettingsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
       await queryClient.invalidateQueries({ queryKey: ["public-workspace-settings"] });
+    },
+  });
+
+  const clearAnalysis = useMutation({
+    mutationFn: async () => {
+      if (!token) {
+        throw new Error("Please sign in first.");
+      }
+
+      const conversations = await api.getConversations(token);
+
+      await Promise.all([
+        api.clearDocuments(token),
+        api.clearAudioAssets(token),
+        api.clearVideos(token),
+        ...conversations.map((conversation) => api.deleteConversation(token, conversation.id)),
+      ]);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["conversations"] }),
+        queryClient.invalidateQueries({ queryKey: libraryQueryKey }),
+        queryClient.invalidateQueries({ queryKey: ["jobs"] }),
+      ]);
     },
   });
 
@@ -233,7 +259,20 @@ export default function WorkspaceSettingsPage() {
               {user?.full_name ?? "Your account"}
               {user?.email ? ` (${user.email})` : ""}
             </div>
-            <SignOutButton redirectTo="/" className="w-full sm:w-auto" />
+            <div className="space-y-3">
+              <SignOutButton redirectTo="/" className="w-full sm:w-auto" />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-center text-primary hover:bg-primary/5 sm:w-auto"
+                onClick={() => setClearAnalysisDialogOpen(true)}
+                disabled={clearAnalysis.isPending}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {clearAnalysis.isPending ? "Clearing analysis..." : "Clear all analysis"}
+              </Button>
+            </div>
+            {clearAnalysis.error ? <p className="mt-3 text-sm text-primary">{clearAnalysis.error.message}</p> : null}
           </Card>
 
           <Card className="p-6">
@@ -268,6 +307,49 @@ export default function WorkspaceSettingsPage() {
           </Card>
         </div>
       </div>
+
+      <AlertDialog
+        open={clearAnalysisDialogOpen}
+        onOpenChange={(open) => {
+          if (!clearAnalysis.isPending) {
+            setClearAnalysisDialogOpen(open);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all analysis?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove every chat, document, audio file, and video in your workspace library for this account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-border"
+              disabled={clearAnalysis.isPending}
+              onClick={() => setClearAnalysisDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={clearAnalysis.isPending}
+              onClick={() =>
+                clearAnalysis.mutate(undefined, {
+                  onSuccess: async () => {
+                    setClearAnalysisDialogOpen(false);
+                    await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+                  },
+                })
+              }
+            >
+              {clearAnalysis.isPending ? "Clearing..." : "Clear all analysis"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={registrationDialogOpen}
