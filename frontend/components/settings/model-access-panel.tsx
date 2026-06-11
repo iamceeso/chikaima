@@ -263,9 +263,9 @@ export function ModelAccessPanel() {
                         {group.items.map((model) => (
                           <div
                             key={model.id}
-                            className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-1.5"
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-border bg-background px-3 py-1.5"
                           >
-                            <div className="min-w-0 pr-3">
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <p className="truncate text-sm font-medium text-foreground">{model.display_name}</p>
                                 {model.is_default ? (
@@ -281,7 +281,7 @@ export function ModelAccessPanel() {
                               </div>
                               <p className="truncate text-[11px] text-foreground-muted">{model.model_key}</p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex shrink-0 items-center gap-2 self-start">
                               <button
                                 type="button"
                                 aria-label={model.is_default ? "Clear default model" : "Set as default model"}

@@ -68,6 +68,14 @@ def _iter_sse_json_events(lines: Iterator[str]) -> Iterator[dict[str, Any]]:
                 return
 
 
+def _extract_stream_error_detail(response: httpx.Response, fallback: str) -> str:
+    try:
+        payload = response.read().decode("utf-8", errors="ignore").strip()
+    except Exception:
+        return fallback
+    return payload or fallback
+
+
 class ProviderAdapter(ABC):
     @abstractmethod
     def generate_reply(self, model_key: str, messages: list[dict[str, str]]) -> str:
@@ -141,7 +149,7 @@ class OpenAIAdapter(ProviderAdapter):
                                 if isinstance(part, dict) and part.get("type") == "text_delta" and part.get("text"):
                                     yield str(part["text"])
         except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or "OpenAI streaming request failed."
+            detail = _extract_stream_error_detail(exc.response, "OpenAI streaming request failed.")
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail) from exc
         except httpx.HTTPError as exc:
             raise HTTPException(
@@ -251,7 +259,7 @@ class AnthropicAdapter(ProviderAdapter):
                         if isinstance(text, str) and text:
                             yield text
         except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or "Anthropic streaming request failed."
+            detail = _extract_stream_error_detail(exc.response, "Anthropic streaming request failed.")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=detail,
@@ -310,7 +318,7 @@ class GeminiAdapter(ProviderAdapter):
                         if text:
                             yield text
         except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or "Gemini streaming request failed."
+            detail = _extract_stream_error_detail(exc.response, "Gemini streaming request failed.")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=detail,
@@ -398,7 +406,7 @@ class OllamaAdapter(ProviderAdapter):
                         if isinstance(content, str) and content:
                             yield content
         except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or "Ollama streaming request failed."
+            detail = _extract_stream_error_detail(exc.response, "Ollama streaming request failed.")
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail) from exc
         except httpx.HTTPError as exc:
             raise HTTPException(
