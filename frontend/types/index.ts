@@ -3,7 +3,6 @@ export type ProviderType =
   | "anthropic"
   | "gemini"
   | "ollama"
-  | "openai_compatible"
   | "openrouter"
   | "litellm"
   | "local";

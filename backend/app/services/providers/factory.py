@@ -20,8 +20,6 @@ class AdapterFactory:
 
         if provider_type == "openai":
             return OpenAIAdapter(api_key=api_key)
-        elif provider_type == "openai_compatible":
-            return OpenAIAdapter(api_key=api_key, base_url=provider.base_url)
         elif provider_type == "openrouter":
             return OpenAIAdapter(
                 api_key=api_key,

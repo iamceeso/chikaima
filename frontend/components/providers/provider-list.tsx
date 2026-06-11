@@ -23,7 +23,6 @@ const providerLabels: Record<Provider["provider_type"], string> = {
   anthropic: "Anthropic",
   gemini: "Gemini",
   ollama: "Ollama",
-  openai_compatible: "OpenAI-compatible",
   openrouter: "OpenRouter",
   litellm: "LiteLLM",
   local: "Local model host",

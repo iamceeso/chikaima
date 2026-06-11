@@ -16,7 +16,7 @@ import type { ProviderType } from "@/types";
 
 const providerSchema = z.object({
   name: z.string().min(2),
-  provider_type: z.enum(["openai", "anthropic", "gemini", "ollama", "openai_compatible", "openrouter", "litellm", "local"]),
+  provider_type: z.enum(["openai", "anthropic", "gemini", "ollama", "openrouter", "litellm", "local"]),
   base_url: z.string().url().optional().or(z.literal("")),
   api_key: z.string().optional(),
 });
@@ -43,11 +43,6 @@ const providerDefaults: Record<ProviderType, { name: string; baseUrl: string; ap
     name: "Local Ollama",
     baseUrl: "http://localhost:11434",
     apiKeyPlaceholder: "Not required",
-  },
-  openai_compatible: {
-    name: "Custom gateway",
-    baseUrl: "https://your-gateway.example.com/v1",
-    apiKeyPlaceholder: "Provider token",
   },
   openrouter: {
     name: "OpenRouter",
@@ -124,7 +119,7 @@ export function ProviderForm() {
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-foreground">Add provider</h2>
         <p className="mt-2 text-sm text-foreground-muted">
-          Connect cloud APIs, local runtimes, or compatible gateways.
+          Connect cloud APIs, local runtimes, or supported gateways.
         </p>
       </div>
       <form
@@ -152,7 +147,6 @@ export function ProviderForm() {
             <option value="anthropic">Anthropic</option>
             <option value="gemini">Gemini</option>
             <option value="ollama">Ollama</option>
-            <option value="openai_compatible">OpenAI-compatible</option>
             <option value="openrouter">OpenRouter</option>
             <option value="litellm">LiteLLM</option>
             <option value="local">Local model host</option>

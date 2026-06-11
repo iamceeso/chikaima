@@ -11,7 +11,6 @@ ProviderType = Literal[
     "anthropic",
     "gemini",
     "ollama",
-    "openai_compatible",
     "openrouter",
     "litellm",
     "local",

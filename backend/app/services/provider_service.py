@@ -132,23 +132,6 @@ CURATED_PROVIDER_MODELS: dict[str, list[dict[str, Any]]] = {
             "capabilities": {"chat": True, "local": True},
         },
     ],
-    "openai_compatible": [
-        {
-            "key": "gpt-4o",
-            "name": "GPT-4o compatible",
-            "capabilities": {"chat": True, "vision": True},
-        },
-        {
-            "key": "gpt-4.1",
-            "name": "GPT-4.1 compatible",
-            "capabilities": {"chat": True, "vision": True},
-        },
-        {
-            "key": "custom-chat-model",
-            "name": "Custom chat model",
-            "capabilities": {"chat": True},
-        },
-    ],
     "openrouter": [
         {
             "key": "~openai/gpt-latest",
@@ -488,12 +471,12 @@ class ProviderService:
             return self._fetch_gemini_models(provider, resolved_api_key)
         if provider.provider_type == "ollama":
             return self._fetch_ollama_models(provider)
-        if provider.provider_type in {"openai_compatible", "openrouter", "litellm"}:
+        if provider.provider_type in {"openrouter", "litellm"}:
             return self._fetch_openai_models(provider, resolved_api_key)
         return CURATED_PROVIDER_MODELS.get(provider.provider_type, [])
 
     def _fetch_openai_models(self, provider: Provider, api_key: str | None) -> list[dict[str, Any]]:
-        fallback_key = provider.provider_type if provider.provider_type in CURATED_PROVIDER_MODELS else "openai_compatible"
+        fallback_key = provider.provider_type if provider.provider_type in CURATED_PROVIDER_MODELS else "openai"
         if not api_key:
             return CURATED_PROVIDER_MODELS["openai" if provider.provider_type == "openai" else fallback_key]
 
