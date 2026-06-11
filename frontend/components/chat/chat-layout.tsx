@@ -317,9 +317,7 @@ export function ChatLayout() {
 
     const attachments = pendingAttachments;
     const content = contentOverride?.trim() || draft.trim() || "Analyze the attached files.";
-    const shouldContinueConversation =
-      conversation && (!activeModel?.id || activeModel.id === conversation.model_id);
-    const nextConversationId = shouldContinueConversation ? conversation.id : undefined;
+    const nextConversationId = conversation?.id;
     const attachmentMetadata = attachments.length ? { attachments } : undefined;
     const userTempId = `temp-user-${crypto.randomUUID()}`;
     const assistantTempId = `temp-assistant-${crypto.randomUUID()}`;
@@ -351,7 +349,7 @@ export function ChatLayout() {
         {
           content,
           conversation_id: nextConversationId,
-          model_id: nextConversationId ? undefined : activeModel?.id,
+          model_id: activeModel?.id,
           title: content.slice(0, 48) || "New analysis",
           metadata: attachmentMetadata,
           use_rag: true,
