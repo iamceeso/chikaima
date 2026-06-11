@@ -137,222 +137,277 @@ export default function WorkspaceSettingsPage() {
   });
 
   return (
-    <SettingsShell title="Workspace" description="Manage access, jobs, and your account.">
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+  <SettingsShell
+    title="Workspace"
+    description="Manage access, routing, jobs, and account settings."
+  >
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-1">
+      {/* Overview */}
+      <Card className="overflow-hidden">
+        <div className="border-b border-border p-6">
+          <h1 className="text-2xl font-semibold text-foreground">
+            Workspace Overview
+          </h1>
+          <p className="mt-1 text-sm text-foreground-muted">
+            Configure workspace access, AI routing, documentation visibility,
+            and account operations.
+          </p>
+        </div>
+
+        <div className="grid gap-4 p-6 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-background-secondary p-5">
+            <p className="text-xs uppercase tracking-wider text-foreground-muted">
+              Users
+            </p>
+            <p className="mt-2 text-3xl font-bold">
+              {workspaceQuery.data?.total_users ?? 0}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-background-secondary p-5">
+            <p className="text-xs uppercase tracking-wider text-foreground-muted">
+              Providers
+            </p>
+            <p className="mt-2 text-3xl font-bold">
+              {workspaceQuery.data?.total_providers ?? 0}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-background-secondary p-5">
+            <p className="text-xs uppercase tracking-wider text-foreground-muted">
+              Queued Jobs
+            </p>
+            <p className="mt-2 text-3xl font-bold">
+              {workspaceQuery.data?.pending_jobs ?? 0}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        {/* Security */}
         <Card className="p-6">
-          <div className="mb-5 flex items-center gap-3">
+          <div className="mb-6 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <h2 className="text-base font-semibold text-foreground">Access</h2>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {/* <div className="rounded-2xl border border-border bg-background-secondary p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Name</p>
-              <p className="mt-2 text-lg font-semibold text-foreground">
-                {workspaceQuery.data?.name ?? "Loading..."}
-              </p>
-            </div> */}
-            <div className="rounded-2xl border border-border bg-background-secondary p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Users</p>
-              <p className="mt-2 text-lg font-semibold text-foreground">{workspaceQuery.data?.total_users ?? 0}</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-background-secondary p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Providers</p>
-              <p className="mt-2 text-lg font-semibold text-foreground">
-                {workspaceQuery.data?.total_providers ?? 0}
+            <div>
+              <h2 className="font-semibold">Security & Access</h2>
+              <p className="text-sm text-foreground-muted">
+                Authentication and API visibility.
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-background-secondary p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted">Queued jobs</p>
-              <p className="mt-2 text-lg font-semibold text-foreground">{workspaceQuery.data?.pending_jobs ?? 0}</p>
-            </div>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-border bg-background p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground">Public registration</p>
-                  <span className="rounded-full border border-border bg-background-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
-                    {workspaceQuery.data?.public_registration_enabled ? "Enabled" : "Disabled"}
-                  </span>
+          <div className="space-y-4">
+            {/* Authentication */}
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-medium">Authentication</h3>
+                  <p className="text-sm text-foreground-muted">
+                    {workspaceQuery.data?.authentication_enabled
+                      ? "Sign-in required."
+                      : "Workspace can be accessed without login."}
+                  </p>
                 </div>
-                <p className="mt-1 text-sm text-foreground-muted">
-                  {workspaceQuery.data?.public_registration_enabled ? "Enabled" : "Disabled"}
-                </p>
+
+                <Button
+                  onClick={() => setAuthenticationDialogOpen(true)}
+                  disabled={
+                    !user?.is_superuser ||
+                    workspaceQuery.data?.first_user_registration_required ||
+                    toggleAuthentication.isPending ||
+                    workspaceQuery.isLoading
+                  }
+                >
+                  {workspaceQuery.data?.authentication_enabled
+                    ? "Disable"
+                    : "Enable"}
+                </Button>
               </div>
-              <Button
-                type="button"
-                onClick={() => setRegistrationDialogOpen(true)}
-                disabled={!user?.is_superuser || toggleRegistration.isPending || workspaceQuery.isLoading}
-                className="w-[16rem] min-w-[16rem] max-w-[16rem] justify-center whitespace-nowrap"
-              >
-                {workspaceQuery.data?.public_registration_enabled ? "Disable registration" : "Enable registration"}
-              </Button>
             </div>
-            {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
-            {toggleRegistration.error ? (
-              <p className="mt-3 text-sm text-primary">{toggleRegistration.error.message}</p>
-            ) : null}
-          </div>
 
-          <div className="mt-4 rounded-2xl border border-border bg-background p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground">Authentication</p>
-                  <span className="rounded-full border border-border bg-background-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
-                    {workspaceQuery.data?.authentication_enabled ? "Enabled" : "Disabled"}
-                  </span>
+            {/* API Docs */}
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-medium">API Documentation</h3>
+                  <p className="text-sm text-foreground-muted">
+                    Control access to Swagger, ReDoc and OpenAPI.
+                  </p>
                 </div>
-                <p className="mt-1 text-sm text-foreground-muted">
-                  {workspaceQuery.data?.first_user_registration_required
-                    ? "Create the first user account before changing authentication rules."
-                    : workspaceQuery.data?.authentication_enabled
-                      ? "Sign-in is required for workspace access."
-                      : "Workspace access is open without login."}
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => setAuthenticationDialogOpen(true)}
-                disabled={!user?.is_superuser || workspaceQuery.data?.first_user_registration_required || toggleAuthentication.isPending || workspaceQuery.isLoading}
-                className="w-[16rem] min-w-[16rem] max-w-[16rem] justify-center whitespace-nowrap"
-              >
-                {workspaceQuery.data?.authentication_enabled ? "Disable authentication" : "Enable authentication"}
-              </Button>
-            </div>
-            {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
-            {toggleAuthentication.error ? (
-              <p className="mt-3 text-sm text-primary">{toggleAuthentication.error.message}</p>
-            ) : null}
-          </div>
 
-          <div className="mt-4 rounded-2xl border border-border bg-background p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground">API docs</p>
-                  <span className="rounded-full border border-border bg-background-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
-                    {workspaceQuery.data?.docs_enabled ? "Enabled" : "Disabled"}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-foreground-muted">
+                <Button
+                  onClick={() => setDocsDialogOpen(true)}
+                  disabled={
+                    !user?.is_superuser ||
+                    toggleDocs.isPending ||
+                    workspaceQuery.isLoading
+                  }
+                >
                   {workspaceQuery.data?.docs_enabled
-                    ? "Swagger UI, ReDoc, and OpenAPI schema are publicly reachable."
-                    : "Docs are hidden from public access by default."}
-                </p>
+                    ? "Disable"
+                    : "Enable"}
+                </Button>
               </div>
-              <Button
-                type="button"
-                onClick={() => setDocsDialogOpen(true)}
-                disabled={!user?.is_superuser || toggleDocs.isPending || workspaceQuery.isLoading}
-                className="w-[16rem] min-w-[16rem] max-w-[16rem] justify-center whitespace-nowrap"
-              >
-                {workspaceQuery.data?.docs_enabled ? "Disable docs" : "Enable docs"}
-              </Button>
             </div>
-            <p className="mt-3 text-xs text-foreground-muted">
-              Paths affected: <span className="font-mono">/docs</span>, <span className="font-mono">/redoc</span>, and <span className="font-mono">/api/v1/openapi.json</span>.
-            </p>
-            {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
-            {toggleDocs.error ? <p className="mt-3 text-sm text-primary">{toggleDocs.error.message}</p> : null}
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-border bg-background p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground">Vision aware routing</p>
-                  <span className="rounded-full border border-border bg-background-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
-                    {workspaceQuery.data?.vision_aware ? "Enabled" : "Disabled"}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-foreground-muted">
-                  {workspaceQuery.data?.vision_aware
-                    ? "If a non-vision model is selected for an image request, Olanma can automatically use a vision-capable model from the same provider."
-                    : "Olanma will only use the exact model selected, even when image analysis would benefit from a vision-capable variant."}
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => setVisionAwareDialogOpen(true)}
-                disabled={!user?.is_superuser || toggleVisionAware.isPending || workspaceQuery.isLoading}
-                className="w-[16rem] min-w-[16rem] max-w-[16rem] justify-center whitespace-nowrap"
-              >
-                {workspaceQuery.data?.vision_aware ? "Disable vision aware" : "Enable vision aware"}
-              </Button>
-            </div>
-            <p className="mt-3 text-xs text-foreground-muted">
-              When enabled, image attachments can automatically route to a compatible vision model from the same provider while keeping the selected model as the conversation default.
-            </p>
-            {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
-            {toggleVisionAware.error ? <p className="mt-3 text-sm text-primary">{toggleVisionAware.error.message}</p> : null}
           </div>
         </Card>
 
-        <div className="grid gap-6">
-          <Card className="p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <UserCircle2 className="h-4.5 w-4.5" />
-              </div>
-              <h2 className="text-base font-semibold text-foreground">Profile</h2>
+        {/* Features */}
+        <Card className="p-6">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <ShieldCheck className="h-5 w-5" />
             </div>
-            <div className="mb-4 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground-muted">
-              {user?.full_name ?? "Your account"}
-              {user?.email ? ` (${user.email})` : ""}
-            </div>
-            <div className="space-y-3">
-              <SignOutButton redirectTo="/" className="w-full sm:w-auto" />
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-center text-primary hover:bg-primary/5 sm:w-auto"
-                onClick={() => setClearAnalysisDialogOpen(true)}
-                disabled={clearAnalysis.isPending}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {clearAnalysis.isPending ? "Clearing analysis..." : "Clear all analysis"}
-              </Button>
-            </div>
-            {clearAnalysis.error ? <p className="mt-3 text-sm text-primary">{clearAnalysis.error.message}</p> : null}
-          </Card>
 
-          <Card className="p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Bell className="h-4.5 w-4.5" />
-              </div>
-              <h2 className="text-base font-semibold text-foreground">Background jobs</h2>
+            <div>
+              <h2 className="font-semibold">Workspace Features</h2>
+              <p className="text-sm text-foreground-muted">
+                Registration and model routing.
+              </p>
             </div>
-            <div className="space-y-2">
-              {jobsQuery.data?.length ? (
-                jobsQuery.data.slice(0, 5).map((job) => (
-                  <div
-                    key={job.id}
-                    className="flex items-center justify-between rounded-xl border border-border bg-background-secondary p-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{job.job_type}</p>
-                      <p className="text-xs text-foreground-muted">{job.resource_type ?? "Task"}</p>
-                    </div>
-                    <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs uppercase text-foreground-muted">
-                      {job.status}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">
-                  No jobs
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-medium">Public Registration</h3>
+                  <p className="text-sm text-foreground-muted">
+                    Allow users to create accounts.
+                  </p>
                 </div>
-              )}
+
+                <Button
+                  onClick={() => setRegistrationDialogOpen(true)}
+                  disabled={
+                    !user?.is_superuser ||
+                    toggleRegistration.isPending ||
+                    workspaceQuery.isLoading
+                  }
+                >
+                  {workspaceQuery.data?.public_registration_enabled
+                    ? "Disable"
+                    : "Enable"}
+                </Button>
+              </div>
             </div>
-          </Card>
-        </div>
+
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-medium">Vision Routing</h3>
+                  <p className="text-sm text-foreground-muted">
+                    Route image requests to compatible models.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => setVisionAwareDialogOpen(true)}
+                  disabled={
+                    !user?.is_superuser ||
+                    toggleVisionAware.isPending ||
+                    workspaceQuery.isLoading
+                  }
+                >
+                  {workspaceQuery.data?.vision_aware
+                    ? "Disable"
+                    : "Enable"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        {/* Jobs */}
+        <Card className="p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <Bell className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Background Jobs</h2>
+          </div>
+
+          <div className="space-y-3">
+            {jobsQuery.data?.length ? (
+              jobsQuery.data.slice(0, 5).map((job) => (
+                <div
+                  key={job.id}
+                  className="flex items-center justify-between rounded-xl border border-border p-4"
+                >
+                  <div>
+                    <p className="font-medium">{job.job_type}</p>
+                    <p className="text-xs text-foreground-muted">
+                      {job.resource_type ?? "Task"}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full border px-3 py-1 text-xs uppercase">
+                    {job.status}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-xl border border-dashed p-6 text-center text-sm text-foreground-muted">
+                No active jobs
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Account */}
+        <Card className="p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <UserCircle2 className="h-5 w-5 text-primary" />
+            <h2 className="font-semibold">Account</h2>
+          </div>
+
+          <div className="rounded-xl border border-border bg-background-secondary p-4">
+            <p className="font-medium">
+              {user?.full_name ?? "Your account"}
+            </p>
+
+            {user?.email && (
+              <p className="text-sm text-foreground-muted">
+                {user.email}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5">
+            <SignOutButton
+              redirectTo="/"
+              className="w-full sm:w-auto"
+            />
+          </div>
+
+          <div className="mt-6 rounded-xl border border-destructive/30 p-4">
+            <h3 className="font-medium text-destructive">
+              Danger Zone
+            </h3>
+
+            <p className="mt-1 text-sm text-foreground-muted">
+              Permanently remove chats, documents, videos and audio.
+            </p>
+
+            <Button
+              variant="outline"
+              className="mt-4 w-full sm:w-auto"
+              onClick={() => setClearAnalysisDialogOpen(true)}
+              disabled={clearAnalysis.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {clearAnalysis.isPending
+                ? "Clearing..."
+                : "Clear Analysis"}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
 
       <AlertDialog
         open={visionAwareDialogOpen}
