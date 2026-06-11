@@ -35,7 +35,7 @@ def get_current_user(
 
     token = authorization.removeprefix("Bearer ").strip()
     try:
-        payload = decode_token(token)
+        payload = decode_token(token, expected_type="access")
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 

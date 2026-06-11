@@ -1,6 +1,6 @@
 # Docker Compose Setup
 
-Production-ready Docker Compose setup for Olanma.
+Docker Compose setup for local evaluation of Olanma.
 
 ## Prerequisites
 
@@ -16,23 +16,19 @@ Production-ready Docker Compose setup for Olanma.
 git clone https://github.com/iamceeso/olanma.git
 cd olanma
 
-# 2. Copy environment file
-cp .env.example .env
+# 2. Copy backend environment file
+cp backend/.env.example backend/.env
 
-# 3. Edit .env with your settings
-# Add your API keys:
-# - OPENAI_API_KEY
-# - ANTHROPIC_API_KEY
-# etc.
+# 3. Edit backend/.env with any custom settings you need
 
 # 4. Start services
-docker-compose up -d
+docker compose up -d
 
 # 5. Wait for services to be ready
-docker-compose ps
+docker compose ps
 
 # 6. Run migrations
-docker-compose exec backend alembic upgrade head
+docker compose exec backend alembic upgrade head
 
 # 7. Visit http://localhost:3000
 ```
@@ -61,78 +57,67 @@ docker-compose exec backend alembic upgrade head
 - Container: `olanma-redis`
 
 ### Celery Worker
-- Container: `olanma-celery`
+- Container: `olanma-celery-worker`
 - Processes background tasks
-
-### Nginx (Reverse Proxy)
-- Port: 80, 443
-- Container: `olanma-nginx`
 
 ## Environment Configuration
 
-Edit `.env` before starting:
+Edit `backend/.env` before starting:
 
 ```env
-# Database
-DATABASE_NAME=olanma
-DATABASE_USER=olanma
-DATABASE_PASSWORD=STRONG_PASSWORD_HERE
-DATABASE_HOST=postgres
-DATABASE_PORT=5432
-
-# Redis
-REDIS_PASSWORD=STRONG_REDIS_PASSWORD
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-# JWT & Auth
-JWT_SECRET_KEY=GENERATE_WITH_openssl_rand_-base64_32
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# CORS
-BACKEND_CORS_ORIGINS=["http://localhost:3000"]
-NEXT_PUBLIC_API_URL=http://localhost:8000/api
-
-# LLM Providers
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-
 # Application
-ENVIRONMENT=development
-DEBUG=false
-MEDIA_ROOT=/app/storage
-MAX_UPLOAD_SIZE_MB=500
+APP_NAME=Olanma API
+APP_ENV=development
+APP_DEBUG=true
+
+# API
+API_V1_PREFIX=/api/v1
+
+# Database & Redis
+DATABASE_URL=postgresql+psycopg://olanma:olanma@postgres:5432/olanma
+REDIS_URL=redis://redis:6379/0
+
+# JWT & provider secret
+JWT_SECRET_KEY=change-me-development-secret
+JWT_REFRESH_SECRET_KEY=change-me-too-development-secret
+PROVIDER_SECRET_KEY=replace-with-32-char-secret-key
+
+# CORS & storage
+CORS_ORIGINS=["http://localhost:3000"]
+MEDIA_ROOT=storage
 ```
+
+The backend and worker images install `ffmpeg` and `tesseract-ocr`. Audio/video transcription also depends on `openai-whisper`, which is installed with the backend Python dependencies.
 
 ## Common Commands
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f celery
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f celery-worker
 
 # Execute command in container
-docker-compose exec backend bash
-docker-compose exec postgres psql -U olanma -d olanma
+docker compose exec backend bash
+docker compose exec postgres psql -U olanma -d olanma
 
 # Stop services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (WARNING: deletes data)
-docker-compose down -v
+docker compose down -v
 
 # Rebuild images
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # Scale services
-docker-compose up -d --scale celery=3
+docker compose up -d --scale celery-worker=3
 
 # Check service health
-docker-compose ps
+docker compose ps
 ```
 
 ## Volumes (Data Persistence)
@@ -148,10 +133,10 @@ Data persists in Docker volumes. To backup:
 
 ```bash
 # Backup PostgreSQL
-docker-compose exec postgres pg_dump -U olanma olanma > backup.sql
+docker compose exec postgres pg_dump -U olanma olanma > backup.sql
 
 # Restore PostgreSQL
-docker-compose exec -T postgres psql -U olanma olanma < backup.sql
+docker compose exec -T postgres psql -U olanma olanma < backup.sql
 ```
 
 ## Troubleshooting
@@ -163,12 +148,12 @@ docker-compose exec -T postgres psql -U olanma olanma < backup.sql
 docker ps
 
 # View detailed logs
-docker-compose logs backend
+docker compose logs backend
 
 # Rebuild from scratch
-docker-compose down -v
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down -v
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ### Port already in use

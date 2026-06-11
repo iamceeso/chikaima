@@ -10,7 +10,7 @@ from app.models.job import Job
 from app.models.summary import SummaryArtifact
 from app.models.transcript import Transcript
 from app.models.video import Video
-from app.services.asset_processors import processor_registry
+from app.services.asset_processors import AssetProcessingError, processor_registry
 from app.services.embeddings_service import EmbeddingsService
 from app.services.llm_service import LLMService
 from app.workers.celery_app import celery_app
@@ -61,6 +61,8 @@ def _process_resource_job(job_id: str, model: type[AudioAsset | Video | Document
         processor = processor_registry.select(resource, mime_type)
         extracted = processor.extract(resource, mime_type)
         extracted_text = (extracted.transcript or extracted.content or "").strip()
+        if resource_type in {"audio", "video"} and not extracted_text:
+            raise AssetProcessingError(f"No transcript content could be extracted from {resource.name}.")
 
         transcript = _upsert_transcript(db, resource, resource_type, extracted_text)
         summary_bundle = _generate_summary_bundle(db, resource, resource_type, extracted_text)

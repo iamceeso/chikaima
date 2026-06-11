@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import html
 import re
+import shutil
 import subprocess
 import tempfile
 import zipfile
@@ -78,6 +79,10 @@ class ResourceProcessor(Protocol):
     def supports(self, resource: IngestibleResource, mime_type: str | None = None) -> bool: ...
 
     def extract(self, resource: IngestibleResource, mime_type: str | None = None) -> ExtractedAsset: ...
+
+
+class AssetProcessingError(RuntimeError):
+    pass
 
 
 def chunk_text(text: str, *, base_metadata: dict | None = None) -> list[ChunkPayload]:
@@ -309,7 +314,7 @@ class AudioProcessor:
         return (mime_type or "").startswith("audio/") or Path(resource.name).suffix.lower() in AUDIO_EXTENSIONS
 
     def extract(self, resource: IngestibleResource, mime_type: str | None = None) -> ExtractedAsset:
-        transcript = _transcribe_audio(Path(resource.file_path))
+        transcript = _transcribe_audio(Path(resource.file_path), resource.name)
         return ExtractedAsset(
             content=transcript,
             transcript=transcript,
@@ -324,9 +329,11 @@ class VideoProcessor:
 
     def extract(self, resource: IngestibleResource, mime_type: str | None = None) -> ExtractedAsset:
         path = Path(resource.file_path)
+        if shutil.which("ffmpeg") is None:
+            raise AssetProcessingError("Video processing requires ffmpeg to be installed in the worker environment.")
+
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as handle:
             audio_path = Path(handle.name)
-        transcript = ""
         try:
             result = subprocess.run(
                 [
@@ -347,10 +354,10 @@ class VideoProcessor:
                 check=False,
                 text=True,
             )
-            if result.returncode == 0:
-                transcript = _transcribe_audio(audio_path)
-        except FileNotFoundError:  # pragma: no cover
-            transcript = ""
+            if result.returncode != 0:
+                stderr = (result.stderr or "").strip()
+                raise AssetProcessingError(f"ffmpeg could not extract audio from {resource.name}: {stderr or 'unknown error'}")
+            transcript = _transcribe_audio(audio_path, resource.name)
         finally:
             audio_path.unlink(missing_ok=True)
         return ExtractedAsset(
@@ -361,16 +368,23 @@ class VideoProcessor:
         )
 
 
-def _transcribe_audio(path: Path) -> str:
-    if not path.exists() or whisper is None:
-        return ""
+def _transcribe_audio(path: Path, source_name: str) -> str:
+    if not path.exists():
+        raise AssetProcessingError(f"{source_name} could not be read for transcription.")
+    if whisper is None:
+        raise AssetProcessingError(
+            "Audio transcription requires the openai-whisper package to be installed in the worker environment."
+        )
     try:
         model = whisper.load_model("base")
         result = model.transcribe(str(path))
-    except Exception:  # noqa: BLE001
-        return ""
+    except Exception as exc:  # noqa: BLE001
+        raise AssetProcessingError(f"Transcription failed for {source_name}: {exc}") from exc
     text = result.get("text", "")
-    return text.strip() if isinstance(text, str) else ""
+    transcript = text.strip() if isinstance(text, str) else ""
+    if not transcript:
+        raise AssetProcessingError(f"No speech could be transcribed from {source_name}.")
+    return transcript
 
 
 class AssetProcessorRegistry:

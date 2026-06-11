@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings as app_settings
 from app.core.security import (
     create_access_token,
+    create_password_reset_token,
     create_refresh_token,
     decode_token,
     hash_password,
@@ -16,6 +20,8 @@ from app.repositories.users import UserRepository
 from app.schemas.auth import PasswordResetConfirm, UserLogin, UserRegister
 from app.schemas.user import UserAdminCreate, UserAdminUpdate
 from app.services.workspace_service import WorkspaceService
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -138,24 +144,26 @@ class AuthService:
                 detail="Authentication is disabled for this workspace.",
             )
         try:
-            payload = decode_token(refresh_token, refresh=True)
+            payload = decode_token(refresh_token, refresh=True, expected_type="refresh")
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
         return create_access_token(payload["sub"])
 
     def request_password_reset(self, email: str) -> dict[str, str]:
+        response = {"message": "If the account exists, password reset instructions have been sent."}
         user = self.users.get_by_email(email)
         if not user:
-            return {"message": "If the account exists, a reset token has been generated."}
-        token = create_access_token(user.id)
-        return {
-            "message": "Reset token generated for development use.",
-            "reset_token": token,
-        }
+            return response
+
+        token = create_password_reset_token(user.id)
+        if not app_settings.is_production:
+            logger.info("Password reset token for %s: %s", user.email, token)
+
+        return response
 
     def confirm_password_reset(self, payload: PasswordResetConfirm) -> dict[str, str]:
         try:
-            token_payload = decode_token(payload.token)
+            token_payload = decode_token(payload.token, expected_type="password_reset")
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid reset token") from exc
 

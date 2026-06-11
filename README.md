@@ -65,6 +65,7 @@ cp frontend/.env.example frontend/.env.local
 ### 2. Run with Docker
 
 ```bash
+cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
@@ -75,6 +76,8 @@ Services:
 - API docs: `http://localhost:8000/docs`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
+
+The Docker images install `ffmpeg` and `tesseract-ocr`, and the backend uses `openai-whisper` for audio/video transcription. The first transcription run can take longer while the Whisper model is prepared.
 
 ### 3. Local Development
 
@@ -141,6 +144,7 @@ Versioned endpoints live under `/api/v1`:
 - Access tokens authenticate API requests
 - Refresh tokens issue new access tokens
 - Password reset endpoints support token-based reset flow
+- In non-production environments, password reset tokens are written to backend logs for local testing instead of being returned by the API
 - Credentials are hashed, provider secrets are stored as encrypted payload placeholders ready for KMS or Vault integration
 
 ## Production Notes

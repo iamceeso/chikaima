@@ -9,6 +9,7 @@ from passlib.context import CryptContext
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 30
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -31,6 +32,16 @@ def create_refresh_token(subject: str, expires_delta: timedelta | None = None) -
     return jwt.encode(payload, settings.jwt_refresh_secret_key, algorithm=settings.jwt_algorithm)
 
 
-def decode_token(token: str, refresh: bool = False) -> dict[str, Any]:
+def create_password_reset_token(subject: str, expires_delta: timedelta | None = None) -> str:
+    expires = datetime.now(UTC) + (expires_delta or timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES))
+    payload: dict[str, Any] = {"sub": subject, "exp": expires, "type": "password_reset"}
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+
+
+def decode_token(token: str, refresh: bool = False, expected_type: str | None = None) -> dict[str, Any]:
     secret = settings.jwt_refresh_secret_key if refresh else settings.jwt_secret_key
-    return jwt.decode(token, secret, algorithms=[settings.jwt_algorithm])
+    payload = jwt.decode(token, secret, algorithms=[settings.jwt_algorithm])
+    token_type = payload.get("type")
+    if expected_type and token_type != expected_type:
+        raise jwt.InvalidTokenError(f"Invalid token type: expected {expected_type}, got {token_type}")
+    return payload
