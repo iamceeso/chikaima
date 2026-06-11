@@ -309,6 +309,17 @@ export function ChatLayout() {
     });
   };
 
+  useEffect(() => {
+    const historyEl = historyRef.current;
+    if (!historyEl) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      historyEl.scrollTop = historyEl.scrollHeight;
+    });
+  }, [conversation?.id]);
+
   const streamConversation = async (contentOverride?: string) => {
     if (!token) {
       setStreamError("Please sign in first.");
