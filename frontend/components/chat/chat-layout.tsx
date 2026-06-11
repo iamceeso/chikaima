@@ -701,11 +701,7 @@ export function ChatLayout() {
                         {message.role === "assistant" && message.status === "streaming" && !hasReceivedStreamToken ? (
                           <div className="flex items-center gap-2 text-[13px] text-foreground-muted sm:text-sm">
                             <span>Thinking</span>
-                            <span className="inline-flex gap-0.5">
-                              <span className="animate-pulse [animation-delay:0ms]">.</span>
-                              <span className="animate-pulse [animation-delay:150ms]">.</span>
-                              <span className="animate-pulse [animation-delay:300ms]">.</span>
-                            </span>
+                            <span className="animate-pulse">...</span>
                           </div>
                         ) : (
                           <p className="whitespace-pre-wrap wrap-break-word text-[13px] leading-6 text-foreground sm:text-sm">

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -45,7 +46,7 @@ class LLMService:
         model, provider = selection
         return model, provider
 
-    def generate_reply(self, provider: Provider, model: AIModel, messages: list[dict[str, str]]) -> str:
+    def generate_reply(self, provider: Provider, model: AIModel, messages: list[dict[str, Any]]) -> str:
         adapter = self._build_adapter(provider)
         content = adapter.generate_reply(model.model_key, messages)
         if not content:
@@ -55,7 +56,7 @@ class LLMService:
             )
         return content
 
-    def stream_reply(self, provider: Provider, model: AIModel, messages: list[dict[str, str]]) -> Iterator[str]:
+    def stream_reply(self, provider: Provider, model: AIModel, messages: list[dict[str, Any]]) -> Iterator[str]:
         adapter = self._build_adapter(provider)
         yielded = False
         for chunk in adapter.stream_reply(model.model_key, messages):
@@ -86,10 +87,10 @@ class LLMService:
         user_id: str,
         provider: Provider,
         model: AIModel,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         include_context: bool = True,
     ) -> tuple[str, list[dict[str, str | int | float]]]:
-        user_message = messages[-1]["content"] if messages else ""
+        user_message = self._content_to_text(messages[-1]["content"]) if messages else ""
         citations: list[dict[str, str | int | float]] = []
 
         if include_context and user_message:
@@ -126,9 +127,9 @@ When you rely on a chunk, cite it using the bracketed reference already included
 
 If the context doesn't contain relevant information, answer based on your knowledge and say that no direct asset evidence was found."""
 
-                rag_messages = [{"role": "system", "content": rag_system_message}]
+                rag_messages: list[dict[str, Any]] = [{"role": "system", "content": rag_system_message}]
                 rag_messages.extend(messages[:-1])
-                rag_messages.append({"role": "user", "content": user_message})
+                rag_messages.append(messages[-1])
 
                 response = self.generate_reply(provider, model, rag_messages)
                 return response, citations
@@ -141,12 +142,12 @@ If the context doesn't contain relevant information, answer based on your knowle
         user_id: str,
         provider: Provider,
         model: AIModel,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         include_context: bool = True,
     ) -> tuple[Iterator[str], list[dict[str, str | int | float]]]:
-        user_message = messages[-1]["content"] if messages else ""
+        user_message = self._content_to_text(messages[-1]["content"]) if messages else ""
         citations: list[dict[str, str | int | float]] = []
-        stream_messages = messages
+        stream_messages: list[dict[str, Any]] = messages
 
         if include_context and user_message:
             search_results = self._search_with_fallback(user_id, user_message, limit=RAG_SEARCH_LIMIT)
@@ -182,9 +183,21 @@ When you rely on a chunk, cite it using the bracketed reference already included
 If the context doesn't contain relevant information, answer based on your knowledge and say that no direct asset evidence was found."""
                 stream_messages = [{"role": "system", "content": rag_system_message}]
                 stream_messages.extend(messages[:-1])
-                stream_messages.append({"role": "user", "content": user_message})
+                stream_messages.append(messages[-1])
 
         return self.stream_reply(provider, model, stream_messages), citations
+
+    def _content_to_text(self, content: Any) -> str:
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            text_parts = [
+                str(part.get("text", "")).strip()
+                for part in content
+                if isinstance(part, dict) and part.get("type") == "text" and str(part.get("text", "")).strip()
+            ]
+            return "\n\n".join(text_parts).strip()
+        return str(content or "")
 
     def _search_with_fallback(
         self,

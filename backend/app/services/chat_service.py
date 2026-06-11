@@ -1,13 +1,26 @@
 from __future__ import annotations
 
+import base64
+import mimetypes
+from typing import Any
+from pathlib import Path
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.models.audio import AudioAsset
+from app.models.ai_model import AIModel
 from app.models.conversation import Conversation
+from app.models.document import Document
 from app.models.message import Message
+from app.models.transcript import Transcript
+from app.models.video import Video
 from app.repositories.chat import ConversationRepository, MessageRepository
 from app.schemas.chat import ConversationCreate, MessageCreate
 from app.services.llm_service import LLMService
+
+MAX_ATTACHMENT_CONTEXT_CHARS = 8_000
+MAX_ATTACHMENT_ITEM_CHARS = 2_500
 
 
 class ChatService:
@@ -54,7 +67,7 @@ class ChatService:
                         user_id=user_id,
                         provider=provider,
                         model=model,
-                        messages=self._serialize_messages([user_message]),
+                        messages=self._serialize_messages(user_id, [user_message], model),
                     )
                     meta = {
                         "provider": provider.provider_type,
@@ -65,7 +78,7 @@ class ChatService:
                     assistant_content = self.llm.generate_reply(
                         provider=provider,
                         model=model,
-                        messages=self._serialize_messages([user_message]),
+                        messages=self._serialize_messages(user_id, [user_message], model),
                     )
                     meta = {
                         "provider": provider.provider_type,
@@ -126,7 +139,7 @@ class ChatService:
                     user_id=user_id,
                     provider=provider,
                     model=model,
-                    messages=self._serialize_messages(history),
+                    messages=self._serialize_messages(user_id, history, model),
                 )
                 meta = {
                     "provider": provider.provider_type,
@@ -137,7 +150,7 @@ class ChatService:
                 assistant_content = self.llm.generate_reply(
                     provider=provider,
                     model=model,
-                    messages=self._serialize_messages(history),
+                    messages=self._serialize_messages(user_id, history, model),
                 )
                 meta = {"provider": provider.provider_type, "model": model.model_key}
 
@@ -196,7 +209,7 @@ class ChatService:
                         user_id=user_id,
                         provider=provider,
                         model=model,
-                        messages=self._serialize_messages(history),
+                        messages=self._serialize_messages(user_id, history, model),
                     )
                     meta = {
                         "provider": provider.provider_type,
@@ -207,7 +220,7 @@ class ChatService:
                     assistant_content = self.llm.generate_reply(
                         provider=provider,
                         model=model,
-                        messages=self._serialize_messages(history),
+                        messages=self._serialize_messages(user_id, history, model),
                     )
                     meta = {
                         "provider": provider.provider_type,
@@ -252,7 +265,7 @@ class ChatService:
                     user_id=user_id,
                     provider=provider,
                     model=model,
-                    messages=self._serialize_messages(history),
+                    messages=self._serialize_messages(user_id, history, model),
                 )
                 meta = {
                     "regenerated_from": message.id,
@@ -264,7 +277,7 @@ class ChatService:
                 assistant_content = self.llm.generate_reply(
                     provider=provider,
                     model=model,
-                    messages=self._serialize_messages(history),
+                    messages=self._serialize_messages(user_id, history, model),
                 )
                 meta = {
                     "regenerated_from": message.id,
@@ -286,5 +299,182 @@ class ChatService:
             self.db.rollback()
             raise
 
-    def _serialize_messages(self, messages: list[Message]) -> list[dict[str, str]]:
-        return [{"role": message.role, "content": message.content} for message in messages]
+    def _serialize_messages(self, user_id: str, messages: list[Message], model: AIModel) -> list[dict[str, Any]]:
+        return [
+            {
+                "role": message.role,
+                "content": self._build_message_content(user_id, message, model),
+            }
+            for message in messages
+        ]
+
+    def _build_message_content(self, user_id: str, message: Message, model: AIModel) -> str | list[dict[str, str]]:
+        base_content = message.content
+        if message.role != "user":
+            return base_content
+
+        attachment_context = self._build_attachment_context(user_id, message.meta)
+        vision_parts = self._build_image_parts(user_id, message.meta, model)
+        if not attachment_context and not vision_parts:
+            return base_content
+
+        text_content = base_content
+        if attachment_context:
+            text_content = (
+                f"{base_content}\n\n"
+                "Attached resources for this message:\n"
+                f"{attachment_context}\n\n"
+                "Use the attached resource context when it is relevant to the user's request."
+            )
+        elif vision_parts:
+            text_content = (
+                f"{base_content}\n\n"
+                "An image is attached to this message. Analyze it directly when that helps answer the user's request."
+            )
+        if not vision_parts:
+            return text_content
+
+        return [{"type": "text", "text": text_content}, *vision_parts]
+
+    def _build_attachment_context(self, user_id: str, metadata: dict[str, Any] | None) -> str:
+        if not isinstance(metadata, dict):
+            return ""
+
+        attachments = metadata.get("attachments")
+        if not isinstance(attachments, list):
+            return ""
+
+        sections: list[str] = []
+        remaining_chars = MAX_ATTACHMENT_CONTEXT_CHARS
+
+        for attachment in attachments:
+            if remaining_chars <= 0 or not isinstance(attachment, dict):
+                break
+
+            section = self._build_attachment_section(user_id, attachment)
+            if not section:
+                continue
+
+            section = section[:MAX_ATTACHMENT_ITEM_CHARS].strip()
+            if not section:
+                continue
+
+            sections.append(section)
+            remaining_chars -= len(section)
+
+        return "\n\n".join(sections)
+
+    def _build_image_parts(self, user_id: str, metadata: dict[str, Any] | None, model: AIModel) -> list[dict[str, str]]:
+        if not isinstance(metadata, dict) or not bool((model.capabilities or {}).get("vision")):
+            return []
+
+        attachments = metadata.get("attachments")
+        if not isinstance(attachments, list):
+            return []
+
+        image_parts: list[dict[str, str]] = []
+        for attachment in attachments:
+            if not isinstance(attachment, dict):
+                continue
+            resource_id = attachment.get("id")
+            kind = attachment.get("kind")
+            if kind != "document" or not isinstance(resource_id, str):
+                continue
+
+            resource = self.db.get(Document, resource_id)
+            if not resource or resource.user_id != user_id or not resource.mime_type.startswith("image/"):
+                continue
+
+            file_path = Path(resource.file_path)
+            if not file_path.exists():
+                continue
+
+            mime_type = resource.mime_type or mimetypes.guess_type(file_path.name)[0] or "image/png"
+            try:
+                encoded = base64.b64encode(file_path.read_bytes()).decode("utf-8")
+            except OSError:
+                continue
+
+            image_parts.append(
+                {
+                    "type": "image",
+                    "mime_type": mime_type,
+                    "data": encoded,
+                }
+            )
+        return image_parts
+
+    def _build_attachment_section(self, user_id: str, attachment: dict[str, Any]) -> str:
+        resource_id = attachment.get("id")
+        kind = attachment.get("kind")
+        display_name = str(attachment.get("name") or "Attachment")
+        if not isinstance(resource_id, str) or not isinstance(kind, str):
+            return ""
+
+        model_map: dict[str, type[Document | AudioAsset | Video]] = {
+            "document": Document,
+            "audio": AudioAsset,
+            "video": Video,
+        }
+        model = model_map.get(kind)
+        if model is None:
+            return ""
+
+        resource = self.db.get(model, resource_id)
+        if not resource or resource.user_id != user_id:
+            return f"{display_name} ({kind}) could not be loaded."
+
+        transcript = (
+            self.db.query(Transcript)
+            .filter(
+                Transcript.user_id == user_id,
+                Transcript.resource_type == kind,
+                Transcript.resource_id == resource_id,
+            )
+            .order_by(Transcript.created_at.desc())
+            .first()
+        )
+
+        if isinstance(resource, Document) and resource.mime_type.startswith("image/"):
+            label = f"Image attachment: {resource.name}"
+            if resource.status != "completed":
+                return f"{label}\nStatus: {resource.status}. OCR/analysis may still be processing."
+
+            ocr_text = (transcript.content if transcript and transcript.content else "").strip()
+            if ocr_text:
+                return f"{label}\nExtracted text:\n{ocr_text}"
+            if resource.summary:
+                return f"{label}\nSummary:\n{resource.summary}"
+            return f"{label}\nNo extracted text is available yet."
+
+        if kind == "document":
+            label = f"Document attachment: {resource.name}"
+            if resource.status != "completed":
+                return f"{label}\nStatus: {resource.status}. Document analysis may still be processing."
+
+            parts = [label]
+            if resource.summary:
+                parts.append(f"Summary:\n{resource.summary.strip()}")
+            if transcript and transcript.content:
+                parts.append(f"Extracted content:\n{transcript.content.strip()}")
+            return "\n".join(parts)
+
+        if kind == "audio":
+            label = f"Audio attachment: {resource.name}"
+            if resource.status != "completed":
+                return f"{label}\nStatus: {resource.status}. Transcription may still be processing."
+            transcript_text = (resource.transcript or (transcript.content if transcript else "")).strip()
+            return f"{label}\nTranscript:\n{transcript_text or 'No transcript is available yet.'}"
+
+        if kind == "video":
+            label = f"Video attachment: {resource.name}"
+            if resource.status != "completed":
+                return f"{label}\nStatus: {resource.status}. Transcription may still be processing."
+            transcript_text = (resource.transcript or (transcript.content if transcript else "")).strip()
+            parts = [label]
+            if resource.summary:
+                parts.append(f"Summary:\n{resource.summary.strip()}")
+            parts.append(f"Transcript:\n{transcript_text or 'No transcript is available yet.'}")
+            return "\n".join(parts)
+
+        return ""

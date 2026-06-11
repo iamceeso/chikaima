@@ -134,7 +134,7 @@ def stream_chat(
         user_id=current_user.id,
         provider=provider,
         model=model,
-        messages=service._serialize_messages([*history, user_message]),
+        messages=service._serialize_messages(current_user.id, [*history, user_message], model),
         include_context=payload.use_rag,
     )
 

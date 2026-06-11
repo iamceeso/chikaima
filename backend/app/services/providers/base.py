@@ -8,19 +8,42 @@ import httpx
 from fastapi import HTTPException, status
 
 
-def _normalize_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-    return [{"role": str(message["role"]), "content": str(message["content"])} for message in messages if message.get("content")]
+def _text_from_content(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = [
+            str(part.get("text", "")).strip()
+            for part in content
+            if isinstance(part, dict) and part.get("type") == "text" and str(part.get("text", "")).strip()
+        ]
+        return "\n\n".join(text_parts).strip()
+    return str(content or "")
+
+
+def _normalize_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for message in messages:
+        if "content" not in message:
+            continue
+        content = message["content"]
+        if isinstance(content, str) and not content.strip():
+            continue
+        if isinstance(content, list) and not content:
+            continue
+        normalized.append({"role": str(message["role"]), "content": content})
+    return normalized
 
 
 def _extract_system_prompt(
-    messages: list[dict[str, str]],
-) -> tuple[str | None, list[dict[str, str]]]:
+    messages: list[dict[str, Any]],
+) -> tuple[str | None, list[dict[str, Any]]]:
     system_parts: list[str] = []
-    conversation_messages: list[dict[str, str]] = []
+    conversation_messages: list[dict[str, Any]] = []
 
     for message in _normalize_messages(messages):
         if message["role"] == "system":
-            system_parts.append(message["content"])
+            system_parts.append(_text_from_content(message["content"]))
         else:
             conversation_messages.append(message)
 
@@ -28,11 +51,20 @@ def _extract_system_prompt(
     return system_prompt, conversation_messages
 
 
-def _merge_consecutive_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-    merged: list[dict[str, str]] = []
+def _merge_message_content(left: Any, right: Any) -> Any:
+    if isinstance(left, str) and isinstance(right, str):
+        return f"{left}\n\n{right}".strip()
+
+    left_parts = left if isinstance(left, list) else [{"type": "text", "text": str(left).strip()}]
+    right_parts = right if isinstance(right, list) else [{"type": "text", "text": str(right).strip()}]
+    return [part for part in [*left_parts, *right_parts] if not (part.get("type") == "text" and not str(part.get("text", "")).strip())]
+
+
+def _merge_consecutive_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
     for message in _normalize_messages(messages):
         if merged and merged[-1]["role"] == message["role"]:
-            merged[-1]["content"] = f"{merged[-1]['content']}\n\n{message['content']}".strip()
+            merged[-1]["content"] = _merge_message_content(merged[-1]["content"], message["content"])
         else:
             merged.append(message.copy())
     return merged
@@ -78,11 +110,11 @@ def _extract_stream_error_detail(response: httpx.Response, fallback: str) -> str
 
 class ProviderAdapter(ABC):
     @abstractmethod
-    def generate_reply(self, model_key: str, messages: list[dict[str, str]]) -> str:
+    def generate_reply(self, model_key: str, messages: list[dict[str, Any]]) -> str:
         raise NotImplementedError
 
     @abstractmethod
-    def stream_reply(self, model_key: str, messages: list[dict[str, str]]) -> Iterator[str]:
+    def stream_reply(self, model_key: str, messages: list[dict[str, Any]]) -> Iterator[str]:
         raise NotImplementedError
 
 
@@ -91,10 +123,10 @@ class OpenAIAdapter(ProviderAdapter):
         self.api_key = api_key
         self.base_url = (base_url or "https://api.openai.com/v1").rstrip("/")
 
-    def generate_reply(self, model_key: str, messages: list[dict[str, str]]) -> str:
+    def generate_reply(self, model_key: str, messages: list[dict[str, Any]]) -> str:
         payload: dict[str, Any] = {
             "model": model_key,
-            "messages": _normalize_messages(messages),
+            "messages": self._build_messages(messages),
         }
 
         try:
@@ -119,10 +151,10 @@ class OpenAIAdapter(ProviderAdapter):
 
         return self._extract_content(response.json())
 
-    def stream_reply(self, model_key: str, messages: list[dict[str, str]]) -> Iterator[str]:
+    def stream_reply(self, model_key: str, messages: list[dict[str, Any]]) -> Iterator[str]:
         payload: dict[str, Any] = {
             "model": model_key,
-            "messages": _normalize_messages(messages),
+            "messages": self._build_messages(messages),
             "stream": True,
         }
 
@@ -171,13 +203,43 @@ class OpenAIAdapter(ProviderAdapter):
 
         return ""
 
+    def _build_messages(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        built: list[dict[str, Any]] = []
+        for message in _normalize_messages(messages):
+            content = message["content"]
+            if isinstance(content, list):
+                built.append(
+                    {
+                        "role": message["role"],
+                        "content": [
+                            {"type": "text", "text": str(part.get("text", "")).strip()}
+                            if part.get("type") == "text"
+                            else {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{part['mime_type']};base64,{part['data']}",
+                                },
+                            }
+                            for part in content
+                            if isinstance(part, dict)
+                            and (
+                                (part.get("type") == "text" and str(part.get("text", "")).strip())
+                                or (part.get("type") == "image" and part.get("mime_type") and part.get("data"))
+                            )
+                        ],
+                    }
+                )
+            else:
+                built.append({"role": message["role"], "content": str(content)})
+        return built
+
 
 class AnthropicAdapter(ProviderAdapter):
     def __init__(self, api_key: str, base_url: str | None = None) -> None:
         self.api_key = api_key
         self.base_url = (base_url or "https://api.anthropic.com").rstrip("/")
 
-    def generate_reply(self, model_key: str, messages: list[dict[str, str]]) -> str:
+    def generate_reply(self, model_key: str, messages: list[dict[str, Any]]) -> str:
         system_prompt, conversation_messages = _extract_system_prompt(_merge_consecutive_messages(messages))
         payload: dict[str, Any] = {
             "model": model_key,
@@ -185,7 +247,7 @@ class AnthropicAdapter(ProviderAdapter):
             "messages": [
                 {
                     "role": message["role"],
-                    "content": [{"type": "text", "text": message["content"]}],
+                    "content": self._build_content_blocks(message["content"]),
                 }
                 for message in conversation_messages
             ],
@@ -221,7 +283,7 @@ class AnthropicAdapter(ProviderAdapter):
         text_parts = [block.get("text", "").strip() for block in content if isinstance(block, dict) and block.get("type") == "text"]
         return "\n".join(part for part in text_parts if part).strip()
 
-    def stream_reply(self, model_key: str, messages: list[dict[str, str]]) -> Iterator[str]:
+    def stream_reply(self, model_key: str, messages: list[dict[str, Any]]) -> Iterator[str]:
         system_prompt, conversation_messages = _extract_system_prompt(_merge_consecutive_messages(messages))
         payload: dict[str, Any] = {
             "model": model_key,
@@ -229,7 +291,7 @@ class AnthropicAdapter(ProviderAdapter):
             "messages": [
                 {
                     "role": message["role"],
-                    "content": [{"type": "text", "text": message["content"]}],
+                    "content": self._build_content_blocks(message["content"]),
                 }
                 for message in conversation_messages
             ],
@@ -270,13 +332,35 @@ class AnthropicAdapter(ProviderAdapter):
                 detail="Could not reach the Anthropic provider.",
             ) from exc
 
+    def _build_content_blocks(self, content: Any) -> list[dict[str, Any]]:
+        if isinstance(content, list):
+            blocks: list[dict[str, Any]] = []
+            for part in content:
+                if not isinstance(part, dict):
+                    continue
+                if part.get("type") == "text" and str(part.get("text", "")).strip():
+                    blocks.append({"type": "text", "text": str(part["text"]).strip()})
+                elif part.get("type") == "image" and part.get("mime_type") and part.get("data"):
+                    blocks.append(
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": part["mime_type"],
+                                "data": part["data"],
+                            },
+                        }
+                    )
+            return blocks or [{"type": "text", "text": _text_from_content(content)}]
+        return [{"type": "text", "text": _text_from_content(content)}]
+
 
 class GeminiAdapter(ProviderAdapter):
     def __init__(self, api_key: str, base_url: str | None = None) -> None:
         self.api_key = api_key
         self.base_url = (base_url or "https://generativelanguage.googleapis.com/v1beta").rstrip("/")
 
-    def generate_reply(self, model_key: str, messages: list[dict[str, str]]) -> str:
+    def generate_reply(self, model_key: str, messages: list[dict[str, Any]]) -> str:
         payload = self._build_payload(messages)
 
         try:
@@ -301,7 +385,7 @@ class GeminiAdapter(ProviderAdapter):
 
         return self._extract_gemini_text(response.json())
 
-    def stream_reply(self, model_key: str, messages: list[dict[str, str]]) -> Iterator[str]:
+    def stream_reply(self, model_key: str, messages: list[dict[str, Any]]) -> Iterator[str]:
         payload = self._build_payload(messages)
 
         try:
@@ -329,12 +413,31 @@ class GeminiAdapter(ProviderAdapter):
                 detail="Could not reach the Gemini provider.",
             ) from exc
 
-    def _build_payload(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+    def _build_payload(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
         system_prompt, conversation_messages = _extract_system_prompt(_merge_consecutive_messages(messages))
         contents: list[dict[str, Any]] = []
         for message in conversation_messages:
             role = "model" if message["role"] == "assistant" else "user"
-            contents.append({"role": role, "parts": [{"text": message["content"]}]})
+            parts: list[dict[str, Any]] = []
+            content = message["content"]
+            if isinstance(content, list):
+                for part in content:
+                    if not isinstance(part, dict):
+                        continue
+                    if part.get("type") == "text" and str(part.get("text", "")).strip():
+                        parts.append({"text": str(part["text"]).strip()})
+                    elif part.get("type") == "image" and part.get("mime_type") and part.get("data"):
+                        parts.append(
+                            {
+                                "inline_data": {
+                                    "mime_type": part["mime_type"],
+                                    "data": part["data"],
+                                }
+                            }
+                        )
+            else:
+                parts.append({"text": _text_from_content(content)})
+            contents.append({"role": role, "parts": parts or [{"text": _text_from_content(content)}]})
 
         payload: dict[str, Any] = {"contents": contents}
         if system_prompt:
@@ -355,10 +458,10 @@ class OllamaAdapter(ProviderAdapter):
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
 
-    def generate_reply(self, model_key: str, messages: list[dict[str, str]]) -> str:
+    def generate_reply(self, model_key: str, messages: list[dict[str, Any]]) -> str:
         payload: dict[str, Any] = {
             "model": model_key,
-            "messages": _merge_consecutive_messages(messages),
+            "messages": self._build_messages(messages),
             "stream": False,
         }
 
@@ -380,10 +483,10 @@ class OllamaAdapter(ProviderAdapter):
 
         return response.json().get("message", {}).get("content", "")
 
-    def stream_reply(self, model_key: str, messages: list[dict[str, str]]) -> Iterator[str]:
+    def stream_reply(self, model_key: str, messages: list[dict[str, Any]]) -> Iterator[str]:
         payload: dict[str, Any] = {
             "model": model_key,
-            "messages": _merge_consecutive_messages(messages),
+            "messages": self._build_messages(messages),
             "stream": True,
         }
 
@@ -413,3 +516,22 @@ class OllamaAdapter(ProviderAdapter):
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Could not reach Ollama endpoint.",
             ) from exc
+
+    def _build_messages(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        built: list[dict[str, Any]] = []
+        for message in _merge_consecutive_messages(messages):
+            content = message["content"]
+            built_message: dict[str, Any] = {
+                "role": message["role"],
+                "content": _text_from_content(content),
+            }
+            if isinstance(content, list):
+                images = [
+                    part["data"]
+                    for part in content
+                    if isinstance(part, dict) and part.get("type") == "image" and part.get("data")
+                ]
+                if images:
+                    built_message["images"] = images
+            built.append(built_message)
+        return built
