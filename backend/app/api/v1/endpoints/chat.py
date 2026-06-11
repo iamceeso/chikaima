@@ -101,18 +101,20 @@ def stream_chat(
         if not conversation or conversation.user_id != current_user.id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
         selected_model_id = payload.model_id or conversation.model_id
-        model, provider = service.llm.resolve_model_and_provider(current_user.id, selected_model_id)
-        if conversation.model_id != model.id:
-            conversation.model_id = model.id
+        selected_model, _ = service.llm.resolve_model_and_provider(current_user.id, selected_model_id)
+        if conversation.model_id != selected_model.id:
+            conversation.model_id = selected_model.id
             db.add(conversation)
             db.flush()
+        model, provider = service._resolve_chat_model_and_provider(current_user.id, selected_model_id, payload.metadata)
         history = list(conversation.messages)
     else:
-        model, provider = service.llm.resolve_model_and_provider(current_user.id, payload.model_id)
+        selected_model, _ = service.llm.resolve_model_and_provider(current_user.id, payload.model_id)
+        model, provider = service._resolve_chat_model_and_provider(current_user.id, payload.model_id, payload.metadata)
         conversation = Conversation(
             user_id=current_user.id,
             title=(payload.title or payload.content).strip()[:48] or "New analysis",
-            model_id=model.id,
+            model_id=selected_model.id,
         )
         db.add(conversation)
         db.flush()

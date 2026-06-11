@@ -1,5 +1,6 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from app.services.chat_service import ChatService
 
@@ -61,3 +62,35 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIsInstance(serialized[0]["content"], list)
         self.assertEqual(serialized[0]["content"][0]["type"], "text")
         self.assertEqual(serialized[0]["content"][1]["type"], "image")
+
+    def test_resolve_chat_model_and_provider_prefers_same_provider_vision_model_when_enabled(self) -> None:
+        service = object.__new__(ChatService)
+        base_model = SimpleNamespace(id="model-1", provider_id="provider-1", capabilities={"vision": False})
+        vision_model = SimpleNamespace(id="model-2", provider_id="provider-1", capabilities={"vision": True})
+        provider = SimpleNamespace(id="provider-1")
+        service.llm = SimpleNamespace(resolve_model_and_provider=lambda user_id, model_id: (base_model, provider))
+        service._find_same_provider_vision_model = lambda provider_id: vision_model  # type: ignore[method-assign]
+        service._should_auto_use_vision_model = lambda metadata, model: True  # type: ignore[method-assign]
+
+        resolved_model, resolved_provider = service._resolve_chat_model_and_provider(
+            "user-1",
+            "model-1",
+            {"attachments": [{"id": "doc-1", "kind": "document"}]},
+        )
+
+        self.assertIs(resolved_model, vision_model)
+        self.assertIs(resolved_provider, provider)
+
+    def test_should_auto_use_vision_model_respects_workspace_toggle(self) -> None:
+        service = object.__new__(ChatService)
+        service.db = SimpleNamespace()
+        model = SimpleNamespace(capabilities={"vision": False})
+
+        with (
+            patch("app.services.chat_service.WorkspaceService") as workspace_service,
+            patch.object(service, "_has_image_attachment", return_value=True),
+        ):
+            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(vision_aware=False)
+            should_auto = service._should_auto_use_vision_model({"attachments": [{"id": "doc-1"}]}, model)
+
+        self.assertFalse(should_auto)

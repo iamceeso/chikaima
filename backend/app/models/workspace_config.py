@@ -14,3 +14,4 @@ class WorkspaceConfig(UUIDTimestampMixin, Base):
     authentication_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     docs_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     public_registration_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    vision_aware: Mapped[bool] = mapped_column(Boolean, default=True)

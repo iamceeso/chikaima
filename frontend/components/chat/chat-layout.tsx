@@ -494,27 +494,38 @@ export function ChatLayout() {
   const showDropOverlay = isDragging && !uploadAttachment.isPending;
 
   const renderModelPicker = (className?: string) => (
-    <select
-      value={activeModel?.id ?? ""}
-      disabled={!modelsQuery.data?.length}
-      onChange={(event) =>
-        setSelectedModelIds((current) => ({
-          ...current,
-          [modelSelectionScope]: event.target.value,
-        }))
-      }
-      className={cn(
-        "max-w-52 rounded-full border border-border bg-background-secondary/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm outline-none backdrop-blur",
-        "cursor-pointer hover:bg-surface-raised",
-        className,
-      )}
-    >
-      {modelsQuery.data?.map((model) => (
-        <option key={model.id} value={model.id}>
-          {model.display_name}
-        </option>
-      ))}
-    </select>
+    <div className="flex items-center gap-2">
+      <select
+        value={activeModel?.id ?? ""}
+        disabled={!modelsQuery.data?.length}
+        onChange={(event) =>
+          setSelectedModelIds((current) => ({
+            ...current,
+            [modelSelectionScope]: event.target.value,
+          }))
+        }
+        className={cn(
+          "max-w-52 rounded-full border border-border bg-background-secondary/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm outline-none backdrop-blur",
+          "cursor-pointer hover:bg-surface-raised",
+          className,
+        )}
+      >
+        {modelsQuery.data?.map((model) => (
+          <option key={model.id} value={model.id}>
+            {model.display_name}
+          </option>
+        ))}
+      </select>
+      {activeModel?.capabilities?.vision ? (
+        <span
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background-secondary text-foreground-muted"
+          title="Vision-capable model"
+          aria-label="Vision-capable model"
+        >
+          <Eye className="h-3.5 w-3.5" />
+        </span>
+      ) : null}
+    </div>
   );
 
   const renderComposer = () => (

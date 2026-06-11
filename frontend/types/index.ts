@@ -24,6 +24,7 @@ export interface WorkspaceConfig {
   authentication_enabled: boolean;
   docs_enabled: boolean;
   public_registration_enabled: boolean;
+  vision_aware: boolean;
   first_user_registration_required: boolean;
   total_users: number;
   total_providers: number;

@@ -18,6 +18,7 @@ from app.models.video import Video
 from app.repositories.chat import ConversationRepository, MessageRepository
 from app.schemas.chat import ConversationCreate, MessageCreate
 from app.services.llm_service import LLMService
+from app.services.workspace_service import WorkspaceService
 
 MAX_ATTACHMENT_CONTEXT_CHARS = 8_000
 MAX_ATTACHMENT_ITEM_CHARS = 2_500
@@ -42,7 +43,11 @@ class ChatService:
 
     def create_conversation(self, user_id: str, payload: ConversationCreate, use_rag: bool = True) -> Conversation:
         try:
-            model, provider = self.llm.resolve_model_and_provider(user_id, payload.model_id)
+            model, provider = self._resolve_chat_model_and_provider(
+                user_id,
+                payload.model_id,
+                payload.initial_metadata,
+            )
             conversation = Conversation(
                 user_id=user_id,
                 title=payload.title,
@@ -118,7 +123,11 @@ class ChatService:
                 detail="Only user messages can be posted directly.",
             )
         try:
-            model, provider = self.llm.resolve_model_and_provider(user_id, conversation.model_id)
+            model, provider = self._resolve_chat_model_and_provider(
+                user_id,
+                conversation.model_id,
+                payload.metadata,
+            )
             message = Message(
                 conversation_id=conversation_id,
                 role=payload.role,
@@ -193,7 +202,11 @@ class ChatService:
                     )
                     .delete(synchronize_session=False)
                 )
-                model, provider = self.llm.resolve_model_and_provider(user_id, conversation.model_id)
+                model, provider = self._resolve_chat_model_and_provider(
+                    user_id,
+                    conversation.model_id,
+                    message.meta,
+                )
                 history = list(
                     self.db.query(Message)
                     .filter(
@@ -250,7 +263,11 @@ class ChatService:
 
         try:
             conversation = message.conversation
-            model, provider = self.llm.resolve_model_and_provider(user_id, conversation.model_id)
+            model, provider = self._resolve_chat_model_and_provider(
+                user_id,
+                conversation.model_id,
+                message.meta,
+            )
 
             history: list[Message] = []
             for item in conversation.messages:
@@ -403,6 +420,64 @@ class ChatService:
                 }
             )
         return image_parts
+
+    def _resolve_chat_model_and_provider(
+        self,
+        user_id: str,
+        model_id: str | None,
+        metadata: dict[str, Any] | None,
+    ) -> tuple[AIModel, Any]:
+        model, provider = self.llm.resolve_model_and_provider(user_id, model_id)
+        if not self._should_auto_use_vision_model(metadata, model):
+            return model, provider
+
+        vision_model = self._find_same_provider_vision_model(model.provider_id)
+        if vision_model is None:
+            return model, provider
+
+        return vision_model, provider
+
+    def _should_auto_use_vision_model(self, metadata: dict[str, Any] | None, model: AIModel) -> bool:
+        workspace = WorkspaceService(self.db).get_or_create()
+        if not workspace.vision_aware:
+            return False
+        if bool((model.capabilities or {}).get("vision")):
+            return False
+        return self._has_image_attachment(metadata)
+
+    def _has_image_attachment(self, metadata: dict[str, Any] | None) -> bool:
+        if not isinstance(metadata, dict):
+            return False
+        attachments = metadata.get("attachments")
+        if not isinstance(attachments, list):
+            return False
+
+        for attachment in attachments:
+            if not isinstance(attachment, dict):
+                continue
+            resource_id = attachment.get("id")
+            kind = attachment.get("kind")
+            if kind != "document" or not isinstance(resource_id, str):
+                continue
+            resource = self.db.get(Document, resource_id)
+            if resource and resource.mime_type.startswith("image/"):
+                return True
+        return False
+
+    def _find_same_provider_vision_model(self, provider_id: str) -> AIModel | None:
+        candidates = (
+            self.db.query(AIModel)
+            .filter(
+                AIModel.provider_id == provider_id,
+                AIModel.is_available.is_(True),
+            )
+            .order_by(AIModel.is_default.desc(), AIModel.created_at.asc())
+            .all()
+        )
+        for candidate in candidates:
+            if bool((candidate.capabilities or {}).get("vision")):
+                return candidate
+        return None
 
     def _build_attachment_section(self, user_id: str, attachment: dict[str, Any]) -> str:
         resource_id = attachment.get("id")

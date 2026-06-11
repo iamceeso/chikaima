@@ -10,6 +10,7 @@ class WorkspaceConfigUpdate(BaseModel):
     authentication_enabled: bool | None = None
     docs_enabled: bool | None = None
     public_registration_enabled: bool | None = None
+    vision_aware: bool | None = None
 
 
 class WorkspaceModelVisibilityUpdate(BaseModel):
@@ -22,6 +23,7 @@ class WorkspaceConfigResponse(TimestampedResponse):
     authentication_enabled: bool
     docs_enabled: bool
     public_registration_enabled: bool
+    vision_aware: bool
     first_user_registration_required: bool
     total_users: int
     total_providers: int

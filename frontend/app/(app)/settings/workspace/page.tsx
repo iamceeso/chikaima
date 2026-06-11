@@ -27,6 +27,7 @@ export default function WorkspaceSettingsPage() {
   const [registrationDialogOpen, setRegistrationDialogOpen] = useState(false);
   const [authenticationDialogOpen, setAuthenticationDialogOpen] = useState(false);
   const [docsDialogOpen, setDocsDialogOpen] = useState(false);
+  const [visionAwareDialogOpen, setVisionAwareDialogOpen] = useState(false);
   const [clearAnalysisDialogOpen, setClearAnalysisDialogOpen] = useState(false);
 
   const workspaceQuery = useQuery({
@@ -94,6 +95,20 @@ export default function WorkspaceSettingsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
       await queryClient.invalidateQueries({ queryKey: ["public-workspace-settings"] });
+    },
+  });
+
+  const toggleVisionAware = useMutation({
+    mutationFn: async () => {
+      if (!token || !workspaceQuery.data) {
+        throw new Error("Workspace settings are unavailable.");
+      }
+      return api.updateWorkspaceSettings(token, {
+        vision_aware: !workspaceQuery.data.vision_aware,
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
     },
   });
 
@@ -245,6 +260,37 @@ export default function WorkspaceSettingsPage() {
             {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
             {toggleDocs.error ? <p className="mt-3 text-sm text-primary">{toggleDocs.error.message}</p> : null}
           </div>
+
+          <div className="mt-4 rounded-2xl border border-border bg-background p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">Vision aware routing</p>
+                  <span className="rounded-full border border-border bg-background-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">
+                    {workspaceQuery.data?.vision_aware ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-foreground-muted">
+                  {workspaceQuery.data?.vision_aware
+                    ? "If a non-vision model is selected for an image request, Olanma can automatically use a vision-capable model from the same provider."
+                    : "Olanma will only use the exact model selected, even when image analysis would benefit from a vision-capable variant."}
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setVisionAwareDialogOpen(true)}
+                disabled={!user?.is_superuser || toggleVisionAware.isPending || workspaceQuery.isLoading}
+                className="w-[16rem] min-w-[16rem] max-w-[16rem] justify-center whitespace-nowrap"
+              >
+                {workspaceQuery.data?.vision_aware ? "Disable vision aware" : "Enable vision aware"}
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-foreground-muted">
+              When enabled, image attachments can automatically route to a compatible vision model from the same provider while keeping the selected model as the conversation default.
+            </p>
+            {!user?.is_superuser ? <p className="mt-3 text-xs text-foreground-muted">Admin only.</p> : null}
+            {toggleVisionAware.error ? <p className="mt-3 text-sm text-primary">{toggleVisionAware.error.message}</p> : null}
+          </div>
         </Card>
 
         <div className="grid gap-6">
@@ -307,6 +353,57 @@ export default function WorkspaceSettingsPage() {
           </Card>
         </div>
       </div>
+
+      <AlertDialog
+        open={visionAwareDialogOpen}
+        onOpenChange={(open) => {
+          if (!toggleVisionAware.isPending) {
+            setVisionAwareDialogOpen(open);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {workspaceQuery.data?.vision_aware ? "Disable vision aware routing?" : "Enable vision aware routing?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {workspaceQuery.data?.vision_aware
+                ? "Image requests will stay on the exact selected model, even if that model cannot analyze images directly."
+                : "Olanma will be allowed to use a vision-capable model from the same provider when image analysis is needed."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              className="border border-border"
+              disabled={toggleVisionAware.isPending}
+              onClick={() => setVisionAwareDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={toggleVisionAware.isPending}
+              onClick={() =>
+                toggleVisionAware.mutate(undefined, {
+                  onSuccess: async () => {
+                    setVisionAwareDialogOpen(false);
+                    await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+                  },
+                })
+              }
+            >
+              {toggleVisionAware.isPending
+                ? "Saving..."
+                : workspaceQuery.data?.vision_aware
+                  ? "Disable vision aware"
+                  : "Enable vision aware"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={clearAnalysisDialogOpen}
