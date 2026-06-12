@@ -9,7 +9,10 @@ async function request(path, options = {}) {
     if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
         headers.set("Content-Type", "application/json");
     }
-    if (options.token) {
+    if (options.authHeader) {
+        headers.set("Authorization", options.authHeader);
+    }
+    else if (options.token) {
         headers.set("Authorization", `Bearer ${options.token}`);
     }
     const controller = new AbortController();
@@ -51,7 +54,10 @@ async function request(path, options = {}) {
 async function requestBlob(path, options = {}) {
     const method = (options.method ?? "GET").toUpperCase();
     const headers = new Headers(options.headers);
-    if (options.token) {
+    if (options.authHeader) {
+        headers.set("Authorization", options.authHeader);
+    }
+    else if (options.token) {
         headers.set("Authorization", `Bearer ${options.token}`);
     }
     const controller = new AbortController();
@@ -86,19 +92,19 @@ exports.api = {
     login: (payload) => request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
     logout: (token) => request("/auth/logout", { method: "POST", token }),
     getProfile: (token) => request("/users/me", { token }),
-    getUsers: (token) => request("/users", { token }),
-    createUser: (token, payload) => request("/users", { method: "POST", token, body: JSON.stringify(payload) }),
-    updateUser: (token, userId, payload) => request(`/users/${userId}`, { method: "PATCH", token, body: JSON.stringify(payload) }),
-    deleteUser: (token, userId) => request(`/users/${userId}`, { method: "DELETE", token }),
+    getUsers: (access) => request("/users", access),
+    createUser: (access, payload) => request("/users", { method: "POST", ...access, body: JSON.stringify(payload) }),
+    updateUser: (access, userId, payload) => request(`/users/${userId}`, { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+    deleteUser: (access, userId) => request(`/users/${userId}`, { method: "DELETE", ...access }),
     getDashboard: (token) => request("/dashboard", { token }),
-    getWorkspaceSettings: (token) => request("/settings/workspace", { token }),
-    updateWorkspaceSettings: (token, payload) => request("/settings/workspace", { method: "PATCH", token, body: JSON.stringify(payload) }),
-    getWorkspaceModels: (token) => request("/settings/models", { token }),
-    updateWorkspaceModels: (token, payload) => request("/settings/models", { method: "PATCH", token, body: JSON.stringify(payload) }),
-    getProviders: (token) => request("/providers", { token }),
-    createProvider: (token, payload) => request("/providers", { method: "POST", token, body: JSON.stringify(payload) }),
-    updateProvider: (token, providerId, payload) => request(`/providers/${providerId}`, { method: "PATCH", token, body: JSON.stringify(payload) }),
-    deleteProvider: (token, providerId) => request(`/providers/${providerId}`, { method: "DELETE", token }),
+    getWorkspaceSettings: (access) => request("/settings/workspace", access),
+    updateWorkspaceSettings: (access, payload) => request("/settings/workspace", { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+    getWorkspaceModels: (access) => request("/settings/models", access),
+    updateWorkspaceModels: (access, payload) => request("/settings/models", { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+    getProviders: (access) => request("/providers", access),
+    createProvider: (access, payload) => request("/providers", { method: "POST", ...access, body: JSON.stringify(payload) }),
+    updateProvider: (access, providerId, payload) => request(`/providers/${providerId}`, { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+    deleteProvider: (access, providerId) => request(`/providers/${providerId}`, { method: "DELETE", ...access }),
     getModels: (token) => request("/models", { token }),
     getLibraryBundle: (token) => request("/library", { token }),
     getAssetFile: (token, resourceType, resourceId) => requestBlob(`/assets/${resourceType}/${resourceId}/file`, { token }),

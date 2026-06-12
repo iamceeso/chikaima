@@ -52,14 +52,27 @@ node_test_1.default.afterEach(() => {
         headers: { "Content-Type": "application/json" },
     });
     const { api } = await importApi();
-    await strict_1.default.rejects(() => api.getWorkspaceSettings("token-123"), (error) => error instanceof Error && error.message === "Workspace unavailable");
+    await strict_1.default.rejects(() => api.getWorkspaceSettings({ token: "token-123" }), (error) => error instanceof Error && error.message === "Workspace unavailable");
+});
+(0, node_test_1.default)("api.getWorkspaceSettings prefers explicit authorization headers", async () => {
+    let capturedRequest;
+    global.fetch = async (_input, init) => {
+        capturedRequest = init;
+        return new Response(JSON.stringify({ id: "workspace-1" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+        });
+    };
+    const { api } = await importApi();
+    await api.getWorkspaceSettings({ token: "token-123", authHeader: "Basic abc123" });
+    strict_1.default.equal((capturedRequest?.headers).get("Authorization"), "Basic abc123");
 });
 (0, node_test_1.default)("api.getProviders turns aborts into a timeout message", async () => {
     global.fetch = async () => {
         throw new DOMException("timeout", "AbortError");
     };
     const { api } = await importApi();
-    await strict_1.default.rejects(() => api.getProviders("token-123"), (error) => error instanceof Error &&
+    await strict_1.default.rejects(() => api.getProviders({ token: "token-123" }), (error) => error instanceof Error &&
         error.message === "Request timed out. Check that the backend is running.");
 });
 (0, node_test_1.default)("api.streamChat emits metadata tokens done and error events", async () => {

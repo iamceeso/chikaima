@@ -208,7 +208,7 @@ export default function SettingsUsersPage() {
               <Input id="password" type="password" {...form.register("password")} placeholder="At least 8 characters" />
             </div>
             <label className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground">
-              <input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" {...form.register("is_superuser")} />
+              <input type="checkbox" className="h-4 w-4 accent-primary" {...form.register("is_superuser")} />
               Grant administrator access
             </label>
             {createMutation.error ? <p className="text-sm text-primary">{createMutation.error.message}</p> : null}
@@ -338,7 +338,7 @@ export default function SettingsUsersPage() {
                 <label className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-[var(--primary)]"
+                    className="h-4 w-4 accent-primary"
                     disabled={editingLastAdmin}
                     {...editForm.register("is_superuser")}
                   />
@@ -347,7 +347,7 @@ export default function SettingsUsersPage() {
                 <label className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-[var(--primary)]"
+                    className="h-4 w-4 accent-primary"
                     disabled={editingLastAdmin}
                     {...editForm.register("is_active")}
                   />

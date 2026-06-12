@@ -8,7 +8,7 @@ FRONTEND_DIR="$ROOT_DIR/frontend"
 echo "Running backend tests..."
 (
   cd "$BACKEND_DIR"
-  uv run python -m unittest discover -s tests -p 'test_*.py'
+  uv run pytest
 )
 
 echo "Running frontend tests..."

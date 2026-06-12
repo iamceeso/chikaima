@@ -1,9 +1,8 @@
 import json
 from functools import lru_cache
-from typing import Annotated
 
 from pydantic import Field, computed_field, field_validator, model_validator
-from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PLACEHOLDER_JWT_SECRET = "change-me"
 PLACEHOLDER_JWT_REFRESH_SECRET = "change-me-too"
@@ -23,7 +22,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     provider_secret_key: str = Field(..., min_length=16)
-    cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:3000"])
+    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     media_root: str = "storage"
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_dimension: int = 384
@@ -34,6 +33,7 @@ class Settings(BaseSettings):
         env_file=".env",
         case_sensitive=False,
         extra="ignore",
+        enable_decoding=False,
     )
 
     @field_validator("cors_origins", mode="before")

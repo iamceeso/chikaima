@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import base64
 import mimetypes
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.models.audio import AudioAsset
 from app.models.ai_model import AIModel
+from app.models.audio import AudioAsset
 from app.models.conversation import Conversation
 from app.models.document import Document
 from app.models.message import Message
