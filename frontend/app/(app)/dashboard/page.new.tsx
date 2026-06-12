@@ -111,7 +111,7 @@ export default function DashboardPage() {
             <p className="text-2xl font-bold text-foreground">{metrics.cpuUsage}%</p>
             <div className="flex-1 h-6 bg-background rounded-lg overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all"
+                className="h-full bg-linear-to-r from-blue-500 to-blue-600 rounded-lg transition-all"
                 style={{width: `${metrics.cpuUsage}%`}}
               />
             </div>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
             <p className="text-2xl font-bold text-foreground">{metrics.memoryUsage}%</p>
             <div className="flex-1 h-6 bg-background rounded-lg overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg transition-all"
+                className="h-full bg-linear-to-r from-purple-500 to-purple-600 rounded-lg transition-all"
                 style={{width: `${metrics.memoryUsage}%`}}
               />
             </div>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
             <p className="text-2xl font-bold text-foreground">{metrics.databaseLatency}<span className="text-xs">ms</span></p>
             <div className="flex-1 h-6 bg-background rounded-lg overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-lg transition-all"
+                className="h-full bg-linear-to-r from-green-500 to-green-600 rounded-lg transition-all"
                 style={{width: `${(metrics.databaseLatency / 100) * 100}%`}}
               />
             </div>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
             <p className="text-2xl font-bold text-foreground">{metrics.cacheHitRate}%</p>
             <div className="flex-1 h-6 bg-background rounded-lg overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg transition-all"
+                className="h-full bg-linear-to-r from-amber-500 to-amber-600 rounded-lg transition-all"
                 style={{width: `${metrics.cacheHitRate}%`}}
               />
             </div>

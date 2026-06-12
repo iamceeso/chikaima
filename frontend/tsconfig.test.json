@@ -12,6 +12,9 @@
     "tests/**/*.ts",
     "lib/utils.ts",
     "lib/form-resolver.ts",
+    "lib/env.ts",
+    "services/api.ts",
+    "store/auth-store.ts",
     "store/chat-store.ts"
   ],
   "exclude": [
