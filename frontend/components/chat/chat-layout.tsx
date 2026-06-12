@@ -821,7 +821,7 @@ export function ChatLayout() {
             </button>
           </div>
 
-          <div className="mt-5 flex min-h-28 items-center justify-center rounded-[1.5rem] border border-border bg-background/80 px-4">
+          <div className="mt-5 flex min-h-28 items-center justify-center rounded-3xl border border-border bg-background/80 px-4">
             <div className="flex items-center gap-1.5">
               {bars.map((height, index) => (
                 <span

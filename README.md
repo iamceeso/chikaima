@@ -44,8 +44,8 @@ olanma/
 
 ## Key Features
 
-- User registration, login, logout, refresh tokens, password reset, and profile management
-- Provider management for OpenAI, Anthropic, Gemini, Ollama, and OpenAI-compatible endpoints
+- User registration, login, logout, refresh tokens, and profile management
+- Provider management for OpenAI, Anthropic, Gemini, Ollama, OpenRouter, and LiteLLM-backed endpoints
 - Audio, video, and document ingestion with persisted uploads
 - Background processing through PostgreSQL-backed jobs and Celery workers
 - Transcript and summary artifact foundations for media understanding workflows
@@ -73,7 +73,7 @@ Services:
 
 - Frontend: `http://localhost:3000`
 - Backend API: `http://localhost:8000`
-- API docs: `http://localhost:8000/docs`
+- API docs: `http://localhost:8000/docs` when enabled in workspace settings
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
@@ -122,7 +122,7 @@ To use provider-backed transcript Q&A right away:
 3. Add an `OpenAI` provider with your `sk-...` API key.
 4. Go to `Ask` and send a message.
 
-The first enabled OpenAI model is used for live replies. Other provider types remain scaffolded until their execution adapters are wired.
+The first enabled model is used for live replies. Provider integrations are available through the configured adapter set in the workspace.
 
 ## API Surface
 
@@ -143,8 +143,8 @@ Versioned endpoints live under `/api/v1`:
 
 - Access tokens authenticate API requests
 - Refresh tokens issue new access tokens
-- Password reset endpoints support token-based reset flow
-- In non-production environments, password reset tokens are written to backend logs for local testing instead of being returned by the API
+- Password reset delivery is not configured in this release; use admin-managed account recovery instead
+- In non-production environments, password reset tokens are written to backend logs for local testing only
 - Credentials are hashed, provider secrets are stored as encrypted payload placeholders ready for KMS or Vault integration
 
 ## Production Notes

@@ -15,11 +15,28 @@ def make_auth_service(user: object | None) -> AuthService:
 
 
 class AuthServiceTests(unittest.TestCase):
+    def test_request_password_reset_rejects_unconfigured_production(self) -> None:
+        user = SimpleNamespace(id="user-1", email="person@example.com")
+        service = make_auth_service(user)
+
+        with patch("app.services.auth_service.app_settings", SimpleNamespace(is_production=True)):
+            with self.assertRaises(HTTPException) as context:
+                service.request_password_reset("person@example.com")
+
+        self.assertEqual(context.exception.status_code, 503)
+        self.assertEqual(
+            context.exception.detail,
+            "Password reset is not configured for this deployment.",
+        )
+
     def test_request_password_reset_never_returns_token(self) -> None:
         user = SimpleNamespace(id="user-1", email="person@example.com")
         service = make_auth_service(user)
 
-        with patch("app.services.auth_service.create_password_reset_token", return_value="reset-token"):
+        with (
+            patch("app.services.auth_service.app_settings", SimpleNamespace(is_production=False)),
+            patch("app.services.auth_service.create_password_reset_token", return_value="reset-token"),
+        ):
             response = service.request_password_reset("person@example.com")
 
         self.assertEqual(

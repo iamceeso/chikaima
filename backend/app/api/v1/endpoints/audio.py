@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps.auth import get_current_user
@@ -101,9 +101,15 @@ def get_audio_summaries(
 
 @router.post("/speech-to-text")
 def speech_to_text() -> dict[str, str]:
-    return {"message": "Speech-to-text provider abstraction scaffolded"}
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Speech-to-text API is not implemented in this release.",
+    )
 
 
 @router.post("/text-to-speech")
 def text_to_speech() -> dict[str, str]:
-    return {"message": "Text-to-speech provider abstraction scaffolded"}
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Text-to-speech API is not implemented in this release.",
+    )

@@ -33,16 +33,19 @@ class WorkspaceService:
         self.db.refresh(workspace)
         return workspace
 
-    def get_summary(self) -> WorkspaceConfigResponse:
+    def get_summary(self, actor: User) -> WorkspaceConfigResponse:
         workspace = self.get_or_create()
-        total_users = self.db.query(User).count()
         return WorkspaceConfigResponse(
             **workspace.__dict__,
-            first_user_registration_required=total_users == 0,
-            total_users=total_users,
-            total_providers=self.db.query(Provider).count(),
-            pending_jobs=self.db.query(Job).filter(Job.status.in_(["pending", "running"])).count(),
-            completed_jobs=self.db.query(Job).filter(Job.status == "completed").count(),
+            first_user_registration_required=self.db.query(User).count() == 0,
+            total_users=1,
+            total_providers=self.db.query(Provider).filter(Provider.user_id == actor.id).count(),
+            pending_jobs=self.db.query(Job)
+            .filter(Job.user_id == actor.id, Job.status.in_(["pending", "running"]))
+            .count(),
+            completed_jobs=self.db.query(Job)
+            .filter(Job.user_id == actor.id, Job.status == "completed")
+            .count(),
         )
 
     def get_public_settings(self) -> WorkspacePublicResponse:
@@ -68,7 +71,7 @@ class WorkspaceService:
         self.db.add(workspace)
         self.db.commit()
         self.db.refresh(workspace)
-        return self.get_summary()
+        return self.get_summary(actor)
 
     def list_models(self, actor: User) -> list[AIModelResponse]:
         if not actor.is_superuser:

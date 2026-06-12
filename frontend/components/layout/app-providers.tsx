@@ -13,11 +13,26 @@ const SESSIONLESS_ACCESS_TOKEN = "__olanma_no_auth__";
 function WorkspaceAccessBootstrap() {
   const tokens = useAuthStore((state) => state.tokens);
   const setSession = useAuthStore((state) => state.setSession);
+  const setUser = useAuthStore((state) => state.setUser);
   const clearSession = useAuthStore((state) => state.clearSession);
   const workspaceQuery = useQuery({
     queryKey: ["public-workspace-settings"],
     queryFn: () => api.getPublicWorkspaceSettings(),
     staleTime: 30_000,
+  });
+  useQuery({
+    queryKey: ["profile", tokens?.access_token],
+    queryFn: async () => {
+      if (!tokens?.access_token) {
+        return null;
+      }
+      const profile = await api.getProfile(tokens.access_token);
+      setUser(profile);
+      return profile;
+    },
+    enabled: Boolean(tokens?.access_token),
+    retry: false,
+    staleTime: 5 * 60_000,
   });
 
   useEffect(() => {

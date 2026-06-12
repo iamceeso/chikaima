@@ -150,6 +150,12 @@ class AuthService:
         return create_access_token(payload["sub"])
 
     def request_password_reset(self, email: str) -> dict[str, str]:
+        if app_settings.is_production:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Password reset is not configured for this deployment.",
+            )
+
         response = {"message": "If the account exists, password reset instructions have been sent."}
         user = self.users.get_by_email(email)
         if not user:

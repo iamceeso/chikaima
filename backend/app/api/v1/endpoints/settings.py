@@ -23,8 +23,7 @@ def get_workspace_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> WorkspaceConfigResponse:
-    _ = current_user
-    return WorkspaceService(db).get_summary()
+    return WorkspaceService(db).get_summary(current_user)
 
 
 @router.get("/public", response_model=WorkspacePublicResponse)
