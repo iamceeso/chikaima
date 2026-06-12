@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Power, Trash2 } from "lucide-react";
 
+import { useAdminAccess } from "@/hooks/use-admin-access";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -15,7 +16,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { api } from "@/services/api";
-import { useAuthStore } from "@/store/auth-store";
 import type { Provider } from "@/types";
 
 const providerLabels: Record<Provider["provider_type"], string> = {
@@ -29,25 +29,26 @@ const providerLabels: Record<Provider["provider_type"], string> = {
 };
 
 export function ProviderList() {
-  const token = useAuthStore((state) => state.tokens?.access_token);
+  const { access } = useAdminAccess();
   const queryClient = useQueryClient();
   const [providerPendingDelete, setProviderPendingDelete] = useState<Provider | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["providers"],
     queryFn: () => {
-      if (!token) {
-        return Promise.resolve([]);
+      if (!access) {
+        return Promise.reject(new Error("Administrator access is required."));
       }
-      return api.getProviders(token);
+      return api.getProviders(access);
     },
+    enabled: Boolean(access),
     staleTime: 5 * 60_000,
   });
   const toggleMutation = useMutation({
     mutationFn: async ({ providerId, isEnabled }: { providerId: string; isEnabled: boolean }) => {
-      if (!token) {
-        throw new Error("Please sign in first.");
+      if (!access) {
+        throw new Error("Administrator access is required.");
       }
-      return api.updateProvider(token, providerId, { is_enabled: isEnabled });
+      return api.updateProvider(access, providerId, { is_enabled: isEnabled });
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["providers"] });
@@ -57,10 +58,10 @@ export function ProviderList() {
   });
   const deleteMutation = useMutation({
     mutationFn: async (providerId: string) => {
-      if (!token) {
-        throw new Error("Please sign in first.");
+      if (!access) {
+        throw new Error("Administrator access is required.");
       }
-      return api.deleteProvider(token, providerId);
+      return api.deleteProvider(access, providerId);
     },
     onSuccess: async () => {
       setProviderPendingDelete(null);

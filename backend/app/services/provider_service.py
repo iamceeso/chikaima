@@ -462,6 +462,8 @@ class ProviderService:
             encrypted_api_key = provider.encrypted_config.get("api_key")
             if isinstance(encrypted_api_key, str):
                 resolved_api_key = secret_manager.decrypt(encrypted_api_key)
+                provider.encrypted_config["api_key"] = secret_manager.encrypt(resolved_api_key)
+                self.db.add(provider)
 
         if provider.provider_type == "openai":
             return self._fetch_openai_models(provider, resolved_api_key)

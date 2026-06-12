@@ -210,7 +210,7 @@ uv run ruff format app/
 uv run ruff check app/
 
 # Run tests
-uv run pytest
+uv run python -m unittest discover -s tests -p 'test_*.py'
 
 # Run with hot reload
 uv run uvicorn app.main:app --reload

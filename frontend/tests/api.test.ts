@@ -62,10 +62,27 @@ test("api.getWorkspaceSettings surfaces backend detail messages", async () => {
   const { api } = await importApi();
 
   await assert.rejects(
-    () => api.getWorkspaceSettings("token-123"),
+    () => api.getWorkspaceSettings({ token: "token-123" }),
     (error: unknown) =>
       error instanceof Error && error.message === "Workspace unavailable",
   );
+});
+
+test("api.getWorkspaceSettings prefers explicit authorization headers", async () => {
+  let capturedRequest: RequestInit | undefined;
+
+  global.fetch = async (_input, init) => {
+    capturedRequest = init;
+    return new Response(JSON.stringify({ id: "workspace-1" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+
+  const { api } = await importApi();
+  await api.getWorkspaceSettings({ token: "token-123", authHeader: "Basic abc123" });
+
+  assert.equal((capturedRequest?.headers as Headers).get("Authorization"), "Basic abc123");
 });
 
 test("api.getProviders turns aborts into a timeout message", async () => {
@@ -76,7 +93,7 @@ test("api.getProviders turns aborts into a timeout message", async () => {
   const { api } = await importApi();
 
   await assert.rejects(
-    () => api.getProviders("token-123"),
+    () => api.getProviders({ token: "token-123" }),
     (error: unknown) =>
       error instanceof Error &&
       error.message === "Request timed out. Check that the backend is running.",

@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import get_current_user
+from app.api.deps.auth import get_current_admin_user, get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.user import (
@@ -43,7 +43,7 @@ def update_profile(
 @router.get("", response_model=list[UserResponse])
 def list_users(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> list[UserResponse]:
     _require_superuser(current_user)
     users = AuthService(db).users.list_all()
@@ -54,7 +54,7 @@ def list_users(
 def create_user(
     payload: UserAdminCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> UserResponse:
     user = AuthService(db).create_user(current_user, payload)
     return UserResponse.model_validate(user)
@@ -64,7 +64,7 @@ def create_user(
 def delete_user(
     user_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> Response:
     _require_superuser(current_user)
     target = AuthService(db).users.get(user_id)
@@ -91,7 +91,7 @@ def update_user(
     user_id: str,
     payload: UserAdminUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> UserResponse:
     user = AuthService(db).update_user(current_user, user_id, payload)
     return UserResponse.model_validate(user)

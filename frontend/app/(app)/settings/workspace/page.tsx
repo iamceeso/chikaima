@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, ShieldCheck, Trash2, UserCircle2 } from "lucide-react";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { AdminAccessGate } from "@/components/settings/admin-access-gate";
+import { useAdminAccess } from "@/hooks/use-admin-access";
 import { libraryQueryKey } from "@/lib/library";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import {
@@ -24,6 +26,7 @@ export default function WorkspaceSettingsPage() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
+  const { access, hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled } = useAdminAccess();
   const [registrationDialogOpen, setRegistrationDialogOpen] = useState(false);
   const [authenticationDialogOpen, setAuthenticationDialogOpen] = useState(false);
   const [docsDialogOpen, setDocsDialogOpen] = useState(false);
@@ -33,12 +36,12 @@ export default function WorkspaceSettingsPage() {
   const workspaceQuery = useQuery({
     queryKey: ["workspace-settings"],
     queryFn: () => {
-      if (!token) {
-        return Promise.reject(new Error("Please sign in first."));
+      if (!access) {
+        return Promise.reject(new Error("Administrator access is required."));
       }
-      return api.getWorkspaceSettings(token);
+      return api.getWorkspaceSettings(access);
     },
-    enabled: Boolean(token),
+    enabled: Boolean(access),
     staleTime: 5 * 60_000,
   });
 
@@ -55,10 +58,10 @@ export default function WorkspaceSettingsPage() {
 
   const toggleRegistration = useMutation({
     mutationFn: async () => {
-      if (!token || !workspaceQuery.data) {
+      if (!access || !workspaceQuery.data) {
         throw new Error("Workspace settings are unavailable.");
       }
-      return api.updateWorkspaceSettings(token, {
+      return api.updateWorkspaceSettings(access, {
         public_registration_enabled: !workspaceQuery.data.public_registration_enabled,
       });
     },
@@ -70,10 +73,10 @@ export default function WorkspaceSettingsPage() {
 
   const toggleAuthentication = useMutation({
     mutationFn: async () => {
-      if (!token || !workspaceQuery.data) {
+      if (!access || !workspaceQuery.data) {
         throw new Error("Workspace settings are unavailable.");
       }
-      return api.updateWorkspaceSettings(token, {
+      return api.updateWorkspaceSettings(access, {
         authentication_enabled: !workspaceQuery.data.authentication_enabled,
       });
     },
@@ -85,10 +88,10 @@ export default function WorkspaceSettingsPage() {
 
   const toggleDocs = useMutation({
     mutationFn: async () => {
-      if (!token || !workspaceQuery.data) {
+      if (!access || !workspaceQuery.data) {
         throw new Error("Workspace settings are unavailable.");
       }
-      return api.updateWorkspaceSettings(token, {
+      return api.updateWorkspaceSettings(access, {
         docs_enabled: !workspaceQuery.data.docs_enabled,
       });
     },
@@ -100,10 +103,10 @@ export default function WorkspaceSettingsPage() {
 
   const toggleVisionAware = useMutation({
     mutationFn: async () => {
-      if (!token || !workspaceQuery.data) {
+      if (!access || !workspaceQuery.data) {
         throw new Error("Workspace settings are unavailable.");
       }
-      return api.updateWorkspaceSettings(token, {
+      return api.updateWorkspaceSettings(access, {
         vision_aware: !workspaceQuery.data.vision_aware,
       });
     },
@@ -135,6 +138,46 @@ export default function WorkspaceSettingsPage() {
       ]);
     },
   });
+
+  if (publicWorkspaceQuery.isLoading) {
+    return (
+      <SettingsShell
+        title="Workspace"
+        description="Manage access, routing, jobs, and account settings."
+      >
+        <Card className="p-6">
+          <p className="text-sm text-foreground-muted">Loading workspace access...</p>
+        </Card>
+      </SettingsShell>
+    );
+  }
+
+  if (workspaceAuthDisabled && !hasAdminAccess) {
+    return (
+      <SettingsShell
+        title="Workspace"
+        description="Manage access, routing, jobs, and account settings."
+      >
+        <AdminAccessGate
+          title="Admin credentials required"
+          description="Workspace sign-in is disabled, so changing workspace settings requires an existing administrator email and password."
+        />
+      </SettingsShell>
+    );
+  }
+
+  if (!hasAdminAccess) {
+    return (
+      <SettingsShell
+        title="Workspace"
+        description="Manage access, routing, jobs, and account settings."
+      >
+        <Card className="p-6">
+          <p className="text-sm text-foreground-muted">You need an admin account to manage workspace settings.</p>
+        </Card>
+      </SettingsShell>
+    );
+  }
 
   return (
   <SettingsShell
@@ -216,7 +259,7 @@ export default function WorkspaceSettingsPage() {
                 <Button
                   onClick={() => setAuthenticationDialogOpen(true)}
                   disabled={
-                    !user?.is_superuser ||
+                    !hasAdminAccess ||
                     workspaceQuery.data?.first_user_registration_required ||
                     toggleAuthentication.isPending ||
                     workspaceQuery.isLoading
@@ -242,7 +285,7 @@ export default function WorkspaceSettingsPage() {
                 <Button
                   onClick={() => setDocsDialogOpen(true)}
                   disabled={
-                    !user?.is_superuser ||
+                    !hasAdminAccess ||
                     toggleDocs.isPending ||
                     workspaceQuery.isLoading
                   }
@@ -284,7 +327,7 @@ export default function WorkspaceSettingsPage() {
                 <Button
                   onClick={() => setRegistrationDialogOpen(true)}
                   disabled={
-                    !user?.is_superuser ||
+                    !hasAdminAccess ||
                     toggleRegistration.isPending ||
                     workspaceQuery.isLoading
                   }
@@ -308,7 +351,7 @@ export default function WorkspaceSettingsPage() {
                 <Button
                   onClick={() => setVisionAwareDialogOpen(true)}
                   disabled={
-                    !user?.is_superuser ||
+                    !hasAdminAccess ||
                     toggleVisionAware.isPending ||
                     workspaceQuery.isLoading
                   }

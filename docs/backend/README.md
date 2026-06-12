@@ -367,28 +367,28 @@ def process_document(document_id: str, file_path: str):
 ## Testing
 
 ```python
-# tests/test_chat.py
-import pytest
+# tests/test_chat_service.py
+import unittest
+from types import SimpleNamespace
+
 from app.services.chat_service import ChatService
-from app.schemas.chat import ConversationCreate
 
-@pytest.fixture
-def db():
-    # Setup test database
-    pass
 
-def test_create_conversation(db):
-    service = ChatService(db)
-    payload = ConversationCreate(title="Test")
-    conversation = service.create_conversation("user-1", payload)
-    
-    assert conversation.title == "Test"
-    assert conversation.user_id == "user-1"
+class ChatServiceTests(unittest.TestCase):
+    def test_serialize_messages_leaves_assistant_messages_unchanged(self) -> None:
+        service = object.__new__(ChatService)
+        service.db = SimpleNamespace()
 
-def test_list_conversations(db):
-    service = ChatService(db)
-    conversations = service.list_conversations("user-1")
-    assert len(conversations) >= 0
+        message = SimpleNamespace(
+            role="assistant",
+            content="Here is the answer.",
+            meta={"attachments": []},
+        )
+        model = SimpleNamespace(capabilities={})
+
+        serialized = service._serialize_messages("user-1", [message], model)
+
+        self.assertEqual(serialized, [{"role": "assistant", "content": "Here is the answer."}])
 ```
 
 ## Logging

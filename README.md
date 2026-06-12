@@ -145,7 +145,7 @@ Versioned endpoints live under `/api/v1`:
 - Refresh tokens issue new access tokens
 - Password reset delivery is not configured in this release; use admin-managed account recovery instead
 - In non-production environments, password reset tokens are written to backend logs for local testing only
-- Credentials are hashed, provider secrets are stored as encrypted payload placeholders ready for KMS or Vault integration
+- Credentials are hashed, and provider secrets are encrypted at rest using the configured `PROVIDER_SECRET_KEY`
 
 ## Production Notes
 

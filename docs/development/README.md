@@ -25,7 +25,7 @@ uv run ruff format app/
 uv run ruff check app/
 
 # Run tests
-uv run pytest
+uv run python -m unittest discover -s tests -p 'test_*.py'
 
 # Run with hot reload
 uv run uvicorn app.main:app --reload
@@ -59,16 +59,13 @@ npm run build
 Backend tests:
 ```bash
 # All tests
-uv run pytest
+uv run python -m unittest discover -s tests -p 'test_*.py'
 
 # Specific file
-uv run pytest tests/test_chat.py
-
-# With coverage
-uv run pytest --cov=app --cov-report=html
+uv run python -m unittest tests.test_chat_service
 
 # Specific test
-uv run pytest tests/test_chat.py::test_create_conversation
+uv run python -m unittest tests.test_chat_service.ChatServiceTests.test_serialize_messages_leaves_assistant_messages_unchanged
 ```
 
 Frontend tests:

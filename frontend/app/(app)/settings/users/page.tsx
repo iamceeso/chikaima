@@ -6,6 +6,8 @@ import { Pencil, Shield, Trash2, UserPlus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { AdminAccessGate } from "@/components/settings/admin-access-gate";
+import { useAdminAccess } from "@/hooks/use-admin-access";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import {
   AlertDialog,
@@ -43,18 +45,9 @@ const updateUserSchema = z.object({
 
 type UpdateUserValues = z.infer<typeof updateUserSchema>;
 
-function maskEmail(email: string) {
-  const [localPart, domain = ""] = email.split("@");
-  const visibleLocal = localPart.slice(0, 2);
-  const hiddenLocal = localPart.length > 2 ? "*".repeat(Math.max(localPart.length - 2, 3)) : "***";
-  const [domainName, tld = ""] = domain.split(".");
-  const visibleDomain = domainName ? `${domainName.slice(0, 1)}***` : "***";
-  return `${visibleLocal}${hiddenLocal}@${visibleDomain}${tld ? `.${tld}` : ""}`;
-}
-
 export default function SettingsUsersPage() {
-  const token = useAuthStore((state) => state.tokens?.access_token);
   const currentUser = useAuthStore((state) => state.user);
+  const { access, hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled } = useAdminAccess();
   const queryClient = useQueryClient();
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userPendingDelete, setUserPendingDelete] = useState<User | null>(null);
@@ -81,30 +74,19 @@ export default function SettingsUsersPage() {
   const usersQuery = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => {
-      if (!token) {
-        return Promise.reject(new Error("Please sign in first."));
+      if (!access) {
+        return Promise.reject(new Error("Administrator access is required."));
       }
-      return api.getUsers(token);
+      return api.getUsers(access);
     },
-    enabled: Boolean(token && currentUser?.is_superuser),
+    enabled: Boolean(access),
   });
-  const workspaceQuery = useQuery({
-    queryKey: ["workspace-settings"],
-    queryFn: () => {
-      if (!token) {
-        return Promise.reject(new Error("Please sign in first."));
-      }
-      return api.getWorkspaceSettings(token);
-    },
-    enabled: Boolean(token && currentUser?.is_superuser),
-  });
-
   const createMutation = useMutation({
     mutationFn: async (values: CreateUserValues) => {
-      if (!token) {
-        throw new Error("Please sign in first.");
+      if (!access) {
+        throw new Error("Administrator access is required.");
       }
-      return api.createUser(token, values);
+      return api.createUser(access, values);
     },
     onSuccess: async () => {
       form.reset();
@@ -115,10 +97,10 @@ export default function SettingsUsersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
-      if (!token) {
-        throw new Error("Please sign in first.");
+      if (!access) {
+        throw new Error("Administrator access is required.");
       }
-      return api.deleteUser(token, userId);
+      return api.deleteUser(access, userId);
     },
     onSuccess: async () => {
       setUserPendingDelete(null);
@@ -128,10 +110,10 @@ export default function SettingsUsersPage() {
   });
   const updateMutation = useMutation({
     mutationFn: async (values: UpdateUserValues) => {
-      if (!token || !editingUserId) {
+      if (!access || !editingUserId) {
         throw new Error("Select a user first.");
       }
-      return api.updateUser(token, editingUserId, {
+      return api.updateUser(access, editingUserId, {
         email: values.email,
         full_name: values.full_name,
         password: values.password || undefined,
@@ -146,7 +128,34 @@ export default function SettingsUsersPage() {
     },
   });
 
-  if (!currentUser?.is_superuser) {
+  if (publicWorkspaceQuery.isLoading) {
+    return (
+      <SettingsShell
+        title="User management"
+        description="Manage access."
+      >
+        <Card className="p-6">
+          <p className="text-sm text-foreground-muted">Loading workspace access...</p>
+        </Card>
+      </SettingsShell>
+    );
+  }
+
+  if (workspaceAuthDisabled && !hasAdminAccess) {
+    return (
+      <SettingsShell
+        title="User management"
+        description="Manage access."
+      >
+        <AdminAccessGate
+          title="Admin credentials required"
+          description="Workspace sign-in is disabled, so viewing or changing users requires an existing administrator email and password."
+        />
+      </SettingsShell>
+    );
+  }
+
+  if (!hasAdminAccess) {
     return (
       <SettingsShell
         title="User management"
@@ -162,36 +171,6 @@ export default function SettingsUsersPage() {
   const adminCount = usersQuery.data?.filter((user) => user.is_superuser).length ?? 0;
   const editingUser = usersQuery.data?.find((user) => user.id === editingUserId) ?? null;
   const editingLastAdmin = Boolean(editingUser?.is_superuser && adminCount <= 1);
-  const userManagementLocked = workspaceQuery.data?.authentication_enabled === false;
-
-  if (userManagementLocked) {
-    return (
-      <SettingsShell
-        title="User management"
-        description="Manage access."
-      >
-        <Card className="p-6">
-          <h2 className="text-base font-semibold text-foreground">User management is disabled</h2>
-          <p className="mt-2 text-sm text-foreground-muted">
-            Authentication is currently disabled for this workspace, so the Users page is unavailable.
-          </p>
-          <p className="mt-2 text-sm text-foreground-muted">
-            Registered user values are masked while authentication is off. Re-enable authentication from Workspace settings to view or edit users again.
-          </p>
-          {usersQuery.data?.length ? (
-            <div className="mt-4 space-y-2">
-              {usersQuery.data.map((user) => (
-                <div key={user.id} className="rounded-2xl border border-border bg-background-secondary p-4">
-                  <p className="text-sm font-medium text-foreground">{user.full_name}</p>
-                  <p className="mt-1 text-sm text-foreground-muted">{maskEmail(user.email)}</p>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </Card>
-      </SettingsShell>
-    );
-  }
 
   return (
     <SettingsShell
@@ -289,7 +268,7 @@ export default function SettingsUsersPage() {
                     className="justify-center border border-border sm:w-auto"
                     disabled={
                       deleteMutation.isPending ||
-                      user.id === currentUser.id ||
+                      user.id === currentUser?.id ||
                       (user.is_superuser && adminCount <= 1)
                     }
                     onClick={() => setUserPendingDelete(user)}

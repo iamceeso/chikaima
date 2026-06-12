@@ -4,17 +4,16 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Search, Sparkles, Star } from "lucide-react";
 
+import { useAdminAccess } from "@/hooks/use-admin-access";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
-import { useAuthStore } from "@/store/auth-store";
 import type { AIModel } from "@/types";
 
 export function ModelAccessPanel() {
-  const token = useAuthStore((state) => state.tokens?.access_token);
-  const user = useAuthStore((state) => state.user);
+  const { access, hasAdminAccess } = useAdminAccess();
   const queryClient = useQueryClient();
   const [providerSearch, setProviderSearch] = useState<Record<string, string>>({});
   const [collapsedProviders, setCollapsedProviders] = useState<Record<string, boolean>>({});
@@ -22,12 +21,12 @@ export function ModelAccessPanel() {
   const workspaceModelsQuery = useQuery({
     queryKey: ["workspace-models"],
     queryFn: () => {
-      if (!token) {
-        return Promise.reject(new Error("Please sign in first."));
+      if (!access) {
+        return Promise.reject(new Error("Administrator access is required."));
       }
-      return api.getWorkspaceModels(token);
+      return api.getWorkspaceModels(access);
     },
-    enabled: Boolean(token) && Boolean(user?.is_superuser),
+    enabled: Boolean(access),
     staleTime: 5 * 60_000,
   });
 
@@ -39,10 +38,10 @@ export function ModelAccessPanel() {
       enabledModelIds: string[];
       defaultModelId?: string | null;
     }) => {
-      if (!token) {
-        throw new Error("Please sign in first.");
+      if (!access) {
+        throw new Error("Administrator access is required.");
       }
-      return api.updateWorkspaceModels(token, {
+      return api.updateWorkspaceModels(access, {
         enabled_model_ids: enabledModelIds,
         ...(defaultModelId !== undefined ? { default_model_id: defaultModelId } : {}),
       });
@@ -179,7 +178,7 @@ export function ModelAccessPanel() {
         </div>
       </div>
 
-      {!user?.is_superuser ? (
+      {!hasAdminAccess ? (
         <div className="rounded-xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">
           Admin only.
         </div>

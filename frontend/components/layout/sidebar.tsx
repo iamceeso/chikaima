@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAdminAccess } from "@/hooks/use-admin-access";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
@@ -42,7 +43,7 @@ const navItems = [
 const settingsItems = [
   { href: "/settings/workspace", label: "Workspace", icon: Cog, adminOnly: false },
   { href: "/settings/models", label: "Models", icon: Sparkles, adminOnly: true },
-  { href: "/settings/providers", label: "Providers", icon: Settings, adminOnly: false },
+  { href: "/settings/providers", label: "Providers", icon: Settings, adminOnly: true },
   { href: "/settings/users", label: "Users", icon: FolderKanban, adminOnly: true },
 ];
 
@@ -60,7 +61,7 @@ export function Sidebar({
   onToggleCollapse?: () => void;
 }) {
   const token = useAuthStore((state) => state.tokens?.access_token);
-  const user = useAuthStore((state) => state.user);
+  const { hasAdminAccess } = useAdminAccess();
   const activeConversationId = useChatStore((state) => state.activeConversationId);
   const openFreshChat = useChatStore((state) => state.openFreshChat);
   const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
@@ -75,17 +76,6 @@ export function Sidebar({
       }
       return api.getConversations(token);
     },
-  });
-  const workspaceQuery = useQuery({
-    queryKey: ["workspace-settings"],
-    queryFn: () => {
-      if (!token) {
-        return Promise.resolve(null);
-      }
-      return api.getWorkspaceSettings(token);
-    },
-    enabled: Boolean(token && user?.is_superuser),
-    staleTime: 5 * 60_000,
   });
   const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));
@@ -251,26 +241,19 @@ export function Sidebar({
           {(!collapsed || mobile) && settingsOpen ? (
             <div className="mt-2 space-y-1 pl-4">
               {settingsItems
-                .filter((item) => !item.adminOnly || user?.is_superuser)
+                .filter((item) => !item.adminOnly || hasAdminAccess)
                 .map((item) => {
-                  const disabled =
-                    item.href === "/settings/users" && workspaceQuery.data?.authentication_enabled === false;
                   const active = pathname === item.href;
                   const Icon = item.icon;
                   return (
                     <Link
                       key={item.href}
-                        href={disabled ? pathname : item.href}
-                        onClick={(event) => {
-                          if (disabled) {
-                            event.preventDefault();
-                            return;
-                          }
+                        href={item.href}
+                        onClick={() => {
                           onClose?.();
                         }}
                         className={cn(
                         "flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[11px] transition-colors duration-150",
-                        disabled ? "cursor-not-allowed opacity-45" : "",
                         active
                           ? "bg-background text-foreground"
                           : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
@@ -279,7 +262,6 @@ export function Sidebar({
                       <Icon className="h-3.5 w-3.5" />
                       <span className="font-medium">
                         {item.label}
-                        {disabled ? " (Disabled)" : ""}
                       </span>
                     </Link>
                   );

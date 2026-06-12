@@ -17,8 +17,14 @@ import type {
   VideoAsset,
 } from "@/types";
 
+export type ApiAccess = {
+  token?: string | null;
+  authHeader?: string | null;
+};
+
 type RequestOptions = RequestInit & {
   token?: string | null;
+  authHeader?: string | null;
 };
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -45,7 +51,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (options.token) {
+  if (options.authHeader) {
+    headers.set("Authorization", options.authHeader);
+  } else if (options.token) {
     headers.set("Authorization", `Bearer ${options.token}`);
   }
 
@@ -89,7 +97,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 async function requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
   const method = (options.method ?? "GET").toUpperCase();
   const headers = new Headers(options.headers);
-  if (options.token) {
+  if (options.authHeader) {
+    headers.set("Authorization", options.authHeader);
+  } else if (options.token) {
     headers.set("Authorization", `Bearer ${options.token}`);
   }
 
@@ -129,29 +139,29 @@ export const api = {
     request<AuthTokens>("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   logout: (token: string) => request<{ message: string }>("/auth/logout", { method: "POST", token }),
   getProfile: (token: string) => request<User>("/users/me", { token }),
-  getUsers: (token: string) => request<User[]>("/users", { token }),
+  getUsers: (access: ApiAccess) => request<User[]>("/users", access),
   createUser: (
-    token: string,
+    access: ApiAccess,
     payload: { email: string; full_name: string; password: string; is_superuser?: boolean; is_active?: boolean },
-  ) => request<User>("/users", { method: "POST", token, body: JSON.stringify(payload) }),
+  ) => request<User>("/users", { method: "POST", ...access, body: JSON.stringify(payload) }),
   updateUser: (
-    token: string,
+    access: ApiAccess,
     userId: string,
     payload: { email?: string; full_name?: string; password?: string; is_superuser?: boolean; is_active?: boolean },
-  ) => request<User>(`/users/${userId}`, { method: "PATCH", token, body: JSON.stringify(payload) }),
-  deleteUser: (token: string, userId: string) => request<void>(`/users/${userId}`, { method: "DELETE", token }),
+  ) => request<User>(`/users/${userId}`, { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+  deleteUser: (access: ApiAccess, userId: string) => request<void>(`/users/${userId}`, { method: "DELETE", ...access }),
   getDashboard: (token: string) => request<DashboardSummary>("/dashboard", { token }),
-  getWorkspaceSettings: (token: string) => request<WorkspaceConfig>("/settings/workspace", { token }),
+  getWorkspaceSettings: (access: ApiAccess) => request<WorkspaceConfig>("/settings/workspace", access),
   updateWorkspaceSettings: (
-    token: string,
+    access: ApiAccess,
     payload: { name?: string; authentication_enabled?: boolean; docs_enabled?: boolean; public_registration_enabled?: boolean; vision_aware?: boolean },
-  ) => request<WorkspaceConfig>("/settings/workspace", { method: "PATCH", token, body: JSON.stringify(payload) }),
-  getWorkspaceModels: (token: string) => request<AIModel[]>("/settings/models", { token }),
-  updateWorkspaceModels: (token: string, payload: { enabled_model_ids: string[]; default_model_id?: string | null }) =>
-    request<AIModel[]>("/settings/models", { method: "PATCH", token, body: JSON.stringify(payload) }),
-  getProviders: (token: string) => request<Provider[]>("/providers", { token }),
+  ) => request<WorkspaceConfig>("/settings/workspace", { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+  getWorkspaceModels: (access: ApiAccess) => request<AIModel[]>("/settings/models", access),
+  updateWorkspaceModels: (access: ApiAccess, payload: { enabled_model_ids: string[]; default_model_id?: string | null }) =>
+    request<AIModel[]>("/settings/models", { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+  getProviders: (access: ApiAccess) => request<Provider[]>("/providers", access),
   createProvider: (
-    token: string,
+    access: ApiAccess,
     payload: {
       name: string;
       provider_type: string;
@@ -159,9 +169,9 @@ export const api = {
       api_key?: string;
       config?: Record<string, unknown>;
     },
-  ) => request<Provider>("/providers", { method: "POST", token, body: JSON.stringify(payload) }),
+  ) => request<Provider>("/providers", { method: "POST", ...access, body: JSON.stringify(payload) }),
   updateProvider: (
-    token: string,
+    access: ApiAccess,
     providerId: string,
     payload: {
       name?: string;
@@ -170,9 +180,9 @@ export const api = {
       api_key?: string;
       config?: Record<string, unknown>;
     },
-  ) => request<Provider>(`/providers/${providerId}`, { method: "PATCH", token, body: JSON.stringify(payload) }),
-  deleteProvider: (token: string, providerId: string) =>
-    request<void>(`/providers/${providerId}`, { method: "DELETE", token }),
+  ) => request<Provider>(`/providers/${providerId}`, { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+  deleteProvider: (access: ApiAccess, providerId: string) =>
+    request<void>(`/providers/${providerId}`, { method: "DELETE", ...access }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),
   getLibraryBundle: (token: string) => request<LibraryBundle>("/library", { token }),
   getAssetFile: (token: string, resourceType: AssetResourceType, resourceId: string) =>

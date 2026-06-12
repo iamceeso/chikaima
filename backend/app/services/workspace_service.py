@@ -35,10 +35,11 @@ class WorkspaceService:
 
     def get_summary(self, actor: User) -> WorkspaceConfigResponse:
         workspace = self.get_or_create()
+        total_users = self.db.query(User).count()
         return WorkspaceConfigResponse(
             **workspace.__dict__,
-            first_user_registration_required=self.db.query(User).count() == 0,
-            total_users=1,
+            first_user_registration_required=total_users == 0,
+            total_users=total_users,
             total_providers=self.db.query(Provider).filter(Provider.user_id == actor.id).count(),
             pending_jobs=self.db.query(Job)
             .filter(Job.user_id == actor.id, Job.status.in_(["pending", "running"]))

@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import get_current_user
+from app.api.deps.auth import get_current_admin_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.provider import ProviderCreate, ProviderResponse, ProviderUpdate
@@ -21,7 +21,7 @@ def _mask(provider_secret: str | None) -> str | None:
 @router.get("", response_model=list[ProviderResponse])
 def list_providers(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> list[ProviderResponse]:
     providers = ProviderService(db).list_for_user(current_user.id)
     return [
@@ -37,7 +37,7 @@ def list_providers(
 def create_provider(
     payload: ProviderCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> ProviderResponse:
     provider = ProviderService(db).create(current_user.id, payload)
     return ProviderResponse(
@@ -51,7 +51,7 @@ def update_provider(
     provider_id: str,
     payload: ProviderUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> ProviderResponse:
     provider = ProviderService(db).update(current_user.id, provider_id, payload)
     return ProviderResponse(
@@ -64,7 +64,7 @@ def update_provider(
 def delete_provider(
     provider_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> Response:
     ProviderService(db).delete(current_user.id, provider_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
