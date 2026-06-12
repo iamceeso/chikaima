@@ -9,6 +9,7 @@ import {
   FileImage,
   FileText,
   Inbox,
+  MessageCircle,
   Mic,
   Paperclip,
   PencilLine,
@@ -19,7 +20,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AssetPreviewDialog } from "@/components/assets/asset-preview-dialog";
@@ -138,7 +139,16 @@ export function ChatLayout() {
       typeof window !== "undefined" &&
       Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition),
   );
+  const [isSpeechSupported] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      typeof window.speechSynthesis !== "undefined" &&
+      typeof window.SpeechSynthesisUtterance !== "undefined",
+  );
   const [isListening, setIsListening] = useState(false);
+  const [autoReadAloud, setAutoReadAloud] = useState(false);
+  const [conversationMode, setConversationMode] = useState(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
   const [branchResetFromMessageId, setBranchResetFromMessageId] = useState<string | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<{
@@ -153,6 +163,10 @@ export function ChatLayout() {
   const historyRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const speechRecognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const autoSpokenMessageIdRef = useRef<string | null>(null);
+  const seededConversationIdRef = useRef<string | null>(null);
+  const queuedVoiceSubmissionRef = useRef<string | null>(null);
+  const resumeConversationAfterSpeechRef = useRef(false);
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
@@ -221,6 +235,9 @@ export function ChatLayout() {
     return () => {
       speechRecognitionRef.current?.stop();
       speechRecognitionRef.current = null;
+      if (typeof window !== "undefined") {
+        window.speechSynthesis?.cancel();
+      }
     };
   }, []);
 
@@ -371,6 +388,56 @@ export function ChatLayout() {
     });
   }, [conversation?.id]);
 
+  useEffect(() => {
+    if (seededConversationIdRef.current === (conversation?.id ?? null)) {
+      return;
+    }
+
+    seededConversationIdRef.current = conversation?.id ?? null;
+    const latestAssistantMessage = [...(conversation?.messages ?? [])]
+      .reverse()
+      .find((message) => message.role === "assistant" && message.content.trim());
+    autoSpokenMessageIdRef.current = latestAssistantMessage?.id ?? null;
+    if (typeof window !== "undefined") {
+      window.speechSynthesis.cancel();
+    }
+  }, [conversation?.id, conversation?.messages]);
+
+  useEffect(() => {
+    if (!autoReadAloud || !isSpeechSupported || isStreaming) {
+      return;
+    }
+
+    const latestAssistantMessage = [...visibleMessages]
+      .reverse()
+      .find(
+        (message) =>
+          message.role === "assistant" &&
+          message.status !== "streaming" &&
+          message.content.trim(),
+      );
+
+    if (!latestAssistantMessage || latestAssistantMessage.id === autoSpokenMessageIdRef.current) {
+      return;
+    }
+
+    autoSpokenMessageIdRef.current = latestAssistantMessage.id;
+    if (typeof window !== "undefined") {
+      window.speechSynthesis.cancel();
+    }
+    const utterance = new SpeechSynthesisUtterance(latestAssistantMessage.content);
+    utterance.onend = () => {
+      setSpeakingMessageId((current) => (current === latestAssistantMessage.id ? null : current));
+      if (conversationMode && isVoiceSupported) {
+        resumeConversationAfterSpeechRef.current = true;
+        setVoiceStatus("Conversation mode is listening for your reply.");
+      }
+    };
+    utterance.onerror = () => setSpeakingMessageId((current) => (current === latestAssistantMessage.id ? null : current));
+    setSpeakingMessageId(latestAssistantMessage.id);
+    window.speechSynthesis.speak(utterance);
+  }, [autoReadAloud, conversationMode, isSpeechSupported, isStreaming, isVoiceSupported, visibleMessages]);
+
   const streamConversation = async (contentOverride?: string) => {
     if (!token) {
       setStreamError("Please sign in first.");
@@ -506,14 +573,29 @@ export function ChatLayout() {
     }
   };
 
-  const toggleVoiceInput = () => {
-    if (!isVoiceSupported) {
-      setVoiceStatus("Voice input is not supported in this browser.");
+  const toggleSpeechPlayback = (messageId: string, text: string) => {
+    if (!isSpeechSupported || typeof window === "undefined") {
+      setVoiceStatus("Read aloud is not supported in this browser.");
       return;
     }
 
-    if (isListening) {
-      speechRecognitionRef.current?.stop();
+    if (speakingMessageId === messageId) {
+      window.speechSynthesis.cancel();
+      setSpeakingMessageId(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => setSpeakingMessageId((current) => (current === messageId ? null : current));
+    utterance.onerror = () => setSpeakingMessageId((current) => (current === messageId ? null : current));
+    setSpeakingMessageId(messageId);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startVoiceInput = () => {
+    if (!isVoiceSupported) {
+      setVoiceStatus("Voice input is not supported in this browser.");
       return;
     }
 
@@ -525,9 +607,10 @@ export function ChatLayout() {
 
     const recognition = new recognitionConstructor();
     speechRecognitionRef.current = recognition;
-    recognition.continuous = true;
+    recognition.continuous = !conversationMode;
     recognition.interimResults = false;
     recognition.lang = "en-US";
+    queuedVoiceSubmissionRef.current = null;
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
         .slice(event.resultIndex)
@@ -541,12 +624,14 @@ export function ChatLayout() {
       }
 
       setDraft((current) => `${current.trim()}${current.trim() ? " " : ""}${transcript}`.trim());
+      queuedVoiceSubmissionRef.current = `${queuedVoiceSubmissionRef.current?.trim() ?? ""}${queuedVoiceSubmissionRef.current?.trim() ? " " : ""}${transcript}`.trim();
       setVoiceStatus("Voice captured.");
       requestAnimationFrame(() => textareaRef.current?.focus());
     };
     recognition.onerror = (event) => {
       setIsListening(false);
       speechRecognitionRef.current = null;
+      resumeConversationAfterSpeechRef.current = false;
       setVoiceStatus(
         event.error === "not-allowed"
           ? "Microphone access was blocked."
@@ -556,11 +641,97 @@ export function ChatLayout() {
     recognition.onend = () => {
       setIsListening(false);
       speechRecognitionRef.current = null;
+      const transcript = queuedVoiceSubmissionRef.current?.trim() ?? "";
+      if (conversationMode && transcript) {
+        queuedVoiceSubmissionRef.current = transcript;
+        setVoiceStatus("Sending your spoken reply...");
+        return;
+      }
+      if (conversationMode) {
+        setVoiceStatus("Conversation mode is waiting for you to speak.");
+      }
     };
 
-    setVoiceStatus("Listening...");
+    setVoiceStatus(conversationMode ? "Conversation mode is listening..." : "Listening...");
     setIsListening(true);
     recognition.start();
+  };
+
+  const submitQueuedVoice = useEffectEvent((transcript: string) => {
+    setDraft("");
+    void streamConversation(transcript);
+  });
+
+  const resumeConversationListening = useEffectEvent(() => {
+    startVoiceInput();
+  });
+
+  useEffect(() => {
+    if (!conversationMode || isListening || isStreaming) {
+      return;
+    }
+
+    const queuedTranscript = queuedVoiceSubmissionRef.current?.trim();
+    if (!queuedTranscript) {
+      return;
+    }
+
+    queuedVoiceSubmissionRef.current = null;
+    submitQueuedVoice(queuedTranscript);
+  }, [conversationMode, isListening, isStreaming]);
+
+  useEffect(() => {
+    if (
+      !conversationMode ||
+      !isVoiceSupported ||
+      isListening ||
+      isStreaming ||
+      speakingMessageId ||
+      !resumeConversationAfterSpeechRef.current
+    ) {
+      return;
+    }
+
+    resumeConversationAfterSpeechRef.current = false;
+    resumeConversationListening();
+  }, [conversationMode, isListening, isStreaming, isVoiceSupported, speakingMessageId]);
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      resumeConversationAfterSpeechRef.current = false;
+      speechRecognitionRef.current?.stop();
+      return;
+    }
+
+    startVoiceInput();
+  };
+
+  const toggleConversationMode = () => {
+    if (!isVoiceSupported || !isSpeechSupported) {
+      setVoiceStatus("Conversation mode needs both microphone and read aloud support.");
+      return;
+    }
+
+    setConversationMode((current) => {
+      const next = !current;
+      setAutoReadAloud(next);
+      if (!next) {
+        resumeConversationAfterSpeechRef.current = false;
+        queuedVoiceSubmissionRef.current = null;
+        if (isListening) {
+          speechRecognitionRef.current?.stop();
+        }
+        if (typeof window !== "undefined") {
+          window.speechSynthesis.cancel();
+        }
+        setSpeakingMessageId(null);
+        setVoiceStatus("Conversation mode turned off.");
+      } else {
+        resumeConversationAfterSpeechRef.current = true;
+        setVoiceStatus("Conversation mode is listening...");
+      }
+      return next;
+    });
   };
 
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>, messageId: string) => {
@@ -603,6 +774,93 @@ export function ChatLayout() {
     ) : null;
 
   const showDropOverlay = isDragging && !uploadAttachment.isPending;
+  const conversationVisualState = isListening
+    ? "listening"
+    : speakingMessageId
+      ? "speaking"
+      : isStreaming
+        ? "thinking"
+        : "idle";
+
+  const renderConversationDialog = () => {
+    if (!conversationMode) {
+      return null;
+    }
+
+    const bars = [18, 28, 20, 34, 22, 30, 18];
+    const statusLabel =
+      conversationVisualState === "listening"
+        ? "Listening for you"
+        : conversationVisualState === "speaking"
+          ? "Reading the reply"
+          : conversationVisualState === "thinking"
+            ? "Thinking through the answer"
+            : "Ready when you are";
+
+    return (
+      <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center px-4">
+        <div className="pointer-events-auto w-full max-w-sm rounded-[1.75rem] border border-border bg-surface/96 p-5 shadow-[0_24px_90px_rgba(20,32,25,0.16)] backdrop-blur-md dark:shadow-none">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
+                Conversation Mode
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-foreground">{statusLabel}</h3>
+              <p className="mt-2 text-sm text-foreground-muted">
+                {voiceStatus ?? "Start talking naturally and Olanma will keep the voice loop going."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleConversationMode}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-background-secondary text-foreground-muted transition hover:bg-surface-raised hover:text-foreground"
+              aria-label="Close conversation mode"
+              title="Close conversation mode"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <div className="mt-5 flex min-h-28 items-center justify-center rounded-[1.5rem] border border-border bg-background/80 px-4">
+            <div className="flex items-center gap-1.5">
+              {bars.map((height, index) => (
+                <span
+                  key={`${conversationVisualState}-${height}-${index}`}
+                  className={cn(
+                    "w-1.5 rounded-full transition-all",
+                    conversationVisualState === "listening"
+                      ? "bg-emerald-500 animate-pulse"
+                      : conversationVisualState === "speaking"
+                        ? "bg-primary animate-pulse"
+                        : conversationVisualState === "thinking"
+                          ? "bg-foreground-muted/70 animate-pulse"
+                          : "bg-foreground-muted/35",
+                  )}
+                  style={{
+                    height: `${height}px`,
+                    animationDelay: `${index * 120}ms`,
+                    animationDuration: "900ms",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-center">
+            <div className="rounded-full border border-border bg-background-secondary px-3 py-1 text-xs text-foreground-muted">
+              {conversationVisualState === "listening"
+                ? "Mic live"
+                : conversationVisualState === "speaking"
+                  ? "Voice reply"
+                  : conversationVisualState === "thinking"
+                    ? "AI responding"
+                    : "Waiting for speech"}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderModelPicker = (className?: string) => (
     <div className="flex items-center gap-2">
@@ -702,6 +960,75 @@ export function ChatLayout() {
             >
               {isListening ? <Square className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
             </button>
+            <button
+              type="button"
+              onClick={toggleConversationMode}
+              disabled={busy || !isVoiceSupported || !isSpeechSupported}
+              className={cn(
+                "inline-flex h-8 w-8 items-center justify-center rounded-full border border-border transition-colors",
+                conversationMode
+                  ? "border-primary/30 bg-primary/12 text-primary hover:bg-primary/16"
+                  : "bg-background-secondary text-foreground-muted hover:bg-surface-raised",
+                !isVoiceSupported || !isSpeechSupported ? "cursor-not-allowed opacity-60" : "",
+              )}
+              title={
+                isVoiceSupported && isSpeechSupported
+                  ? conversationMode
+                    ? "Turn off conversation mode"
+                    : "Turn on conversation mode"
+                  : "Conversation mode is not supported in this browser"
+              }
+              aria-label={
+                isVoiceSupported && isSpeechSupported
+                  ? conversationMode
+                    ? "Turn off conversation mode"
+                    : "Turn on conversation mode"
+                  : "Conversation mode is not supported in this browser"
+              }
+            >
+              <MessageCircle className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!isSpeechSupported) {
+                  setVoiceStatus("Read aloud is not supported in this browser.");
+                  return;
+                }
+                if (conversationMode) {
+                  setConversationMode(false);
+                }
+                if (speakingMessageId) {
+                  window.speechSynthesis.cancel();
+                  setSpeakingMessageId(null);
+                }
+                setAutoReadAloud((current) => !current);
+              }}
+              disabled={busy || !isSpeechSupported}
+              className={cn(
+                "inline-flex h-8 w-8 items-center justify-center rounded-full border border-border transition-colors",
+                autoReadAloud
+                  ? "border-primary/30 bg-primary/12 text-primary hover:bg-primary/16"
+                  : "bg-background-secondary text-foreground-muted hover:bg-surface-raised",
+                !isSpeechSupported ? "cursor-not-allowed opacity-60" : "",
+              )}
+              title={
+                isSpeechSupported
+                  ? autoReadAloud
+                    ? "Disable automatic read aloud"
+                    : "Enable automatic read aloud"
+                  : "Read aloud is not supported in this browser"
+              }
+              aria-label={
+                isSpeechSupported
+                  ? autoReadAloud
+                    ? "Disable automatic read aloud"
+                    : "Enable automatic read aloud"
+                  : "Read aloud is not supported in this browser"
+              }
+            >
+              <Volume2 className="h-3 w-3" />
+            </button>
             <Button
               onClick={onSubmit}
               disabled={busy || (!draft.trim() && !pendingAttachments.length)}
@@ -712,11 +1039,11 @@ export function ChatLayout() {
             </Button>
           </div>
         </div>
-        {/* {voiceStatus ? (
+        {voiceStatus ? (
           <p className={cn("mt-1 text-[11px]", isListening ? "text-primary" : "text-foreground-muted")}>
             {voiceStatus}
           </p>
-        ) : null} */}
+        ) : null}
       </div>
     </div>
   );
@@ -915,21 +1242,34 @@ export function ChatLayout() {
                               <span className="ml-1.5">Edit</span>
                             </Button>
                           ) : (
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="ghost"
-                              className="h-7 border border-border px-2.5 text-[11px]"
-                              disabled={isTransient}
-                              onClick={async () => {
-                                await navigator.clipboard.writeText(message.content);
-                                setCopiedMessageId(message.id);
-                                setTimeout(() => setCopiedMessageId(null), 1500);
-                              }}
-                            >
-                              <Copy className="h-3 w-3" />
-                              <span className="ml-1.5">{copiedMessageId === message.id ? "Copied" : "Copy"}</span>
-                            </Button>
+                            <>
+                              <Button
+                                type="button"
+                                size="xs"
+                                variant="ghost"
+                                className="h-7 border border-border px-2.5 text-[11px]"
+                                disabled={isTransient || !isSpeechSupported}
+                                onClick={() => toggleSpeechPlayback(message.id, message.content)}
+                              >
+                                {speakingMessageId === message.id ? <Square className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                                <span className="ml-1.5">{speakingMessageId === message.id ? "Stop" : "Read"}</span>
+                              </Button>
+                              <Button
+                                type="button"
+                                size="xs"
+                                variant="ghost"
+                                className="h-7 border border-border px-2.5 text-[11px]"
+                                disabled={isTransient}
+                                onClick={async () => {
+                                  await navigator.clipboard.writeText(message.content);
+                                  setCopiedMessageId(message.id);
+                                  setTimeout(() => setCopiedMessageId(null), 1500);
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                                <span className="ml-1.5">{copiedMessageId === message.id ? "Copied" : "Copy"}</span>
+                              </Button>
+                            </>
                           )}
                         </div>
                       </>
@@ -1015,6 +1355,7 @@ export function ChatLayout() {
           name={previewAttachment.name}
         />
       ) : null}
+      {renderConversationDialog()}
     </div>
   );
 }
