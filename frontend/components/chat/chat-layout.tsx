@@ -9,9 +9,11 @@ import {
   FileImage,
   FileText,
   Inbox,
+  Mic,
   Paperclip,
   PencilLine,
   Sparkles,
+  Square,
   User2,
   Video,
   Volume2,
@@ -47,6 +49,40 @@ type PendingAttachment = {
   name: string;
   kind: "document" | "audio" | "video";
 };
+
+type SpeechRecognitionAlternative = {
+  transcript: string;
+};
+
+type SpeechRecognitionResult = {
+  isFinal: boolean;
+  0: SpeechRecognitionAlternative;
+};
+
+type SpeechRecognitionEvent = Event & {
+  resultIndex: number;
+  results: ArrayLike<SpeechRecognitionResult>;
+};
+
+type SpeechRecognitionInstance = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: Event & { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 function classifyFile(file: File): PendingAttachment["kind"] | null {
   if (
@@ -97,6 +133,13 @@ export function ChatLayout() {
   const [streamingMessages, setStreamingMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [hasReceivedStreamToken, setHasReceivedStreamToken] = useState(false);
+  const [isVoiceSupported] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition),
+  );
+  const [isListening, setIsListening] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
   const [branchResetFromMessageId, setBranchResetFromMessageId] = useState<string | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<{
     id: string;
@@ -109,6 +152,7 @@ export function ChatLayout() {
   const editingTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const historyRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLDivElement | null>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
@@ -172,6 +216,13 @@ export function ChatLayout() {
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 28), 192)}px`;
   }, [editingDraft, editingMessageId]);
+
+  useEffect(() => {
+    return () => {
+      speechRecognitionRef.current?.stop();
+      speechRecognitionRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const historyEl = historyRef.current;
@@ -421,6 +472,9 @@ export function ChatLayout() {
     if (!draft.trim() && !pendingAttachments.length) {
       return;
     }
+    if (isListening) {
+      speechRecognitionRef.current?.stop();
+    }
     void streamConversation();
   };
 
@@ -450,6 +504,63 @@ export function ChatLayout() {
       event.preventDefault();
       onSubmit();
     }
+  };
+
+  const toggleVoiceInput = () => {
+    if (!isVoiceSupported) {
+      setVoiceStatus("Voice input is not supported in this browser.");
+      return;
+    }
+
+    if (isListening) {
+      speechRecognitionRef.current?.stop();
+      return;
+    }
+
+    const recognitionConstructor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!recognitionConstructor) {
+      setVoiceStatus("Voice input is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new recognitionConstructor();
+    speechRecognitionRef.current = recognition;
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .slice(event.resultIndex)
+        .map((result) => result[0]?.transcript?.trim() ?? "")
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+      if (!transcript) {
+        return;
+      }
+
+      setDraft((current) => `${current.trim()}${current.trim() ? " " : ""}${transcript}`.trim());
+      setVoiceStatus("Voice captured.");
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    };
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      speechRecognitionRef.current = null;
+      setVoiceStatus(
+        event.error === "not-allowed"
+          ? "Microphone access was blocked."
+          : "Voice input could not continue.",
+      );
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      speechRecognitionRef.current = null;
+    };
+
+    setVoiceStatus("Listening...");
+    setIsListening(true);
+    recognition.start();
   };
 
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>, messageId: string) => {
@@ -563,25 +674,49 @@ export function ChatLayout() {
         />
         <div className="mt-1.5 flex items-center justify-between gap-3 pt-1">
           <div className="flex items-center gap-2">
+            {renderModelPicker("max-w-44 bg-background-secondary")}
+          </div>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={openFilePicker}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-1 text-[11px] text-foreground-muted transition-colors hover:bg-surface-raised"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background-secondary text-foreground-muted transition-colors hover:bg-surface-raised"
+              title="Attach file"
+              aria-label="Attach file"
             >
               <Paperclip className="h-3 w-3" />
-              Attach
             </button>
-            {renderModelPicker("max-w-44 bg-background-secondary")}
+            <button
+              type="button"
+              onClick={toggleVoiceInput}
+              disabled={busy || !isVoiceSupported}
+              className={cn(
+                "inline-flex h-8 w-8 items-center justify-center rounded-full border border-border transition-colors",
+                isListening
+                  ? "border-primary/30 bg-primary/12 text-primary hover:bg-primary/16"
+                  : "bg-background-secondary text-foreground-muted hover:bg-surface-raised",
+                !isVoiceSupported ? "cursor-not-allowed opacity-60" : "",
+              )}
+              title={isVoiceSupported ? (isListening ? "Stop voice input" : "Use your microphone") : "Voice input is not supported in this browser"}
+              aria-label={isVoiceSupported ? (isListening ? "Stop voice input" : "Use voice input") : "Voice input is not supported in this browser"}
+            >
+              {isListening ? <Square className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+            </button>
+            <Button
+              onClick={onSubmit}
+              disabled={busy || (!draft.trim() && !pendingAttachments.length)}
+              size="sm"
+              className="h-8 w-8 rounded-full px-0"
+            >
+              {busy ? "..." : <ArrowUp className="h-3.5 w-3.5" />}
+            </Button>
           </div>
-          <Button
-            onClick={onSubmit}
-            disabled={busy || (!draft.trim() && !pendingAttachments.length)}
-            size="sm"
-            className="h-8 w-8 rounded-full px-0"
-          >
-            {busy ? "..." : <ArrowUp className="h-3.5 w-3.5" />}
-          </Button>
         </div>
+        {/* {voiceStatus ? (
+          <p className={cn("mt-1 text-[11px]", isListening ? "text-primary" : "text-foreground-muted")}>
+            {voiceStatus}
+          </p>
+        ) : null} */}
       </div>
     </div>
   );
