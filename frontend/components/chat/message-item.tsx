@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { AssetResourceType, Message } from "@/types";
 import { cn } from "@/lib/utils";
+import { MessageMarkdown } from "./message-markdown";
 import { RAGReferences } from "./rag-references";
 
 interface MessageItemProps {
@@ -101,7 +102,7 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
             <p className="text-sm font-medium text-foreground-muted mb-1">
               {isUserMessage ? "You" : "Assistant"}
             </p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+            <MessageMarkdown content={message.content} />
             {attachments.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {attachments.map((attachment, index) => (

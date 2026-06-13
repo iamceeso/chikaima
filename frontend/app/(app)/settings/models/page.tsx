@@ -6,9 +6,9 @@ import { SettingsShell } from "@/components/settings/settings-shell";
 import { useAdminAccess } from "@/hooks/use-admin-access";
 
 export default function SettingsModelsPage() {
-  const { hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled } = useAdminAccess();
+  const { hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled, adminAuthHydrated } = useAdminAccess();
 
-  if (publicWorkspaceQuery.isLoading) {
+  if (publicWorkspaceQuery.isLoading || (workspaceAuthDisabled && !adminAuthHydrated)) {
     return (
       <SettingsShell title="Models" description="Control which synced models are available across the workspace.">
         <div className="rounded-xl border border-border bg-background-secondary p-4 text-sm text-foreground-muted">

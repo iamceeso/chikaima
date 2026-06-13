@@ -11,6 +11,7 @@ from app.models.provider import Provider
 from app.models.user import User
 from app.schemas.provider import AIModelResponse
 from app.services.provider_service import build_model_response
+from app.services.workspace_service import WorkspaceService
 
 router = APIRouter()
 
@@ -20,11 +21,14 @@ def list_models(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[AIModelResponse]:
+    workspace = WorkspaceService(db).get_or_create()
+    query = db.query(AIModel, Provider).join(Provider, Provider.id == AIModel.provider_id)
+
+    if workspace.authentication_enabled:
+        query = query.filter(Provider.user_id == current_user.id)
+
     models = (
-        db.query(AIModel, Provider)
-        .join(Provider, Provider.id == AIModel.provider_id)
-        .filter(
-            Provider.user_id == current_user.id,
+        query.filter(
             Provider.is_enabled.is_(True),
             AIModel.is_available.is_(True),
         )

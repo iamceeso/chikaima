@@ -41,7 +41,7 @@ export function AdminAccessGate({
     mutationFn: async (values: AdminAccessValues) => {
       const authHeader = buildBasicAuthHeader(values.email, values.password);
       await api.getWorkspaceSettings({ authHeader });
-      setCredentials(values.email.trim(), values.password);
+      setCredentials(values.email.trim(), authHeader);
     },
   });
 

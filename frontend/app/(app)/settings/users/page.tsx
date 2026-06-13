@@ -47,7 +47,7 @@ type UpdateUserValues = z.infer<typeof updateUserSchema>;
 
 export default function SettingsUsersPage() {
   const currentUser = useAuthStore((state) => state.user);
-  const { access, hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled } = useAdminAccess();
+  const { access, hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled, adminAuthHydrated } = useAdminAccess();
   const queryClient = useQueryClient();
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userPendingDelete, setUserPendingDelete] = useState<User | null>(null);
@@ -128,7 +128,7 @@ export default function SettingsUsersPage() {
     },
   });
 
-  if (publicWorkspaceQuery.isLoading) {
+  if (publicWorkspaceQuery.isLoading || (workspaceAuthDisabled && !adminAuthHydrated)) {
     return (
       <SettingsShell
         title="User management"

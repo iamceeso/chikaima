@@ -7,9 +7,9 @@ import { SettingsShell } from "@/components/settings/settings-shell";
 import { useAdminAccess } from "@/hooks/use-admin-access";
 
 export default function SettingsProvidersPage() {
-  const { hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled } = useAdminAccess();
+  const { hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled, adminAuthHydrated } = useAdminAccess();
 
-  if (publicWorkspaceQuery.isLoading) {
+  if (publicWorkspaceQuery.isLoading || (workspaceAuthDisabled && !adminAuthHydrated)) {
     return (
       <SettingsShell
         title="Providers"

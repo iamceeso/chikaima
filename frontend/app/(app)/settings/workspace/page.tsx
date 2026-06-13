@@ -26,7 +26,7 @@ export default function WorkspaceSettingsPage() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
-  const { access, hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled } = useAdminAccess();
+  const { access, hasAdminAccess, publicWorkspaceQuery, workspaceAuthDisabled, adminAuthHydrated } = useAdminAccess();
   const [registrationDialogOpen, setRegistrationDialogOpen] = useState(false);
   const [authenticationDialogOpen, setAuthenticationDialogOpen] = useState(false);
   const [docsDialogOpen, setDocsDialogOpen] = useState(false);
@@ -139,7 +139,7 @@ export default function WorkspaceSettingsPage() {
     },
   });
 
-  if (publicWorkspaceQuery.isLoading) {
+  if (publicWorkspaceQuery.isLoading || (workspaceAuthDisabled && !adminAuthHydrated)) {
     return (
       <SettingsShell
         title="Workspace"

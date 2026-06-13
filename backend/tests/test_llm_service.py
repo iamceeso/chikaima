@@ -15,7 +15,47 @@ def make_service() -> LLMService:
     return service
 
 
+class QueryStub:
+    def join(self, *_args, **_kwargs) -> "QueryStub":
+        return self
+
+    def filter(self, *_args, **_kwargs) -> "QueryStub":
+        return self
+
+    def first(self):
+        return SimpleNamespace(id="model-1"), SimpleNamespace(id="provider-1")
+
+    def order_by(self, *_args, **_kwargs) -> "QueryStub":
+        return self
+
+
 class LLMServiceTests(unittest.TestCase):
+    def test_resolve_model_and_provider_scopes_to_current_user_when_authentication_enabled(self) -> None:
+        service = make_service()
+        query = QueryStub()
+        service.db = SimpleNamespace(query=lambda *_args: query)
+
+        with patch("app.services.llm_service.WorkspaceService") as workspace_service:
+            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(authentication_enabled=True)
+
+            model, provider = service.resolve_model_and_provider("user-1", None)
+
+        self.assertEqual(model.id, "model-1")
+        self.assertEqual(provider.id, "provider-1")
+
+    def test_resolve_model_and_provider_uses_workspace_models_when_authentication_disabled(self) -> None:
+        service = make_service()
+        query = QueryStub()
+        service.db = SimpleNamespace(query=lambda *_args: query)
+
+        with patch("app.services.llm_service.WorkspaceService") as workspace_service:
+            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(authentication_enabled=False)
+
+            model, provider = service.resolve_model_and_provider("workspace-public", None)
+
+        self.assertEqual(model.id, "model-1")
+        self.assertEqual(provider.id, "provider-1")
+
     def test_generate_reply_raises_when_provider_returns_empty_content(self) -> None:
         service = make_service()
         service._build_adapter = lambda provider: SimpleNamespace(  # type: ignore[method-assign]
