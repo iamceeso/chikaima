@@ -61,3 +61,17 @@ class SettingsTests(unittest.TestCase):
         )
 
         self.assertTrue(settings.is_production)
+
+    def test_upload_limit_helpers_convert_megabytes_to_bytes(self) -> None:
+        settings = Settings(
+            jwt_secret_key="change-me-development-secret",
+            jwt_refresh_secret_key="change-me-too-development-secret",
+            provider_secret_key="replace-with-32-char-secret-key",
+            document_upload_max_megabytes=128,
+            audio_upload_max_megabytes=256,
+            video_upload_max_megabytes=1024,
+        )
+
+        self.assertEqual(settings.document_upload_max_bytes, 128 * 1024 * 1024)
+        self.assertEqual(settings.audio_upload_max_bytes, 256 * 1024 * 1024)
+        self.assertEqual(settings.video_upload_max_bytes, 1024 * 1024 * 1024)

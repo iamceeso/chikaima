@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps.auth import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 from app.models.video import Video
@@ -60,7 +61,7 @@ async def upload_video(
             "video/x-matroska",
             "video/webm",
         },
-        max_size_bytes=2 * 1024 * 1024 * 1024,
+        max_size_bytes=settings.video_upload_max_bytes,
     )
     video = Video(
         user_id=current_user.id,

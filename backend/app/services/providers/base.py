@@ -119,9 +119,10 @@ class ProviderAdapter(ABC):
 
 
 class OpenAIAdapter(ProviderAdapter):
-    def __init__(self, api_key: str, base_url: str | None = None) -> None:
+    def __init__(self, api_key: str, base_url: str | None = None, provider_label: str = "OpenAI") -> None:
         self.api_key = api_key
         self.base_url = (base_url or "https://api.openai.com/v1").rstrip("/")
+        self.provider_label = provider_label
 
     def generate_reply(self, model_key: str, messages: list[dict[str, Any]]) -> str:
         payload: dict[str, Any] = {
@@ -141,12 +142,12 @@ class OpenAIAdapter(ProviderAdapter):
                 )
                 response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            detail = exc.response.text or "OpenAI request failed."
+            detail = exc.response.text or f"{self.provider_label} request failed for model {model_key}."
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail) from exc
         except httpx.HTTPError as exc:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Could not reach the AI provider.",
+                detail=f"Could not reach {self.provider_label}.",
             ) from exc
 
         return self._extract_content(response.json())
@@ -181,12 +182,15 @@ class OpenAIAdapter(ProviderAdapter):
                                 if isinstance(part, dict) and part.get("type") == "text_delta" and part.get("text"):
                                     yield str(part["text"])
         except httpx.HTTPStatusError as exc:
-            detail = _extract_stream_error_detail(exc.response, "OpenAI streaming request failed.")
+            detail = _extract_stream_error_detail(
+                exc.response,
+                f"{self.provider_label} streaming request failed for model {model_key}.",
+            )
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail) from exc
         except httpx.HTTPError as exc:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Could not reach the AI provider.",
+                detail=f"Could not reach {self.provider_label}.",
             ) from exc
 
     def _extract_content(self, payload: dict[str, Any]) -> str:

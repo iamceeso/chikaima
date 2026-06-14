@@ -10,9 +10,10 @@ from app.models.job import Job
 from app.models.summary import SummaryArtifact
 from app.models.transcript import Transcript
 from app.models.video import Video
-from app.services.asset_processors import AssetProcessingError, processor_registry
+from app.services.asset_processors import AssetProcessingError, ChunkPayload, processor_registry
 from app.services.embeddings_service import EmbeddingsService
 from app.services.llm_service import LLMService
+from app.services.whisper_transcription_service import WhisperTranscriptionService
 from app.workers.celery_app import celery_app
 
 MAX_LLM_SOURCE_CHARS = 12_000
@@ -58,9 +59,21 @@ def _process_resource_job(job_id: str, model: type[AudioAsset | Video | Document
         db.commit()
 
         mime_type = getattr(resource, "mime_type", None)
-        processor = processor_registry.select(resource, mime_type)
-        extracted = processor.extract(resource, mime_type)
-        extracted_text = (extracted.transcript or extracted.content or "").strip()
+        if resource_type in {"audio", "video"}:
+            extracted_text = WhisperTranscriptionService().transcribe_media(
+                resource.file_path,
+                resource.name,
+            ).strip()
+            if resource_type == "video" and not extracted_text:
+                extracted_text = f"No spoken audio was detected in {resource.name}."
+            extracted_chunks = _build_chunks(extracted_text) if extracted_text else []
+        else:
+            extracted = processor_registry.select(resource, mime_type).extract(resource, mime_type)
+            extracted_text = (extracted.transcript or extracted.content or "").strip()
+            extracted_chunks = extracted.chunks if extracted is not None else []
+            if extracted_text and not extracted_chunks:
+                extracted_chunks = _build_chunks(extracted_text)
+
         if resource_type in {"audio", "video"} and not extracted_text:
             raise AssetProcessingError(f"No transcript content could be extracted from {resource.name}.")
 
@@ -75,7 +88,7 @@ def _process_resource_job(job_id: str, model: type[AudioAsset | Video | Document
             source_id=resource.id,
             asset_type=_resolve_asset_type(resource_type, resource),
             filename=resource.name,
-            chunks=[(chunk.content, chunk.metadata) for chunk in extracted.chunks],
+            chunks=[(chunk.content, chunk.metadata) for chunk in extracted_chunks],
         )
 
         resource.status = "completed"
@@ -103,6 +116,28 @@ def _process_resource_job(job_id: str, model: type[AudioAsset | Video | Document
         raise
     finally:
         db.close()
+
+
+def _build_chunks(content: str) -> list[ChunkPayload]:
+    normalized = " ".join(content.split())
+    if not normalized:
+        return []
+    chunk_size = 4_000
+    overlap = 800
+    step = chunk_size - overlap
+    chunks: list[ChunkPayload] = []
+    start = 0
+    index = 0
+    while start < len(normalized):
+        end = min(len(normalized), start + chunk_size)
+        section = normalized[start:end].strip()
+        if section:
+            chunks.append(ChunkPayload(content=section, metadata={"chunk_index": index}))
+            index += 1
+        if end >= len(normalized):
+            break
+        start += step
+    return chunks
 
 
 def _upsert_transcript(

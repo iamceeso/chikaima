@@ -305,12 +305,39 @@ Error: 413 Payload Too Large
 
 Solutions:
 ```bash
-# Increase limit in .env
-MAX_UPLOAD_SIZE_MB=2000
+# Increase the relevant backend limit in backend/.env
+VIDEO_UPLOAD_MAX_MEGABYTES=2048
+DOCUMENT_UPLOAD_MAX_MEGABYTES=100
+AUDIO_UPLOAD_MAX_MEGABYTES=512
 
-# Or in Nginx
+# If you run behind Nginx or an ingress proxy, raise that limit too
 client_max_body_size 2G;
 ```
+
+FastAPI itself does not set a global upload cap here. In Olanma, uploads are streamed through `StorageService`, which returns `413` when the configured backend limit is exceeded. If the response is coming from a proxy before the request reaches FastAPI, the proxy limit is the one that needs to be increased.
+
+### Whisper or ffmpeg startup failure
+
+Symptoms:
+
+- API container exits during startup
+- Celery worker exits before accepting jobs
+- Logs mention `ffmpeg is unavailable` or `Whisper could not access ffmpeg`
+
+Solutions:
+```bash
+# Local development: reinstall backend dependencies so imageio-ffmpeg is present
+cd backend
+uv sync
+
+# Check the resolved binary if you are overriding it
+echo $FFMPEG_BINARY_PATH
+
+# Optional: point Olanma at a native binary explicitly
+FFMPEG_BINARY_PATH=/usr/bin/ffmpeg
+```
+
+Olanma startup prefers `FFMPEG_BINARY_PATH`, then a system `ffmpeg`, and finally the bundled `imageio-ffmpeg` binary. The resolved binary directory is prepended to `PATH` before Whisper validation runs.
 
 ## Deployment Issues
 

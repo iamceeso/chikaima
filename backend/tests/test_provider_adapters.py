@@ -172,7 +172,7 @@ class OpenAIAdapterTests(unittest.TestCase):
         )
 
     def test_generate_reply_raises_http_exception_for_transport_error(self) -> None:
-        adapter = OpenAIAdapter(api_key="test-key")
+        adapter = OpenAIAdapter(api_key="test-key", provider_label="OpenRouter")
 
         class FailingClient:
             def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
@@ -196,4 +196,44 @@ class OpenAIAdapterTests(unittest.TestCase):
             httpx.Client = original_client  # type: ignore[assignment]
 
         self.assertEqual(context.exception.status_code, 502)
-        self.assertEqual(context.exception.detail, "Could not reach the AI provider.")
+        self.assertEqual(context.exception.detail, "Could not reach OpenRouter.")
+
+    def test_stream_reply_uses_provider_specific_fallback_message(self) -> None:
+        adapter = OpenAIAdapter(api_key="test-key", provider_label="OpenRouter")
+
+        request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+        response = httpx.Response(502, request=request, content=b"")
+
+        class FailingStreamClient:
+            def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+                return None
+
+            def __enter__(self) -> "FailingStreamClient":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> None:
+                return None
+
+            def stream(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+                class StreamContext:
+                    def __enter__(self_inner):
+                        raise httpx.HTTPStatusError("bad gateway", request=request, response=response)
+
+                    def __exit__(self_inner, exc_type, exc, tb) -> None:
+                        return None
+
+                return StreamContext()
+
+        original_client = httpx.Client
+        httpx.Client = FailingStreamClient  # type: ignore[assignment]
+        try:
+            with self.assertRaises(HTTPException) as context:
+                list(adapter.stream_reply("~anthropic/claude-fable-latest", [{"role": "user", "content": "Hi"}]))
+        finally:
+            httpx.Client = original_client  # type: ignore[assignment]
+
+        self.assertEqual(context.exception.status_code, 502)
+        self.assertEqual(
+            context.exception.detail,
+            "OpenRouter streaming request failed for model ~anthropic/claude-fable-latest.",
+        )

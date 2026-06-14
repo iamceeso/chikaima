@@ -101,7 +101,10 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 # Storage
 MEDIA_ROOT=/data/storage
-MAX_UPLOAD_SIZE_MB=500
+DOCUMENT_UPLOAD_MAX_MEGABYTES=100
+AUDIO_UPLOAD_MAX_MEGABYTES=512
+VIDEO_UPLOAD_MAX_MEGABYTES=2048
+WHISPER_MODEL=base
 
 # CORS
 BACKEND_CORS_ORIGINS=["https://your-domain.com"]
@@ -159,6 +162,7 @@ server {
     ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
+    client_max_body_size 2G;
 
     location /api {
         proxy_pass http://backend;

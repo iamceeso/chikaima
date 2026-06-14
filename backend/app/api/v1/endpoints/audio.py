@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps.auth import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.audio import AudioAsset
 from app.models.user import User
@@ -63,7 +64,7 @@ async def upload_audio(
             "audio/ogg",
             "audio/m4a",
         },
-        max_size_bytes=250 * 1024 * 1024,
+        max_size_bytes=settings.audio_upload_max_bytes,
     )
     asset = AudioAsset(
         user_id=current_user.id,

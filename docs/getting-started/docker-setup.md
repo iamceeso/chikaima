@@ -87,7 +87,7 @@ CORS_ORIGINS=["http://localhost:3000"]
 MEDIA_ROOT=storage
 ```
 
-The backend and worker images install `ffmpeg` and `tesseract-ocr`. Audio/video transcription also depends on `openai-whisper`, which is installed with the backend Python dependencies.
+The backend and worker images install native `ffmpeg` and `tesseract-ocr`. Audio/video transcription also depends on `openai-whisper`, and local non-Docker installs fall back to the bundled `imageio-ffmpeg` binary automatically.
 
 ## Common Commands
 

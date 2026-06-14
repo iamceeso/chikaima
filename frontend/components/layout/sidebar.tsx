@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   Trash2,
+  Video,
 } from "lucide-react";
 
 import {
@@ -36,6 +37,7 @@ import { useChatStore } from "@/store/chat-store";
 
 const navItems = [
   { href: "/chat", label: "New Chat", icon: MessageSquarePlus },
+  { href: "/workspace", label: "Video Workspace", icon: Video },
   { href: "/library", label: "Library", icon: LayoutDashboard },
   { href: "/processing", label: "Processing", icon: FolderKanban },
 ];

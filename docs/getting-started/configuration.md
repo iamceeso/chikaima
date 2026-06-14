@@ -39,20 +39,29 @@ JWT_ALGORITHM=HS256
 
 ```env
 # Environment: development, staging, production
-ENVIRONMENT=development
+APP_ENV=development
 
 # Enable debug mode
-DEBUG=true
+APP_DEBUG=true
 
 # Storage directory for uploaded files
-MEDIA_ROOT=./storage
+MEDIA_ROOT=storage
 
-# Maximum upload size in MB
-MAX_UPLOAD_SIZE_MB=500
+# Upload limits in MB
+DOCUMENT_UPLOAD_MAX_MEGABYTES=100
+AUDIO_UPLOAD_MAX_MEGABYTES=512
+VIDEO_UPLOAD_MAX_MEGABYTES=2048
+
+# Whisper runtime
+WHISPER_MODEL=base
+# Optional: force a specific native ffmpeg binary
+# FFMPEG_BINARY_PATH=/usr/bin/ffmpeg
 
 # CORS origins (comma-separated or JSON list)
-BACKEND_CORS_ORIGINS=["http://localhost:3000"]
+CORS_ORIGINS=["http://localhost:3000"]
 ```
+
+FastAPI does not apply a global body-size limit by default in this project. Olanma enforces upload limits inside `StorageService`, and any reverse proxy in front of the API must be configured with a matching or larger request-body limit to avoid proxy-side `413 Request Entity Too Large` responses.
 
 #### LLM Providers
 

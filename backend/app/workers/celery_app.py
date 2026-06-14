@@ -1,9 +1,11 @@
 import sys
 
 from celery import Celery
+from celery.signals import worker_init
 
 import app.models  # noqa: F401  Ensure all SQLAlchemy models are registered before worker tasks run.
 from app.core.config import settings
+from app.services.transcription_runtime import bootstrap_transcription_runtime
 
 celery_app = Celery(
     "olanma",
@@ -19,3 +21,8 @@ celery_app.conf.result_extended = True
 if settings.app_env == "development" and sys.platform == "darwin":
     celery_app.conf.worker_pool = "solo"
     celery_app.conf.worker_concurrency = 1
+
+
+@worker_init.connect
+def _validate_transcription_runtime_on_worker_start(**_: object) -> None:
+    bootstrap_transcription_runtime()

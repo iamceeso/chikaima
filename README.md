@@ -77,7 +77,7 @@ Services:
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-The Docker images install `ffmpeg` and `tesseract-ocr`, and the backend uses `openai-whisper` for audio/video transcription. The first transcription run can take longer while the Whisper model is prepared.
+The Docker images install native `ffmpeg` and `tesseract-ocr`, and the backend uses `openai-whisper` for audio/video transcription. In local development, `imageio-ffmpeg` bundles an `ffmpeg` binary automatically so `uv sync` is enough for the Whisper pipeline. Startup now fails fast if Whisper cannot see `ffmpeg`.
 
 ### 3. Local Development
 
@@ -98,6 +98,8 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Backend startup validates `ffmpeg` before serving requests. It prefers `FFMPEG_BINARY_PATH` when set, then a system `ffmpeg`, and finally falls back to the bundled `imageio-ffmpeg` binary.
+
 Frontend:
 
 ```bash
@@ -112,6 +114,14 @@ Celery worker:
 cd backend
 uv run celery -A app.workers.celery_app.celery_app worker --loglevel=info
 ```
+
+Upload limits are configuration-based:
+
+- `DOCUMENT_UPLOAD_MAX_MEGABYTES=100`
+- `AUDIO_UPLOAD_MAX_MEGABYTES=512`
+- `VIDEO_UPLOAD_MAX_MEGABYTES=2048`
+
+If you deploy behind Nginx or another reverse proxy, make sure its body-size limit is at least as large as the relevant backend setting.
 
 ### 4. Connect OpenAI First
 

@@ -10,7 +10,7 @@ Set up Olanma for local development on macOS, Linux, or Windows.
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install dependencies
-brew install python@3.10 node postgresql redis git ffmpeg tesseract
+brew install python@3.10 node postgresql redis git tesseract
 
 # Start PostgreSQL and Redis
 brew services start postgresql
@@ -21,7 +21,7 @@ brew services start redis
 ```bash
 # Install dependencies
 sudo apt-get update
-sudo apt-get install -y python3.10 python3.10-venv nodejs postgresql redis-server git ffmpeg tesseract-ocr
+sudo apt-get install -y python3.10 python3.10-venv nodejs postgresql redis-server git tesseract-ocr
 
 # Start services
 sudo systemctl start postgresql
@@ -66,7 +66,7 @@ uv sync
 cp .env.example .env
 ```
 
-`openai-whisper` is installed with the backend dependencies. `ffmpeg` is required for audio/video transcription, and `tesseract` powers OCR-backed image extraction.
+`openai-whisper` and `imageio-ffmpeg` are installed with the backend dependencies. Olanma bootstraps Whisper so it can discover a bundled `ffmpeg` binary automatically in local development, while `tesseract` powers OCR-backed image extraction.
 
 ### Configure .env
 
@@ -89,7 +89,11 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Settings
 DEBUG=true
 ENVIRONMENT=development
+WHISPER_MODEL=base
+VIDEO_UPLOAD_MAX_MEGABYTES=2048
 ```
+
+If `ffmpeg` cannot be resolved, the API and Celery worker fail during startup with a clear transcription runtime error instead of allowing upload jobs to fail later.
 
 ### Initialize Database
 

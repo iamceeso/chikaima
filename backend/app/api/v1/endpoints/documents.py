@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps.auth import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.document import Document
 from app.models.user import User
@@ -74,7 +75,7 @@ async def upload_document(
             "text/x-go",
             "text/rust",
         },
-        max_size_bytes=100 * 1024 * 1024,
+        max_size_bytes=settings.document_upload_max_bytes,
     )
     document = Document(
         user_id=current_user.id,

@@ -43,9 +43,10 @@ class StorageService:
                 size += len(chunk)
                 if size > max_size_bytes:
                     target_path.unlink(missing_ok=True)
+                    limit_mb = max_size_bytes // (1024 * 1024)
                     raise HTTPException(
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail="Uploaded file exceeds the size limit.",
+                        detail=f"Uploaded file exceeds the configured size limit of {limit_mb} MB.",
                     )
                 output.write(chunk)
 

@@ -17,18 +17,21 @@ class AdapterFactory:
     @staticmethod
     def create(provider: Provider, api_key: str) -> ProviderAdapter:
         provider_type = provider.provider_type.lower()
+        provider_label = provider.name or provider.provider_type.title()
 
         if provider_type == "openai":
-            return OpenAIAdapter(api_key=api_key)
+            return OpenAIAdapter(api_key=api_key, provider_label=provider_label)
         elif provider_type == "openrouter":
             return OpenAIAdapter(
                 api_key=api_key,
                 base_url=provider.base_url or "https://openrouter.ai/api/v1",
+                provider_label=provider_label,
             )
         elif provider_type == "litellm":
             return OpenAIAdapter(
                 api_key=api_key,
                 base_url=provider.base_url or "http://localhost:4000/v1",
+                provider_label=provider_label,
             )
         elif provider_type == "anthropic":
             return AnthropicAdapter(api_key=api_key, base_url=provider.base_url)
