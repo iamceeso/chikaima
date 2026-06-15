@@ -4,7 +4,6 @@ import mimetypes
 from pathlib import Path
 
 import httpx
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.crypto import secret_manager

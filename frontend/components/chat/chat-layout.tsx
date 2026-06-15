@@ -267,7 +267,7 @@ export function ChatLayout() {
     name: string;
     kind: AssetResourceType;
   } | null>(null);
-  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<{ messageId: string; detail: string } | null>(null);
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<DirectoryCapableInput | null>(null);
@@ -364,13 +364,19 @@ export function ChatLayout() {
       }
       return api.regenerateMessage(token, { message_id: messageId });
     },
+    onMutate: (messageId) => {
+      setResumeError((current) => (current?.messageId === messageId ? null : current));
+    },
     onSuccess: async () => {
       setResumeError(null);
       await queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
-    onError: (error) => {
+    onError: (error, messageId) => {
       autoResumeMessageIdRef.current = null;
-      setResumeError(error instanceof Error ? error.message : "Could not continue automatically.");
+      setResumeError({
+        messageId,
+        detail: error instanceof Error ? error.message : "Could not continue automatically.",
+      });
     },
   });
 
@@ -710,7 +716,6 @@ export function ChatLayout() {
   useEffect(() => {
     if (!processingTarget) {
       autoResumeMessageIdRef.current = null;
-      setResumeError(null);
       return;
     }
 
@@ -723,7 +728,6 @@ export function ChatLayout() {
     }
 
     autoResumeMessageIdRef.current = processingTarget.messageId;
-    setResumeError(null);
     resumeBlockedMessage.mutate(processingTarget.messageId);
   }, [
     isStreaming,
@@ -1628,7 +1632,9 @@ export function ChatLayout() {
                                 })}
                               </div>
                             ) : null}
-                            {resumeError ? <p className="mt-2 text-xs text-destructive">{resumeError}</p> : null}
+                            {resumeError?.messageId === message.id ? (
+                              <p className="mt-2 text-xs text-destructive">{resumeError.detail}</p>
+                            ) : null}
                           </div>
                         ) : null}
                         {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
