@@ -8,6 +8,7 @@ import {
   Eye,
   FileImage,
   FileText,
+  FolderOpen,
   Inbox,
   MessageCircle,
   Mic,
@@ -42,6 +43,7 @@ const starterPrompts = [
 
 const quickActions = [
   { label: "Upload files", kind: "upload" as const },
+  { label: "Add folder", kind: "folder" as const },
   { label: "Meeting recap", kind: "prompt" as const, prompt: "Summarize this meeting and list action items." },
   { label: "Compare insights", kind: "prompt" as const, prompt: "Compare the main insights across my latest uploads." },
 ];
@@ -50,6 +52,10 @@ type PendingAttachment = {
   id: string;
   name: string;
   kind: "document" | "audio" | "video";
+};
+
+type DirectoryCapableInput = HTMLInputElement & {
+  webkitdirectory?: boolean;
 };
 
 type SpeechRecognitionAlternative = {
@@ -104,6 +110,10 @@ function classifyFile(file: File): PendingAttachment["kind"] | null {
     return "video";
   }
   return null;
+}
+
+function shouldIgnoreFile(file: File): boolean {
+  return file.name === ".DS_Store" || file.name.startsWith("._");
 }
 
 function attachmentIcon(kind: PendingAttachment["kind"]) {
@@ -193,6 +203,7 @@ export function ChatLayout() {
   } | null>(null);
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<DirectoryCapableInput | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const editingTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const historyRef = useRef<HTMLDivElement | null>(null);
@@ -248,6 +259,15 @@ export function ChatLayout() {
     return displayMessages.slice(0, cutoffIndex + 1);
   })();
   const hasConversation = Boolean(displayMessages.length);
+
+  useEffect(() => {
+    const input = folderInputRef.current;
+    if (!input) {
+      return;
+    }
+    input.setAttribute("webkitdirectory", "");
+    input.setAttribute("directory", "");
+  }, []);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -775,15 +795,23 @@ export function ChatLayout() {
   const handleFiles = async (files: FileList | File[]) => {
     const queue = Array.from(files);
     for (const file of queue) {
+      if (shouldIgnoreFile(file)) {
+        continue;
+      }
       await uploadAttachment.mutateAsync(file);
     }
   };
 
   const openFilePicker = () => fileInputRef.current?.click();
+  const openFolderPicker = () => folderInputRef.current?.click();
 
   const handleQuickAction = (action: (typeof quickActions)[number]) => {
     if (action.kind === "upload") {
       openFilePicker();
+      return;
+    }
+    if (action.kind === "folder") {
+      openFolderPicker();
       return;
     }
     sendSuggestedPrompt(action.prompt);
@@ -1112,6 +1140,20 @@ export function ChatLayout() {
             event.target.value = "";
           }}
         />
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.gif,audio/*,video/*"
+          onChange={(event) => {
+            if (!event.target.files?.length) {
+              return;
+            }
+            void handleFiles(event.target.files);
+            event.target.value = "";
+          }}
+        />
         {renderAttachmentChips()}
         <Textarea
           ref={textareaRef}
@@ -1130,6 +1172,15 @@ export function ChatLayout() {
             {renderModelPicker("max-w-44 bg-background-secondary")}
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openFolderPicker}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background-secondary text-foreground-muted transition-colors hover:bg-surface-raised"
+              title="Attach folder"
+              aria-label="Attach folder"
+            >
+              <FolderOpen className="h-3 w-3" />
+            </button>
             <button
               type="button"
               onClick={openFilePicker}
@@ -1238,6 +1289,9 @@ export function ChatLayout() {
             {voiceStatus}
           </p>
         ) : null}
+        <p className="mt-1 text-[11px] text-foreground-muted">
+          Add a single video, mixed files, or a whole folder and keep the analysis inside this chat.
+        </p>
       </div>
     </div>
   );
@@ -1279,7 +1333,7 @@ export function ChatLayout() {
             </div>
             <h3 className="mt-4 text-lg font-semibold text-foreground">Drop files into this chat</h3>
             <p className="mt-2 text-sm text-foreground-muted">
-              Add PDFs, documents, images, audio, or video and Olanma will attach them to this conversation.
+              Add PDFs, documents, images, audio, video, or a whole folder and Olanma will attach them to this conversation.
             </p>
             <div className="mt-4 inline-flex items-center rounded-full border border-border bg-background-secondary px-3 py-1 text-xs text-foreground-muted">
               Uploads appear directly in the composer when dropped
@@ -1395,18 +1449,18 @@ export function ChatLayout() {
                                 >
                                   <Icon className="h-3 w-3" />
                                   {attachment.name}
-                                  {attachment.id && attachment.kind === "document" ? (
+                                  {attachment.id ? (
                                     <button
                                       type="button"
                                       onClick={() =>
                                         setPreviewAttachment({
                                           id: attachment.id!,
                                           name: attachment.name,
-                                          kind: "document",
+                                          kind: attachment.kind,
                                         })
                                       }
                                       className="inline-flex h-5 w-5 items-center justify-center rounded-full text-foreground-muted transition hover:bg-background hover:text-foreground"
-                                      title="Preview document"
+                                      title="Preview attachment"
                                     >
                                       <Eye className="h-3 w-3" />
                                     </button>
@@ -1487,7 +1541,7 @@ export function ChatLayout() {
                 How can I help?
               </h2>
               <p className="mx-auto mt-2 max-w-xl text-center text-[13px] text-foreground-muted">
-                Analyze transcripts, compare uploads, extract action items, and keep everything in one workspace thread.
+                Drop in a single video or a whole folder, ask questions in chat, and keep the analysis in one thread.
               </p>
 
               <div className="mt-4 flex flex-wrap justify-center gap-2">
