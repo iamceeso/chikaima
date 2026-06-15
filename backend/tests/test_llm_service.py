@@ -185,6 +185,42 @@ class LLMServiceTests(unittest.TestCase):
         self.assertEqual(citations, [])
         self.assertEqual(captured_messages, original_messages)
 
+    def test_generate_reply_with_rag_passes_source_filters_to_search(self) -> None:
+        service = make_service()
+        search_calls: list[dict[str, object]] = []
+
+        with (
+            patch.object(
+                service,
+                "_search_with_fallback",
+                side_effect=lambda user_id, query, **kwargs: search_calls.append(
+                    {"user_id": user_id, "query": query, **kwargs}
+                ) or [],
+            ),
+            patch.object(service, "generate_reply", return_value="Scoped answer"),
+        ):
+            answer, citations = service.generate_reply_with_rag(
+                "user-1",
+                SimpleNamespace(),
+                SimpleNamespace(),
+                [{"role": "user", "content": "Use only attached files"}],
+                source_filters={"document": {"doc-1"}, "video": {"video-1"}},
+            )
+
+        self.assertEqual(answer, "Scoped answer")
+        self.assertEqual(citations, [])
+        self.assertEqual(
+            search_calls,
+            [
+                {
+                    "user_id": "user-1",
+                    "query": "Use only attached files",
+                    "limit": 3,
+                    "source_filters": {"document": {"doc-1"}, "video": {"video-1"}},
+                }
+            ],
+        )
+
     def test_build_citation_formats_known_locations(self) -> None:
         service = make_service()
 

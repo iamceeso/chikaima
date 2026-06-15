@@ -94,3 +94,24 @@ class ChatServiceTests(unittest.TestCase):
             should_auto = service._should_auto_use_vision_model({"attachments": [{"id": "doc-1"}]}, model)
 
         self.assertFalse(should_auto)
+
+    def test_collect_rag_source_filters_aggregates_attachments_across_messages(self) -> None:
+        service = object.__new__(ChatService)
+
+        messages = [
+            SimpleNamespace(meta={"attachments": [{"id": "doc-1", "kind": "document"}]}),
+            SimpleNamespace(meta={"attachments": [{"id": "audio-1", "kind": "audio"}]}),
+            SimpleNamespace(meta={"attachments": [{"id": "doc-1", "kind": "document"}, {"id": "video-1", "kind": "video"}]}),
+            SimpleNamespace(meta={"attachments": [{"id": 42, "kind": "document"}, {"id": "bad-1", "kind": "unknown"}]}),
+        ]
+
+        source_filters = service._collect_rag_source_filters(messages)
+
+        self.assertEqual(
+            source_filters,
+            {
+                "document": {"doc-1"},
+                "audio": {"audio-1"},
+                "video": {"video-1"},
+            },
+        )

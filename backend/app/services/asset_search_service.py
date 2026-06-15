@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -37,18 +38,39 @@ class AssetSearchService:
         *,
         source_type: str | None = None,
         source_ids: set[str] | None = None,
+        source_filters: dict[str, set[str]] | None = None,
         asset_types: set[str] | None = None,
         limit: int | None = None,
     ) -> list[RetrievalSource]:
         if not query.strip():
             return []
+        if source_filters is not None:
+            source_filters = {
+                current_source_type: current_source_ids
+                for current_source_type, current_source_ids in source_filters.items()
+                if current_source_type and current_source_ids
+            }
+            if not source_filters:
+                return []
 
         limit = limit or settings.rag_top_k
         query_vector = self.embeddings.generate_embedding(query)
 
         distance_expr = AssetChunk.embedding.cosine_distance(query_vector)
         query_obj = self.db.query(AssetChunk, distance_expr.label("distance")).filter(AssetChunk.user_id == user_id)
-        if source_type:
+        if source_filters is not None:
+            query_obj = query_obj.filter(
+                or_(
+                    *[
+                        (
+                            (AssetChunk.source_type == current_source_type)
+                            & AssetChunk.source_id.in_(current_source_ids)
+                        )
+                        for current_source_type, current_source_ids in source_filters.items()
+                    ]
+                )
+            )
+        elif source_type:
             query_obj = query_obj.filter(AssetChunk.source_type == source_type)
         if source_ids:
             query_obj = query_obj.filter(AssetChunk.source_id.in_(source_ids))

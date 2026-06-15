@@ -68,11 +68,13 @@ class ChatService:
                 self.db.flush()
 
                 if use_rag:
+                    rag_scope = self._collect_rag_source_filters([user_message])
                     assistant_content, citations = self.llm.generate_reply_with_rag(
                         user_id=user_id,
                         provider=provider,
                         model=model,
                         messages=self._serialize_messages(user_id, [user_message], model),
+                        source_filters=rag_scope,
                     )
                     meta = {
                         "provider": provider.provider_type,
@@ -144,11 +146,13 @@ class ChatService:
             history = [*conversation.messages, message]
 
             if use_rag:
+                rag_scope = self._collect_rag_source_filters(history)
                 assistant_content, citations = self.llm.generate_reply_with_rag(
                     user_id=user_id,
                     provider=provider,
                     model=model,
                     messages=self._serialize_messages(user_id, history, model),
+                    source_filters=rag_scope,
                 )
                 meta = {
                     "provider": provider.provider_type,
@@ -218,11 +222,13 @@ class ChatService:
                 )
 
                 if use_rag:
+                    rag_scope = self._collect_rag_source_filters(history)
                     assistant_content, citations = self.llm.generate_reply_with_rag(
                         user_id=user_id,
                         provider=provider,
                         model=model,
                         messages=self._serialize_messages(user_id, history, model),
+                        source_filters=rag_scope,
                     )
                     meta = {
                         "provider": provider.provider_type,
@@ -278,11 +284,13 @@ class ChatService:
                 history.append(item)
 
             if use_rag:
+                rag_scope = self._collect_rag_source_filters(history)
                 assistant_content, citations = self.llm.generate_reply_with_rag(
                     user_id=user_id,
                     provider=provider,
                     model=model,
                     messages=self._serialize_messages(user_id, history, model),
+                    source_filters=rag_scope,
                 )
                 meta = {
                     "regenerated_from": message.id,
@@ -478,6 +486,29 @@ class ChatService:
             if bool((candidate.capabilities or {}).get("vision")):
                 return candidate
         return None
+
+    def _collect_rag_source_filters(self, messages: list[Message]) -> dict[str, set[str]] | None:
+        source_filters: dict[str, set[str]] = {}
+
+        for message in messages:
+            metadata = getattr(message, "meta", None)
+            if not isinstance(metadata, dict):
+                continue
+
+            attachments = metadata.get("attachments")
+            if not isinstance(attachments, list):
+                continue
+
+            for attachment in attachments:
+                if not isinstance(attachment, dict):
+                    continue
+                resource_id = attachment.get("id")
+                kind = attachment.get("kind")
+                if not isinstance(resource_id, str) or kind not in {"document", "audio", "video"}:
+                    continue
+                source_filters.setdefault(kind, set()).add(resource_id)
+
+        return source_filters or None
 
     def _build_attachment_section(self, user_id: str, attachment: dict[str, Any]) -> str:
         resource_id = attachment.get("id")

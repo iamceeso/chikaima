@@ -138,6 +138,7 @@ def stream_chat(
         model=model,
         messages=service._serialize_messages(current_user.id, [*history, user_message], model),
         include_context=payload.use_rag,
+        source_filters=service._collect_rag_source_filters([*history, user_message]),
     )
 
     def event_stream():

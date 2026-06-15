@@ -15,3 +15,11 @@ class AssetSearchServiceTests(unittest.TestCase):
         service.embeddings = SimpleNamespace(generate_embedding=unexpected_call)
 
         self.assertEqual(service.search("user-1", "   "), [])
+
+    def test_search_returns_empty_for_empty_source_filters(self) -> None:
+        service = object.__new__(AssetSearchService)
+        service.db = SimpleNamespace()
+
+        service.embeddings = SimpleNamespace(generate_embedding=lambda _: [0.1, 0.2, 0.3])
+
+        self.assertEqual(service.search("user-1", "hello", source_filters={}), [])

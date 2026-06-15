@@ -91,12 +91,18 @@ class LLMService:
         model: AIModel,
         messages: list[dict[str, Any]],
         include_context: bool = True,
+        source_filters: dict[str, set[str]] | None = None,
     ) -> tuple[str, list[dict[str, str | int | float]]]:
         user_message = self._content_to_text(messages[-1]["content"]) if messages else ""
         citations: list[dict[str, str | int | float]] = []
 
         if include_context and user_message:
-            search_results = self._search_with_fallback(user_id, user_message, limit=RAG_SEARCH_LIMIT)
+            search_results = self._search_with_fallback(
+                user_id,
+                user_message,
+                limit=RAG_SEARCH_LIMIT,
+                source_filters=source_filters,
+            )
             if search_results:
                 context_sections: list[str] = []
                 for result in search_results:
@@ -146,13 +152,19 @@ If the context doesn't contain relevant information, answer based on your knowle
         model: AIModel,
         messages: list[dict[str, Any]],
         include_context: bool = True,
+        source_filters: dict[str, set[str]] | None = None,
     ) -> tuple[Iterator[str], list[dict[str, str | int | float]]]:
         user_message = self._content_to_text(messages[-1]["content"]) if messages else ""
         citations: list[dict[str, str | int | float]] = []
         stream_messages: list[dict[str, Any]] = messages
 
         if include_context and user_message:
-            search_results = self._search_with_fallback(user_id, user_message, limit=RAG_SEARCH_LIMIT)
+            search_results = self._search_with_fallback(
+                user_id,
+                user_message,
+                limit=RAG_SEARCH_LIMIT,
+                source_filters=source_filters,
+            )
             if search_results:
                 context_sections: list[str] = []
                 for result in search_results:
@@ -207,9 +219,10 @@ If the context doesn't contain relevant information, answer based on your knowle
         query: str,
         *,
         limit: int,
+        source_filters: dict[str, set[str]] | None = None,
     ) -> list:
         try:
-            return self.asset_search.search(user_id, query, limit=limit)
+            return self.asset_search.search(user_id, query, limit=limit, source_filters=source_filters)
         except Exception:
             return []
 
