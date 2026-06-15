@@ -118,6 +118,13 @@ class ChatServiceTests(unittest.TestCase):
             },
         )
 
+    def test_collect_rag_source_filters_returns_empty_scope_without_attachments(self) -> None:
+        service = object.__new__(ChatService)
+
+        source_filters = service._collect_rag_source_filters([SimpleNamespace(meta={}), SimpleNamespace(meta=None)])
+
+        self.assertEqual(source_filters, {})
+
     def test_collect_pending_attachments_returns_only_incomplete_resources(self) -> None:
         service = object.__new__(ChatService)
         resources = {

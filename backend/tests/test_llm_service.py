@@ -221,6 +221,30 @@ class LLMServiceTests(unittest.TestCase):
             ],
         )
 
+    def test_generate_reply_with_rag_skips_workspace_search_when_scope_is_empty(self) -> None:
+        service = make_service()
+        captured_messages: list[dict[str, str]] = []
+
+        with (
+            patch.object(service, "_search_with_fallback", return_value=[]),
+            patch.object(
+                service,
+                "generate_reply",
+                side_effect=lambda provider, model, messages: captured_messages.extend(messages) or "Plain answer",
+            ),
+        ):
+            answer, citations = service.generate_reply_with_rag(
+                "user-1",
+                SimpleNamespace(),
+                SimpleNamespace(),
+                [{"role": "user", "content": "What videos are here?"}],
+                source_filters={},
+            )
+
+        self.assertEqual(answer, "Plain answer")
+        self.assertEqual(citations, [])
+        self.assertEqual(captured_messages, [{"role": "user", "content": "What videos are here?"}])
+
     def test_build_citation_formats_known_locations(self) -> None:
         service = make_service()
 
