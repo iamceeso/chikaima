@@ -2,6 +2,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from fastapi import HTTPException
+
 from app.services.chat_service import ChatService
 
 
@@ -115,3 +117,97 @@ class ChatServiceTests(unittest.TestCase):
                 "video": {"video-1"},
             },
         )
+
+    def test_collect_pending_attachments_returns_only_incomplete_resources(self) -> None:
+        service = object.__new__(ChatService)
+        resources = {
+            ("Video", "video-1"): SimpleNamespace(user_id="user-1", name="walkthrough.mp4", status="processing"),
+            ("AudioAsset", "audio-1"): SimpleNamespace(user_id="user-1", name="meeting.wav", status="completed"),
+            ("Document", "doc-1"): SimpleNamespace(user_id="user-2", name="notes.pdf", status="processing"),
+        }
+        service.db = SimpleNamespace(get=lambda model, resource_id: resources.get((model.__name__, resource_id)))
+
+        messages = [
+            SimpleNamespace(
+                meta={
+                    "attachments": [
+                        {"id": "video-1", "kind": "video"},
+                        {"id": "audio-1", "kind": "audio"},
+                        {"id": "doc-1", "kind": "document"},
+                        {"id": "video-1", "kind": "video"},
+                    ]
+                }
+            )
+        ]
+
+        pending = service._collect_pending_attachments("user-1", messages)
+
+        self.assertEqual(
+            pending,
+            [{"id": "video-1", "kind": "video", "name": "walkthrough.mp4", "status": "processing"}],
+        )
+
+    def test_build_pending_attachment_notice_mentions_video_transcription(self) -> None:
+        service = object.__new__(ChatService)
+        service._collect_pending_attachments = lambda user_id, messages: [  # type: ignore[method-assign]
+            {"id": "video-1", "kind": "video", "name": "2. IMDhub Registration & Signin.mp4", "status": "processing"}
+        ]
+
+        notice = service._build_pending_attachment_notice("user-1", [SimpleNamespace(meta={})])
+
+        self.assertIn("transcription is still processing", notice)
+        self.assertIn("2. IMDhub Registration & Signin.mp4", notice)
+
+    def test_delete_conversation_removes_attached_resources_and_conversation(self) -> None:
+        service = object.__new__(ChatService)
+        conversation = SimpleNamespace(
+            id="conv-1",
+            user_id="user-1",
+            messages=[
+                SimpleNamespace(meta={"attachments": [{"id": "doc-1", "kind": "document"}]}),
+                SimpleNamespace(meta={"attachments": [{"id": "video-1", "kind": "video"}, {"id": "doc-1", "kind": "document"}]}),
+            ],
+        )
+        repo_state = {"conversation": conversation}
+        delete_calls: list[str] = []
+        commit_calls: list[str] = []
+        cleaned_resources: list[tuple[str, str, str]] = []
+
+        service.conversations = SimpleNamespace(get=lambda conversation_id: repo_state["conversation"])
+        service.db = SimpleNamespace(
+            delete=lambda item: delete_calls.append(item.id),
+            commit=lambda: commit_calls.append("commit"),
+        )
+
+        with (
+            patch("app.services.chat_service.TranscriptService") as transcript_service,
+            patch("app.services.chat_service.LibraryService") as library_service,
+        ):
+            transcript_service.return_value.delete_resource.side_effect = (
+                lambda user_id, resource_type, resource_id: cleaned_resources.append((user_id, resource_type, resource_id))
+            )
+
+            def delete_and_clear(item):
+                delete_calls.append(item.id)
+                repo_state["conversation"] = None
+
+            service.db.delete = delete_and_clear
+            service.delete_conversation("user-1", "conv-1")
+
+            library_service.invalidate_user_cache.assert_called_once_with("user-1")
+
+        self.assertEqual(
+            cleaned_resources,
+            [("user-1", "document", "doc-1"), ("user-1", "video", "video-1")],
+        )
+        self.assertEqual(delete_calls, ["conv-1"])
+        self.assertEqual(commit_calls, ["commit"])
+
+    def test_delete_conversation_raises_for_unknown_conversation(self) -> None:
+        service = object.__new__(ChatService)
+        service.conversations = SimpleNamespace(get=lambda conversation_id: None)
+
+        with self.assertRaises(HTTPException) as context:
+            service.delete_conversation("user-1", "missing")
+
+        self.assertEqual(context.exception.status_code, 404)

@@ -132,14 +132,24 @@ def stream_chat(
     db.refresh(conversation)
     db.refresh(user_message)
 
-    stream, citations = service.llm.stream_reply_with_rag(
-        user_id=current_user.id,
-        provider=provider,
-        model=model,
-        messages=service._serialize_messages(current_user.id, [*history, user_message], model),
-        include_context=payload.use_rag,
-        source_filters=service._collect_rag_source_filters([*history, user_message]),
-    )
+    message_history = [*history, user_message]
+    pending_notice = service._build_pending_attachment_notice(current_user.id, message_history)
+    citations: list[dict[str, str | int | float]] = []
+
+    if pending_notice:
+        def blocked_stream():
+            yield pending_notice
+
+        stream = blocked_stream()
+    else:
+        stream, citations = service.llm.stream_reply_with_rag(
+            user_id=current_user.id,
+            provider=provider,
+            model=model,
+            messages=service._serialize_messages(current_user.id, message_history, model),
+            include_context=payload.use_rag,
+            source_filters=service._collect_rag_source_filters(message_history),
+        )
 
     def event_stream():
         metadata = {
@@ -148,6 +158,7 @@ def stream_chat(
             "provider": provider.provider_type,
             "model": model.model_key,
             "rag_citations": citations,
+            "processing_blocked": bool(pending_notice),
         }
         yield f"event: metadata\ndata: {json.dumps(metadata)}\n\n"
         assistant_parts: list[str] = []
@@ -165,6 +176,7 @@ def stream_chat(
                         "provider": provider.provider_type,
                         "model": model.model_key,
                         "rag_citations": citations,
+                        "processing_blocked": bool(pending_notice),
                     },
                 )
                 db.add(assistant_message)

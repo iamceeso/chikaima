@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import mimetypes
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,9 @@ from app.models.transcript import Transcript
 from app.models.video import Video
 from app.repositories.chat import ConversationRepository, MessageRepository
 from app.schemas.chat import ConversationCreate, MessageCreate
+from app.services.library_service import LibraryService
 from app.services.llm_service import LLMService
+from app.services.transcript_service import TranscriptService
 from app.services.workspace_service import WorkspaceService
 
 MAX_ATTACHMENT_CONTEXT_CHARS = 8_000
@@ -38,8 +41,20 @@ class ChatService:
         conversation = self.conversations.get(conversation_id)
         if not conversation or conversation.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
-        self.db.delete(conversation)
-        self.db.commit()
+        attachments = self._collect_rag_source_filters(list(conversation.messages))
+        transcript_service = TranscriptService(self.db)
+
+        if attachments:
+            for resource_type, resource_ids in attachments.items():
+                for resource_id in resource_ids:
+                    transcript_service.delete_resource(user_id, resource_type, resource_id)
+
+        refreshed_conversation = self.conversations.get(conversation_id)
+        if refreshed_conversation and refreshed_conversation.user_id == user_id:
+            self.db.delete(refreshed_conversation)
+            self.db.commit()
+
+        LibraryService.invalidate_user_cache(user_id)
 
     def create_conversation(self, user_id: str, payload: ConversationCreate, use_rag: bool = True) -> Conversation:
         try:
@@ -67,7 +82,17 @@ class ChatService:
                 self.db.add(user_message)
                 self.db.flush()
 
-                if use_rag:
+                pending_notice = self._build_pending_attachment_notice(user_id, [user_message])
+                if pending_notice:
+                    assistant_content = pending_notice
+                    citations = []
+                    meta = {
+                        "provider": provider.provider_type,
+                        "model": model.model_key,
+                        "processing_blocked": True,
+                        "rag_citations": citations,
+                    }
+                elif use_rag:
                     rag_scope = self._collect_rag_source_filters([user_message])
                     assistant_content, citations = self.llm.generate_reply_with_rag(
                         user_id=user_id,
@@ -145,7 +170,17 @@ class ChatService:
 
             history = [*conversation.messages, message]
 
-            if use_rag:
+            pending_notice = self._build_pending_attachment_notice(user_id, history)
+            if pending_notice:
+                assistant_content = pending_notice
+                citations = []
+                meta = {
+                    "provider": provider.provider_type,
+                    "model": model.model_key,
+                    "processing_blocked": True,
+                    "rag_citations": citations,
+                }
+            elif use_rag:
                 rag_scope = self._collect_rag_source_filters(history)
                 assistant_content, citations = self.llm.generate_reply_with_rag(
                     user_id=user_id,
@@ -221,7 +256,17 @@ class ChatService:
                     .all()
                 )
 
-                if use_rag:
+                pending_notice = self._build_pending_attachment_notice(user_id, history)
+                if pending_notice:
+                    assistant_content = pending_notice
+                    citations = []
+                    meta = {
+                        "provider": provider.provider_type,
+                        "model": model.model_key,
+                        "processing_blocked": True,
+                        "rag_citations": citations,
+                    }
+                elif use_rag:
                     rag_scope = self._collect_rag_source_filters(history)
                     assistant_content, citations = self.llm.generate_reply_with_rag(
                         user_id=user_id,
@@ -283,7 +328,18 @@ class ChatService:
                     continue
                 history.append(item)
 
-            if use_rag:
+            pending_notice = self._build_pending_attachment_notice(user_id, history)
+            if pending_notice:
+                assistant_content = pending_notice
+                citations = []
+                meta = {
+                    "regenerated_from": message.id,
+                    "provider": provider.provider_type,
+                    "model": model.model_key,
+                    "processing_blocked": True,
+                    "rag_citations": citations,
+                }
+            elif use_rag:
                 rag_scope = self._collect_rag_source_filters(history)
                 assistant_content, citations = self.llm.generate_reply_with_rag(
                     user_id=user_id,
@@ -487,7 +543,36 @@ class ChatService:
                 return candidate
         return None
 
-    def _collect_rag_source_filters(self, messages: list[Message]) -> dict[str, set[str]] | None:
+    def _build_pending_attachment_notice(self, user_id: str, messages: list[Message]) -> str | None:
+        pending_resources = self._collect_pending_attachments(user_id, messages)
+        if not pending_resources:
+            return None
+
+        if len(pending_resources) == 1:
+            pending = pending_resources[0]
+            if pending["kind"] == "video":
+                return (
+                    f'I can see you\'ve uploaded "{pending["name"]}", but the transcription is still processing.\n\n'
+                    "Please give it a moment to finish, and I'll be able to help with that video once it's complete."
+                )
+            if pending["kind"] == "audio":
+                return (
+                    f'I can see you\'ve uploaded "{pending["name"]}", but the transcription is still processing.\n\n'
+                    "Please give it a moment to finish, and I'll be able to help with that audio once it's complete."
+                )
+            return (
+                f'I can see you\'ve uploaded "{pending["name"]}", but it is still processing.\n\n'
+                "Please give it a moment to finish, and I'll be able to help once it's complete."
+            )
+
+        pending_lines = [f'- {item["name"]} ({item["kind"]}, {item["status"]})' for item in pending_resources]
+        return (
+            "Some attached files are still processing, so I can't work from them yet.\n\n"
+            + "\n".join(pending_lines)
+            + "\n\nPlease wait for processing to finish, then try again."
+        )
+
+    def _collect_rag_source_filters(self, messages: list[Message]) -> dict[str, set[str]]:
         source_filters: dict[str, set[str]] = {}
 
         for message in messages:
@@ -508,7 +593,56 @@ class ChatService:
                     continue
                 source_filters.setdefault(kind, set()).add(resource_id)
 
-        return source_filters or None
+        return source_filters
+
+    def _collect_pending_attachments(self, user_id: str, messages: Iterable[Message]) -> list[dict[str, str]]:
+        pending_resources: list[dict[str, str]] = []
+        seen: set[tuple[str, str]] = set()
+
+        model_map: dict[str, type[Document | AudioAsset | Video]] = {
+            "document": Document,
+            "audio": AudioAsset,
+            "video": Video,
+        }
+
+        for message in messages:
+            metadata = getattr(message, "meta", None)
+            if not isinstance(metadata, dict):
+                continue
+
+            attachments = metadata.get("attachments")
+            if not isinstance(attachments, list):
+                continue
+
+            for attachment in attachments:
+                if not isinstance(attachment, dict):
+                    continue
+                resource_id = attachment.get("id")
+                kind = attachment.get("kind")
+                if not isinstance(resource_id, str) or kind not in model_map:
+                    continue
+
+                cache_key = (kind, resource_id)
+                if cache_key in seen:
+                    continue
+                seen.add(cache_key)
+
+                resource = self.db.get(model_map[kind], resource_id)
+                if not resource or resource.user_id != user_id:
+                    continue
+                if resource.status == "completed":
+                    continue
+
+                pending_resources.append(
+                    {
+                        "id": resource_id,
+                        "kind": kind,
+                        "name": getattr(resource, "name", attachment.get("name") or "Attachment"),
+                        "status": resource.status,
+                    }
+                )
+
+        return pending_resources
 
     def _build_attachment_section(self, user_id: str, attachment: dict[str, Any]) -> str:
         resource_id = attachment.get("id")

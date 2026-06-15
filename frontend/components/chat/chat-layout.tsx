@@ -10,6 +10,7 @@ import {
   FileText,
   FolderOpen,
   Inbox,
+  LoaderCircle,
   MessageCircle,
   Mic,
   Paperclip,
@@ -52,6 +53,17 @@ type PendingAttachment = {
   id: string;
   name: string;
   kind: "document" | "audio" | "video";
+};
+
+type AttachmentReference = {
+  id: string;
+  name: string;
+  kind: AssetResourceType;
+};
+
+type ProcessingTarget = {
+  messageId: string;
+  attachments: AttachmentReference[];
 };
 
 type DirectoryCapableInput = HTMLInputElement & {
@@ -161,6 +173,60 @@ function pickSpeechVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice |
   return voices.find((voice) => voice.lang.startsWith("en")) ?? voices[0] ?? null;
 }
 
+function getMessageAttachments(metadata: unknown): AttachmentReference[] {
+  if (!metadata || typeof metadata !== "object") {
+    return [];
+  }
+
+  const attachments = (metadata as { attachments?: unknown }).attachments;
+  if (!Array.isArray(attachments)) {
+    return [];
+  }
+
+  return attachments.flatMap((attachment) => {
+    if (!attachment || typeof attachment !== "object") {
+      return [];
+    }
+
+    const candidate = attachment as { id?: unknown; name?: unknown; kind?: unknown };
+    if (
+      typeof candidate.id !== "string" ||
+      typeof candidate.name !== "string" ||
+      (candidate.kind !== "document" && candidate.kind !== "audio" && candidate.kind !== "video")
+    ) {
+      return [];
+    }
+
+    return [{ id: candidate.id, name: candidate.name, kind: candidate.kind }];
+  });
+}
+
+function getProcessingTarget(messages: Message[]): ProcessingTarget | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role !== "assistant") {
+      continue;
+    }
+    if (!message.metadata?.processing_blocked) {
+      return null;
+    }
+
+    const attachments = new Map<string, AttachmentReference>();
+    for (let historyIndex = 0; historyIndex <= index; historyIndex += 1) {
+      for (const attachment of getMessageAttachments(messages[historyIndex]?.metadata)) {
+        attachments.set(`${attachment.kind}:${attachment.id}`, attachment);
+      }
+    }
+
+    return {
+      messageId: message.id,
+      attachments: [...attachments.values()],
+    };
+  }
+
+  return null;
+}
+
 export function ChatLayout() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const activeConversationId = useChatStore((state) => state.activeConversationId);
@@ -201,6 +267,7 @@ export function ChatLayout() {
     name: string;
     kind: AssetResourceType;
   } | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const dragDepthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<DirectoryCapableInput | null>(null);
@@ -215,6 +282,7 @@ export function ChatLayout() {
   const seededConversationIdRef = useRef<string | null>(null);
   const queuedVoiceSubmissionRef = useRef<string | null>(null);
   const resumeConversationAfterSpeechRef = useRef(false);
+  const autoResumeMessageIdRef = useRef<string | null>(null);
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations"],
@@ -258,7 +326,53 @@ export function ChatLayout() {
     }
     return displayMessages.slice(0, cutoffIndex + 1);
   })();
+  const processingTarget = getProcessingTarget(displayMessages);
   const hasConversation = Boolean(displayMessages.length);
+
+  const libraryQuery = useQuery({
+    queryKey: ["library"],
+    queryFn: () => {
+      if (!token) {
+        return Promise.resolve({ audio: [], videos: [], documents: [] });
+      }
+      return api.getLibraryBundle(token);
+    },
+    enabled: Boolean(token && processingTarget),
+    refetchInterval: processingTarget ? 3000 : false,
+  });
+
+  const processingAttachments = processingTarget?.attachments.map((attachment) => {
+    const source =
+      attachment.kind === "document"
+        ? libraryQuery.data?.documents
+        : attachment.kind === "audio"
+          ? libraryQuery.data?.audio
+          : libraryQuery.data?.videos;
+    const resource = source?.find((item) => item.id === attachment.id);
+    return {
+      ...attachment,
+      status: resource?.status ?? "processing",
+    };
+  }) ?? [];
+
+  const pendingProcessingAttachments = processingAttachments.filter((attachment) => attachment.status !== "completed");
+
+  const resumeBlockedMessage = useMutation({
+    mutationFn: async (messageId: string) => {
+      if (!token) {
+        throw new Error("Please sign in first.");
+      }
+      return api.regenerateMessage(token, { message_id: messageId });
+    },
+    onSuccess: async () => {
+      setResumeError(null);
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+    onError: (error) => {
+      autoResumeMessageIdRef.current = null;
+      setResumeError(error instanceof Error ? error.message : "Could not continue automatically.");
+    },
+  });
 
   useEffect(() => {
     const input = folderInputRef.current;
@@ -594,6 +708,32 @@ export function ChatLayout() {
   });
 
   useEffect(() => {
+    if (!processingTarget) {
+      autoResumeMessageIdRef.current = null;
+      setResumeError(null);
+      return;
+    }
+
+    if (!processingAttachments.length || pendingProcessingAttachments.length > 0 || resumeBlockedMessage.isPending || isStreaming) {
+      return;
+    }
+
+    if (autoResumeMessageIdRef.current === processingTarget.messageId) {
+      return;
+    }
+
+    autoResumeMessageIdRef.current = processingTarget.messageId;
+    setResumeError(null);
+    resumeBlockedMessage.mutate(processingTarget.messageId);
+  }, [
+    isStreaming,
+    pendingProcessingAttachments.length,
+    processingAttachments.length,
+    processingTarget,
+    resumeBlockedMessage,
+  ]);
+
+  useEffect(() => {
     const historyEl = historyRef.current;
     if (!historyEl) {
       return;
@@ -745,6 +885,7 @@ export function ChatLayout() {
                         provider: metadata.provider,
                         model: metadata.model,
                         rag_citations: Array.isArray(metadata.rag_citations) ? metadata.rag_citations : [],
+                        processing_blocked: Boolean(metadata.processing_blocked),
                       },
                     }
                   : message,
@@ -1438,6 +1579,58 @@ export function ChatLayout() {
                         ) : (
                           <MessageMarkdown content={message.content} className="wrap-break-word" />
                         )}
+                        {message.metadata?.processing_blocked && processingTarget?.messageId === message.id ? (
+                          <div className="mt-3 rounded-2xl border border-amber-300/70 bg-amber-50/80 px-3.5 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                            <div className="flex items-center gap-2 font-medium">
+                              <LoaderCircle
+                                className={cn(
+                                  "h-4 w-4",
+                                  pendingProcessingAttachments.length > 0 || resumeBlockedMessage.isPending ? "animate-spin" : "",
+                                )}
+                              />
+                              <span>
+                                {pendingProcessingAttachments.length > 0
+                                  ? "Still transcribing"
+                                  : resumeBlockedMessage.isPending
+                                    ? "Transcription finished. Continuing now"
+                                    : "Transcription finished"}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-100/80">
+                              {pendingProcessingAttachments.length > 0
+                                ? "Olanma will keep watching this attachment and continue automatically when processing finishes."
+                                : resumeBlockedMessage.isPending
+                                  ? "Your original request is being continued automatically."
+                                  : "Your original request is ready to continue."}
+                            </p>
+                            {processingAttachments.length ? (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {processingAttachments.map((attachment) => {
+                                  const Icon = attachmentIcon(attachment.kind);
+                                  const isDone = attachment.status === "completed";
+                                  return (
+                                    <span
+                                      key={`${message.id}-processing-${attachment.kind}-${attachment.id}`}
+                                      className={cn(
+                                        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px]",
+                                        isDone
+                                          ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                          : "border-amber-300 bg-white/70 text-amber-900 dark:border-amber-500/30 dark:bg-background/40 dark:text-amber-100",
+                                      )}
+                                    >
+                                      <Icon className="h-3 w-3" />
+                                      <span className="max-w-52 truncate">{attachment.name}</span>
+                                      <span className="uppercase tracking-[0.12em] text-[10px]">
+                                        {isDone ? "ready" : attachment.status}
+                                      </span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                            {resumeError ? <p className="mt-2 text-xs text-destructive">{resumeError}</p> : null}
+                          </div>
+                        ) : null}
                         {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
                           <div className="mt-2.5 flex flex-wrap gap-2">
                             {(message.metadata.attachments as Array<{ id?: string; name: string; kind: PendingAttachment["kind"] }>).map((attachment) => {
