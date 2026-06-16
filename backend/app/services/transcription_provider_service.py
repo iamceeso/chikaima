@@ -20,10 +20,18 @@ class TranscriptionProviderService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def transcribe_media(self, user_id: str, file_path: str, source_name: str, mime_type: str | None = None) -> str:
+    def transcribe_media(
+        self,
+        user_id: str,
+        file_path: str,
+        source_name: str,
+        mime_type: str | None = None,
+    ) -> str:
         path = Path(file_path)
         if not path.exists():
-            raise AssetProcessingError(f"{source_name} could not be read for transcription.")
+            raise AssetProcessingError(
+                f"{source_name} could not be read for transcription."
+            )
 
         size_bytes = path.stat().st_size
         if size_bytes > MAX_TRANSCRIPTION_FILE_BYTES:
@@ -34,7 +42,8 @@ class TranscriptionProviderService:
         providers = self._list_transcription_providers(user_id)
         if not providers:
             raise AssetProcessingError(
-                "No supported transcription provider is enabled. Add an OpenAI, LiteLLM, or local OpenAI-compatible provider to transcribe audio or video files."
+                "No supported transcription provider is enabled. Add an OpenAI, "
+                "LiteLLM, or local OpenAI-compatible provider to transcribe audio or video files."
             )
 
         errors: list[str] = []
@@ -44,7 +53,9 @@ class TranscriptionProviderService:
             except AssetProcessingError as exc:
                 errors.append(f"{provider.name}: {exc}")
 
-        raise AssetProcessingError(errors[-1] if errors else f"Transcription failed for {source_name}.")
+        raise AssetProcessingError(
+            errors[-1] if errors else f"Transcription failed for {source_name}."
+        )
 
     def _list_transcription_providers(self, user_id: str) -> list[Provider]:
         workspace = WorkspaceService(self.db).get_or_create()
@@ -55,17 +66,29 @@ class TranscriptionProviderService:
         if workspace.authentication_enabled:
             query = query.filter(Provider.user_id == user_id)
         providers = list(query.order_by(Provider.created_at.asc()).all())
-        providers.sort(key=lambda provider: OPENAI_COMPATIBLE_PROVIDER_PRIORITY.get(provider.provider_type, 100))
+        providers.sort(
+            key=lambda provider: OPENAI_COMPATIBLE_PROVIDER_PRIORITY.get(
+                provider.provider_type, 100
+            )
+        )
         return providers
 
-    def _transcribe_with_provider(self, provider: Provider, path: Path, mime_type: str | None) -> str:
+    def _transcribe_with_provider(
+        self, provider: Provider, path: Path, mime_type: str | None
+    ) -> str:
         encrypted_api_key = provider.encrypted_config.get("api_key")
         if provider.provider_type != "local" and not encrypted_api_key:
             raise AssetProcessingError(f"{provider.name} is missing an API key.")
 
         api_key = secret_manager.decrypt(encrypted_api_key) if encrypted_api_key else ""
-        base_url = (provider.base_url or DEFAULT_BASE_URLS[provider.provider_type]).rstrip("/")
-        content_type = mime_type or mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        base_url = (
+            provider.base_url or DEFAULT_BASE_URLS[provider.provider_type]
+        ).rstrip("/")
+        content_type = (
+            mime_type
+            or mimetypes.guess_type(path.name)[0]
+            or "application/octet-stream"
+        )
 
         try:
             with path.open("rb") as handle, httpx.Client(timeout=300.0) as client:
@@ -81,7 +104,9 @@ class TranscriptionProviderService:
             detail = exc.response.text or "Transcription request failed."
             raise AssetProcessingError(detail) from exc
         except httpx.HTTPError as exc:
-            raise AssetProcessingError("Could not reach the transcription provider.") from exc
+            raise AssetProcessingError(
+                "Could not reach the transcription provider."
+            ) from exc
 
         payload = response.json()
         text = payload.get("text", "")

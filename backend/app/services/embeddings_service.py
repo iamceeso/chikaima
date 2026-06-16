@@ -15,7 +15,11 @@ from app.services.workspace_service import WorkspaceService
 logger = logging.getLogger(__name__)
 
 OPENAI_COMPATIBLE_PROVIDER_TYPES = ("openai", "openrouter", "litellm", "local")
-SUPPORTED_EMBEDDING_PROVIDER_TYPES = (*OPENAI_COMPATIBLE_PROVIDER_TYPES, "gemini", "ollama")
+SUPPORTED_EMBEDDING_PROVIDER_TYPES = (
+    *OPENAI_COMPATIBLE_PROVIDER_TYPES,
+    "gemini",
+    "ollama",
+)
 EMBEDDING_PROVIDER_PRIORITY = {
     "openai": 0,
     "openrouter": 1,
@@ -57,7 +61,8 @@ class EmbeddingsService:
         providers = self._list_embedding_providers(user_id)
         if not providers:
             raise NoEmbeddingProviderError(
-                "No supported embedding provider is enabled. Add an OpenAI, Gemini, Ollama, OpenRouter, LiteLLM, or local OpenAI-compatible provider to enable retrieval."
+                "No supported embedding provider is enabled. Add an OpenAI, Gemini, Ollama, OpenRouter, "
+                "LiteLLM, or local OpenAI-compatible provider to enable retrieval."
             )
         return self._generate_embedding_with_providers(providers, text)
 
@@ -83,7 +88,11 @@ class EmbeddingsService:
 
         providers = self._list_embedding_providers(user_id)
         if not providers:
-            logger.warning("Skipping vector indexing for %s/%s because no embedding provider is configured.", source_type, source_id)
+            logger.warning(
+                "Skipping vector indexing for %s/%s because no embedding provider is configured.",
+                source_type,
+                source_id,
+            )
             self.db.flush()
             return []
 
@@ -99,10 +108,17 @@ class EmbeddingsService:
                 payload.setdefault("source_id", source_id)
                 payload.setdefault("asset_type", asset_type)
                 payload.setdefault("filename", filename)
-                embedding = self._generate_embedding_with_providers(providers, normalized)
+                embedding = self._generate_embedding_with_providers(
+                    providers, normalized
+                )
                 prepared_chunks.append((chunk_index, normalized, payload, embedding))
         except EmbeddingProviderError as exc:
-            logger.warning("Skipping vector indexing for %s/%s after embedding provider failure: %s", source_type, source_id, exc)
+            logger.warning(
+                "Skipping vector indexing for %s/%s after embedding provider failure: %s",
+                source_type,
+                source_id,
+                exc,
+            )
             self.db.flush()
             return []
 
@@ -125,7 +141,9 @@ class EmbeddingsService:
         self.db.flush()
         return stored_chunks
 
-    def delete_chunks_for_source(self, *, user_id: str, source_type: str, source_id: str) -> int:
+    def delete_chunks_for_source(
+        self, *, user_id: str, source_type: str, source_id: str
+    ) -> int:
         count = (
             self.db.query(AssetChunk)
             .filter(
@@ -147,10 +165,16 @@ class EmbeddingsService:
         if workspace.authentication_enabled:
             query = query.filter(Provider.user_id == user_id)
         providers = list(query.order_by(Provider.created_at.asc()).all())
-        providers.sort(key=lambda provider: EMBEDDING_PROVIDER_PRIORITY.get(provider.provider_type, 100))
+        providers.sort(
+            key=lambda provider: EMBEDDING_PROVIDER_PRIORITY.get(
+                provider.provider_type, 100
+            )
+        )
         return providers
 
-    def _generate_embedding_with_providers(self, providers: list[Provider], text: str) -> list[float]:
+    def _generate_embedding_with_providers(
+        self, providers: list[Provider], text: str
+    ) -> list[float]:
         errors: list[str] = []
         for provider in providers:
             try:
@@ -159,7 +183,9 @@ class EmbeddingsService:
             except EmbeddingProviderError as exc:
                 errors.append(f"{provider.name}: {exc}")
 
-        raise EmbeddingProviderError(errors[-1] if errors else "Embedding generation failed.")
+        raise EmbeddingProviderError(
+            errors[-1] if errors else "Embedding generation failed."
+        )
 
     def _embed_with_provider(self, provider: Provider, text: str) -> list[float]:
         if provider.provider_type in OPENAI_COMPATIBLE_PROVIDER_TYPES:
@@ -168,15 +194,21 @@ class EmbeddingsService:
             return self._embed_with_gemini(provider, text)
         if provider.provider_type == "ollama":
             return self._embed_with_ollama(provider, text)
-        raise EmbeddingProviderError(f"{provider.provider_type} does not support embeddings.")
+        raise EmbeddingProviderError(
+            f"{provider.provider_type} does not support embeddings."
+        )
 
-    def _embed_with_openai_compatible(self, provider: Provider, text: str) -> list[float]:
+    def _embed_with_openai_compatible(
+        self, provider: Provider, text: str
+    ) -> list[float]:
         encrypted_api_key = provider.encrypted_config.get("api_key")
         if provider.provider_type not in {"litellm", "local"} and not encrypted_api_key:
             raise EmbeddingProviderError(f"{provider.name} is missing an API key.")
 
         api_key = secret_manager.decrypt(encrypted_api_key) if encrypted_api_key else ""
-        base_url = (provider.base_url or DEFAULT_BASE_URLS[provider.provider_type]).rstrip("/")
+        base_url = (
+            provider.base_url or DEFAULT_BASE_URLS[provider.provider_type]
+        ).rstrip("/")
         payload = {
             "model": self._embedding_model_for_provider(provider),
             "input": text or " ",
@@ -187,13 +219,17 @@ class EmbeddingsService:
 
         try:
             with httpx.Client(timeout=60.0) as client:
-                response = client.post(f"{base_url}/embeddings", headers=headers, json=payload)
+                response = client.post(
+                    f"{base_url}/embeddings", headers=headers, json=payload
+                )
                 response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             detail = exc.response.text or "Embedding request failed."
             raise EmbeddingProviderError(detail) from exc
         except httpx.HTTPError as exc:
-            raise EmbeddingProviderError("Could not reach the embedding provider.") from exc
+            raise EmbeddingProviderError(
+                "Could not reach the embedding provider."
+            ) from exc
 
         data = response.json().get("data") or []
         if not data:
@@ -222,7 +258,9 @@ class EmbeddingsService:
             detail = exc.response.text or "Embedding request failed."
             raise EmbeddingProviderError(detail) from exc
         except httpx.HTTPError as exc:
-            raise EmbeddingProviderError("Could not reach the embedding provider.") from exc
+            raise EmbeddingProviderError(
+                "Could not reach the embedding provider."
+            ) from exc
 
         embedding = response.json().get("embedding") or {}
         return self._parse_embedding_values(embedding.get("values"))
@@ -234,14 +272,19 @@ class EmbeddingsService:
             with httpx.Client(timeout=60.0) as client:
                 response = client.post(
                     f"{base_url}/api/embed",
-                    json={"model": self._embedding_model_for_provider(provider), "input": text or " "},
+                    json={
+                        "model": self._embedding_model_for_provider(provider),
+                        "input": text or " ",
+                    },
                 )
                 response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             detail = exc.response.text or "Embedding request failed."
             raise EmbeddingProviderError(detail) from exc
         except httpx.HTTPError as exc:
-            raise EmbeddingProviderError("Could not reach the embedding provider.") from exc
+            raise EmbeddingProviderError(
+                "Could not reach the embedding provider."
+            ) from exc
 
         payload = response.json()
         if isinstance(payload.get("embedding"), list):
@@ -259,10 +302,14 @@ class EmbeddingsService:
 
     def _parse_embedding_values(self, values: Any) -> list[float]:
         if not isinstance(values, list):
-            raise EmbeddingProviderError("The embedding provider returned an invalid vector payload.")
+            raise EmbeddingProviderError(
+                "The embedding provider returned an invalid vector payload."
+            )
         vector = [float(value) for value in values if isinstance(value, (int, float))]
         if not vector:
-            raise EmbeddingProviderError("The embedding provider returned an empty vector.")
+            raise EmbeddingProviderError(
+                "The embedding provider returned an empty vector."
+            )
         return vector
 
     def _coerce_embedding_dimension(self, vector: list[float]) -> list[float]:
