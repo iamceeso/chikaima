@@ -33,6 +33,12 @@ class AdapterFactory:
                 base_url=provider.base_url or "http://localhost:4000/v1",
                 provider_label=provider_label,
             )
+        elif provider_type == "local":
+            return OpenAIAdapter(
+                api_key=api_key,
+                base_url=provider.base_url or "http://localhost:4000/v1",
+                provider_label=provider_label,
+            )
         elif provider_type == "anthropic":
             return AnthropicAdapter(api_key=api_key, base_url=provider.base_url)
         elif provider_type == "gemini":

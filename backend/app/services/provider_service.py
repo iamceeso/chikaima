@@ -168,8 +168,18 @@ CURATED_PROVIDER_MODELS: dict[str, list[dict[str, Any]]] = {
     ],
     "local": [
         {
-            "key": "local-foundation",
-            "name": "Local foundation model",
+            "key": "qwen3",
+            "name": "Qwen 3",
+            "capabilities": {"chat": True, "local": True},
+        },
+        {
+            "key": "llama3.1",
+            "name": "Llama 3.1",
+            "capabilities": {"chat": True, "local": True},
+        },
+        {
+            "key": "gemma3",
+            "name": "Gemma 3",
             "capabilities": {"chat": True, "local": True},
         },
     ],
@@ -182,6 +192,7 @@ DEFAULT_BASE_URLS: dict[str, str] = {
     "ollama": "http://localhost:11434",
     "openrouter": "https://openrouter.ai/api/v1",
     "litellm": "http://localhost:4000/v1",
+    "local": "http://localhost:4000/v1",
 }
 
 OPENAI_EXCLUDED_MODEL_TOKENS = (
@@ -227,6 +238,11 @@ MODEL_PRIORITY: dict[str, dict[str, int]] = {
         "gemini-2.5-flash-lite": 2,
         "gemini-3-pro-preview": 3,
         "gemini-3-flash-preview": 4,
+    },
+    "local": {
+        "qwen3": 0,
+        "llama3.1": 1,
+        "gemma3": 2,
     },
 }
 
@@ -473,13 +489,13 @@ class ProviderService:
             return self._fetch_gemini_models(provider, resolved_api_key)
         if provider.provider_type == "ollama":
             return self._fetch_ollama_models(provider)
-        if provider.provider_type in {"openrouter", "litellm"}:
+        if provider.provider_type in {"openrouter", "litellm", "local"}:
             return self._fetch_openai_models(provider, resolved_api_key)
         return CURATED_PROVIDER_MODELS.get(provider.provider_type, [])
 
     def _fetch_openai_models(self, provider: Provider, api_key: str | None) -> list[dict[str, Any]]:
         fallback_key = provider.provider_type if provider.provider_type in CURATED_PROVIDER_MODELS else "openai"
-        if not api_key:
+        if not api_key and provider.provider_type != "local":
             return CURATED_PROVIDER_MODELS["openai" if provider.provider_type == "openai" else fallback_key]
 
         base_url = _resolve_base_url(provider.provider_type, provider.base_url)
@@ -488,9 +504,10 @@ class ProviderService:
 
         try:
             with httpx.Client(timeout=12.0) as client:
+                headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
                 response = client.get(
                     _join_api_url(base_url, "models"),
-                    headers={"Authorization": f"Bearer {api_key}"},
+                    headers=headers,
                 )
                 response.raise_for_status()
         except httpx.HTTPError:
@@ -506,7 +523,11 @@ class ProviderService:
             for item in data
             if isinstance(item, dict)
             and isinstance(item.get("id"), str)
-            and (_should_include_openrouter_model(item["id"]) if provider.provider_type == "openrouter" else _should_include_openai_model(item["id"]))
+            and (
+                _should_include_openrouter_model(item["id"])
+                if provider.provider_type in {"openrouter", "local"}
+                else _should_include_openai_model(item["id"])
+            )
         ]
         return sorted(models, key=lambda item: item["name"].lower())
 

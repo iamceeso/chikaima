@@ -14,7 +14,7 @@ from app.services.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
-OPENAI_COMPATIBLE_PROVIDER_TYPES = ("openai", "openrouter", "litellm")
+OPENAI_COMPATIBLE_PROVIDER_TYPES = ("openai", "openrouter", "litellm", "local")
 SUPPORTED_EMBEDDING_PROVIDER_TYPES = (*OPENAI_COMPATIBLE_PROVIDER_TYPES, "gemini", "ollama")
 EMBEDDING_PROVIDER_PRIORITY = {
     "openai": 0,
@@ -27,6 +27,7 @@ DEFAULT_BASE_URLS = {
     "openai": "https://api.openai.com/v1",
     "openrouter": "https://openrouter.ai/api/v1",
     "litellm": "http://localhost:4000/v1",
+    "local": "http://localhost:4000/v1",
     "gemini": "https://generativelanguage.googleapis.com/v1beta",
     "ollama": "http://localhost:11434",
 }
@@ -34,6 +35,7 @@ DEFAULT_EMBEDDING_MODELS = {
     "openai": "text-embedding-3-small",
     "openrouter": "openai/text-embedding-3-small",
     "litellm": "text-embedding-3-small",
+    "local": "text-embedding-3-small",
     "gemini": "text-embedding-004",
     "ollama": "nomic-embed-text",
 }
@@ -55,7 +57,7 @@ class EmbeddingsService:
         providers = self._list_embedding_providers(user_id)
         if not providers:
             raise NoEmbeddingProviderError(
-                "No supported embedding provider is enabled. Add an OpenAI, Gemini, Ollama, OpenRouter, or LiteLLM provider to enable retrieval."
+                "No supported embedding provider is enabled. Add an OpenAI, Gemini, Ollama, OpenRouter, LiteLLM, or local OpenAI-compatible provider to enable retrieval."
             )
         return self._generate_embedding_with_providers(providers, text)
 
@@ -170,7 +172,7 @@ class EmbeddingsService:
 
     def _embed_with_openai_compatible(self, provider: Provider, text: str) -> list[float]:
         encrypted_api_key = provider.encrypted_config.get("api_key")
-        if provider.provider_type != "litellm" and not encrypted_api_key:
+        if provider.provider_type not in {"litellm", "local"} and not encrypted_api_key:
             raise EmbeddingProviderError(f"{provider.name} is missing an API key.")
 
         api_key = secret_manager.decrypt(encrypted_api_key) if encrypted_api_key else ""

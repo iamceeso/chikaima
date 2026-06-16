@@ -134,6 +134,28 @@ class TranscriptionProviderServiceTests(unittest.TestCase):
 
         self.assertEqual(str(context.exception), "OpenAI is missing an API key.")
 
+    def test_transcribe_with_local_provider_allows_missing_api_key(self) -> None:
+        service = TranscriptionProviderService(db=SimpleNamespace())
+        provider = SimpleNamespace(
+            name="Local Gateway",
+            provider_type="local",
+            encrypted_config={},
+            base_url="http://localhost:4000/v1",
+        )
+        response = SimpleNamespace(
+            raise_for_status=lambda: None,
+            json=lambda: {"text": "  local transcript  "},
+        )
+        client = MagicMock()
+        client.__enter__.return_value.post.return_value = response
+
+        with tempfile.NamedTemporaryFile(suffix=".wav") as handle:
+            with patch("app.services.transcription_provider_service.httpx.Client", return_value=client):
+                result = service._transcribe_with_provider(provider, Path(handle.name), "audio/wav")
+
+        self.assertEqual(result, "local transcript")
+        self.assertEqual(client.__enter__.return_value.post.call_args.kwargs["headers"], {})
+
     def test_transcribe_with_provider_uses_defaults_and_returns_stripped_text(self) -> None:
         service = TranscriptionProviderService(db=SimpleNamespace())
         provider = SimpleNamespace(

@@ -11,7 +11,7 @@ from app.models.provider import Provider
 from app.services.asset_processors import AssetProcessingError
 from app.services.workspace_service import WorkspaceService
 
-OPENAI_COMPATIBLE_PROVIDER_TYPES = ("openai", "litellm")
+OPENAI_COMPATIBLE_PROVIDER_TYPES = ("openai", "litellm", "local")
 DEFAULT_TRANSCRIPTION_MODEL = "gpt-4o-transcribe"
 MAX_TRANSCRIPTION_FILE_BYTES = 25 * 1024 * 1024
 
@@ -34,7 +34,7 @@ class TranscriptionProviderService:
         providers = self._list_transcription_providers(user_id)
         if not providers:
             raise AssetProcessingError(
-                "No supported transcription provider is enabled. Add an OpenAI-compatible provider to transcribe audio or video files."
+                "No supported transcription provider is enabled. Add an OpenAI, LiteLLM, or local OpenAI-compatible provider to transcribe audio or video files."
             )
 
         errors: list[str] = []
@@ -60,18 +60,19 @@ class TranscriptionProviderService:
 
     def _transcribe_with_provider(self, provider: Provider, path: Path, mime_type: str | None) -> str:
         encrypted_api_key = provider.encrypted_config.get("api_key")
-        if not encrypted_api_key:
+        if provider.provider_type != "local" and not encrypted_api_key:
             raise AssetProcessingError(f"{provider.name} is missing an API key.")
 
-        api_key = secret_manager.decrypt(encrypted_api_key)
+        api_key = secret_manager.decrypt(encrypted_api_key) if encrypted_api_key else ""
         base_url = (provider.base_url or DEFAULT_BASE_URLS[provider.provider_type]).rstrip("/")
         content_type = mime_type or mimetypes.guess_type(path.name)[0] or "application/octet-stream"
 
         try:
             with path.open("rb") as handle, httpx.Client(timeout=300.0) as client:
+                headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
                 response = client.post(
                     f"{base_url}/audio/transcriptions",
-                    headers={"Authorization": f"Bearer {api_key}"},
+                    headers=headers,
                     data={"model": DEFAULT_TRANSCRIPTION_MODEL},
                     files={"file": (path.name, handle, content_type)},
                 )
@@ -92,9 +93,11 @@ class TranscriptionProviderService:
 OPENAI_COMPATIBLE_PROVIDER_PRIORITY = {
     "openai": 0,
     "litellm": 1,
+    "local": 2,
 }
 
 DEFAULT_BASE_URLS = {
     "openai": "https://api.openai.com/v1",
     "litellm": "http://localhost:4000/v1",
+    "local": "http://localhost:4000/v1",
 }

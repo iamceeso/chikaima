@@ -60,6 +60,23 @@ class EmbeddingsServiceTests(unittest.TestCase):
         self.assertEqual(result, [0.1, 0.2, 0.3])
         generate_with_providers.assert_called_once_with(providers, "")
 
+    def test_embed_with_local_provider_allows_missing_api_key(self) -> None:
+        service = embeddings_service.EmbeddingsService(db=Mock())
+        provider = Mock(provider_type="local", base_url="http://localhost:4000/v1", encrypted_config={}, name="Local Gateway")
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"data": [{"embedding": [0.1, 0.2, 0.3]}]}
+        client = Mock()
+        client.__enter__ = Mock(return_value=client)
+        client.__exit__ = Mock(return_value=None)
+        client.post.return_value = response
+
+        with patch("app.services.embeddings_service.httpx.Client", return_value=client):
+            vector = service._embed_with_openai_compatible(provider, "hello")
+
+        self.assertEqual(vector, [0.1, 0.2, 0.3])
+        self.assertEqual(client.post.call_args.kwargs["headers"], {"Content-Type": "application/json"})
+
     def test_replace_chunks_for_source_adds_normalized_chunks_and_defaults_metadata(self) -> None:
         query = QueryRecorder()
         db = FakeDB(query)

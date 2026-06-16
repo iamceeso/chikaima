@@ -281,7 +281,7 @@ class LLMServiceTests(unittest.TestCase):
             },
         )
 
-    def test_build_adapter_requires_api_key_for_non_ollama_provider(self) -> None:
+    def test_build_adapter_requires_api_key_for_non_ollama_non_local_provider(self) -> None:
         service = make_service()
         provider = SimpleNamespace(
             provider_type="openai",
@@ -294,3 +294,18 @@ class LLMServiceTests(unittest.TestCase):
 
         self.assertEqual(context.exception.status_code, 400)
         self.assertEqual(context.exception.detail, "Primary OpenAI is missing an API key.")
+
+    def test_build_adapter_allows_local_provider_without_api_key(self) -> None:
+        service = make_service()
+        provider = SimpleNamespace(
+            provider_type="local",
+            name="Local Gateway",
+            encrypted_config={},
+            base_url="http://localhost:4000/v1",
+        )
+
+        with patch("app.services.llm_service.AdapterFactory.create", return_value="adapter") as factory:
+            adapter = service._build_adapter(provider)
+
+        self.assertEqual(adapter, "adapter")
+        factory.assert_called_once_with(provider, "")

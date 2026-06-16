@@ -43,6 +43,19 @@ class AdapterFactoryTests(unittest.TestCase):
             provider_label="Lite",
         )
 
+    def test_create_returns_local_adapter_with_default_base_url(self) -> None:
+        provider = SimpleNamespace(provider_type="local", name="Local", base_url=None)
+
+        with patch("app.services.providers.factory.OpenAIAdapter", return_value="adapter") as adapter_class:
+            adapter = AdapterFactory.create(provider, "")
+
+        self.assertEqual(adapter, "adapter")
+        adapter_class.assert_called_once_with(
+            api_key="",
+            base_url="http://localhost:4000/v1",
+            provider_label="Local",
+        )
+
     def test_create_returns_anthropic_and_gemini_adapters(self) -> None:
         anthropic_provider = SimpleNamespace(provider_type="anthropic", name="Claude", base_url="https://anthropic.example")
         gemini_provider = SimpleNamespace(provider_type="gemini", name="Gemini", base_url="https://gemini.example")

@@ -49,6 +49,9 @@ class ProviderServiceTests(unittest.TestCase):
     def test_litellm_default_base_url_is_registered(self) -> None:
         self.assertEqual(DEFAULT_BASE_URLS["litellm"], "http://localhost:4000/v1")
 
+    def test_local_default_base_url_is_registered(self) -> None:
+        self.assertEqual(DEFAULT_BASE_URLS["local"], "http://localhost:4000/v1")
+
     def test_init_and_list_for_user_delegate_to_repository(self) -> None:
         db = SimpleNamespace()
 
@@ -517,9 +520,16 @@ class ProviderServiceTests(unittest.TestCase):
             provider_type="local", encrypted_config={}, base_url=None
         )
 
-        self.assertEqual(
-            service._load_provider_models(provider), CURATED_PROVIDER_MODELS["local"]
-        )
+        with patch.object(
+            service,
+            "_fetch_openai_models",
+            return_value=CURATED_PROVIDER_MODELS["local"],
+        ) as fetcher:
+            self.assertEqual(
+                service._load_provider_models(provider), CURATED_PROVIDER_MODELS["local"]
+            )
+
+        fetcher.assert_called_once_with(provider, None)
 
     def test_load_provider_models_dispatches_all_provider_types(self) -> None:
         service = object.__new__(ProviderService)
@@ -593,11 +603,38 @@ class ProviderServiceTests(unittest.TestCase):
                 ),
                 ["openai"],
             )
+            self.assertEqual(
+                service._load_provider_models(
+                    SimpleNamespace(
+                        provider_type="local", encrypted_config={}, base_url=None
+                    ),
+                    None,
+                ),
+                ["openai"],
+            )
 
-        self.assertEqual(openai_fetcher.call_count, 3)
+        self.assertEqual(openai_fetcher.call_count, 4)
         anthropic_fetcher.assert_called_once()
         gemini_fetcher.assert_called_once()
         ollama_fetcher.assert_called_once()
+
+    def test_fetch_openai_models_allows_local_provider_without_api_key(self) -> None:
+        service = object.__new__(ProviderService)
+        provider = SimpleNamespace(
+            provider_type="local", base_url="http://localhost:4000/v1"
+        )
+        response = SimpleNamespace(
+            raise_for_status=lambda: None,
+            json=lambda: {"data": [{"id": "qwen3"}]},
+        )
+        client = MagicMock()
+        client.__enter__.return_value.get.return_value = response
+
+        with patch("app.services.provider_service.httpx.Client", return_value=client):
+            models = service._fetch_openai_models(provider, None)
+
+        self.assertEqual(models[0]["key"], "qwen3")
+        self.assertEqual(client.__enter__.return_value.get.call_args.kwargs["headers"], {})
 
     def test_fetch_openai_models_uses_curated_fallbacks_when_unavailable(self) -> None:
         service = object.__new__(ProviderService)

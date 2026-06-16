@@ -55,10 +55,20 @@ const providerDefaults: Record<ProviderType, { name: string; baseUrl: string; ap
     apiKeyPlaceholder: "Proxy key or master key",
   },
   local: {
-    name: "Local model host",
+    name: "Local OpenAI gateway",
     baseUrl: "http://localhost:4000/v1",
     apiKeyPlaceholder: "Optional",
   },
+};
+
+const providerSupportNotes: Record<ProviderType, string> = {
+  openai: "Chat, embeddings, and transcription are wired.",
+  anthropic: "Chat is wired. Embeddings and transcription are not routed through Anthropic in Olanma.",
+  gemini: "Chat and embeddings are wired. Audio transcription currently uses OpenAI-compatible providers.",
+  ollama: "Chat and embeddings are wired. Audio transcription is not routed through Ollama in Olanma.",
+  openrouter: "Chat and embeddings are wired. Audio transcription is not routed through OpenRouter in Olanma.",
+  litellm: "Chat, embeddings, and transcription are wired when your LiteLLM proxy exposes OpenAI-compatible endpoints.",
+  local: "Chat, embeddings, and transcription are wired when your local OpenAI-compatible gateway exposes those endpoints.",
 };
 
 export function ProviderForm() {
@@ -78,6 +88,7 @@ export function ProviderForm() {
     name: "provider_type",
   });
   const defaults = providerDefaults[providerType];
+  const supportNote = providerSupportNotes[providerType];
   const previousProviderType = useRef<ProviderType>("openai");
 
   useEffect(() => {
@@ -119,7 +130,7 @@ export function ProviderForm() {
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-foreground">Add provider</h2>
         <p className="mt-2 text-sm text-foreground-muted">
-          Connect cloud APIs, local runtimes, or supported gateways.
+          Connect cloud APIs, local Ollama instances, or OpenAI-compatible gateways.
         </p>
       </div>
       <form
@@ -149,13 +160,14 @@ export function ProviderForm() {
             <option value="ollama">Ollama</option>
             <option value="openrouter">OpenRouter</option>
             <option value="litellm">LiteLLM</option>
-            <option value="local">Local model host</option>
+            <option value="local">Local OpenAI gateway</option>
           </select>
         </div>
         <div className="min-w-0">
           <Label htmlFor="base_url">Base URL</Label>
           <Input id="base_url" {...form.register("base_url")} placeholder={defaults.baseUrl} />
         </div>
+        <p className="text-sm text-foreground-muted">{supportNote}</p>
         <div className="min-w-0">
           <Label htmlFor="api_key">API key</Label>
           <Input id="api_key" type="password" {...form.register("api_key")} placeholder={defaults.apiKeyPlaceholder} />

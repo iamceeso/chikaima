@@ -75,7 +75,7 @@ class LLMService:
 
     def _build_adapter(self, provider: Provider):
         encrypted_api_key = provider.encrypted_config.get("api_key")
-        if provider.provider_type != "ollama" and not encrypted_api_key:
+        if provider.provider_type not in {"ollama", "local"} and not encrypted_api_key:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"{provider.name} is missing an API key.",
