@@ -131,6 +131,11 @@ async function requestBlob(path: string, options: RequestOptions = {}): Promise<
   return response.blob();
 }
 
+export const apiTestUtils = {
+  request,
+  requestBlob,
+};
+
 export const api = {
   getPublicWorkspaceSettings: () => request<WorkspacePublicSettings>("/settings/public"),
   register: (payload: { email: string; full_name: string; password: string }) =>

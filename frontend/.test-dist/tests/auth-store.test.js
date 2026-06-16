@@ -4,6 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const strict_1 = __importDefault(require("node:assert/strict"));
+const node_module_1 = require("node:module");
+const node_path_1 = __importDefault(require("node:path"));
 const node_test_1 = __importDefault(require("node:test"));
 class MemoryStorage {
     store = {};
@@ -21,13 +23,19 @@ class MemoryStorage {
     }
 }
 const originalLocalStorage = global.localStorage;
-async function importAuthStore() {
+const requireForTests = (0, node_module_1.createRequire)(node_path_1.default.resolve(process.cwd(), "package.json"));
+async function importAuthStore(initialStorage) {
     const storage = new MemoryStorage();
+    for (const [key, value] of Object.entries(initialStorage ?? {})) {
+        storage.setItem(key, value);
+    }
     Object.defineProperty(globalThis, "localStorage", {
         configurable: true,
         value: storage,
     });
-    const module = await import(`../store/auth-store.js?case=${Math.random()}`);
+    const modulePath = node_path_1.default.resolve(process.cwd(), ".test-dist/store/auth-store.js");
+    delete requireForTests.cache[requireForTests.resolve(modulePath)];
+    const module = requireForTests(modulePath);
     return { storage, useAuthStore: module.useAuthStore };
 }
 node_test_1.default.afterEach(() => {
@@ -58,6 +66,34 @@ node_test_1.default.afterEach(() => {
     });
     strict_1.default.equal(useAuthStore.getState().tokens?.access_token, "access");
     strict_1.default.equal(useAuthStore.getState().user?.email, "user@example.com");
+});
+(0, node_test_1.default)("setSession defaults user to null", async () => {
+    const { useAuthStore } = await importAuthStore();
+    useAuthStore.getState().setSession({
+        access_token: "access",
+        refresh_token: "refresh",
+        token_type: "bearer",
+    });
+    strict_1.default.equal(useAuthStore.getState().user, null);
+});
+(0, node_test_1.default)("rehydrate loads persisted auth state and marks the store hydrated", async () => {
+    const { useAuthStore } = await importAuthStore({
+        "olanma-auth": JSON.stringify({
+            state: {
+                tokens: {
+                    access_token: "persisted-access",
+                    refresh_token: "persisted-refresh",
+                    token_type: "bearer",
+                },
+                user: null,
+            },
+            version: 0,
+        }),
+    });
+    await useAuthStore.persist.rehydrate();
+    strict_1.default.equal(useAuthStore.getState().tokens?.access_token, "persisted-access");
+    strict_1.default.equal(useAuthStore.getState().user, null);
+    strict_1.default.equal(useAuthStore.getState().hydrated, true);
 });
 (0, node_test_1.default)("clearSession removes stored auth state", async () => {
     const { useAuthStore } = await importAuthStore();

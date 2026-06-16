@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.api = void 0;
+exports.api = exports.apiTestUtils = void 0;
 const env_1 = require("../lib/env");
 const REQUEST_TIMEOUT_MS = 10_000;
 async function request(path, options = {}) {
@@ -86,6 +86,10 @@ async function requestBlob(path, options = {}) {
     }
     return response.blob();
 }
+exports.apiTestUtils = {
+    request,
+    requestBlob,
+};
 exports.api = {
     getPublicWorkspaceSettings: () => request("/settings/public"),
     register: (payload) => request("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
