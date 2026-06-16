@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -6,13 +6,31 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential curl ffmpeg tesseract-ocr \
+    && apt-get install -y --no-install-recommends build-essential curl \
     && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+
+ENV PATH="/opt/venv/bin:$PATH"
 
 COPY . .
 
 RUN pip install --no-cache-dir uv \
-    && uv pip install --system .
+    && uv pip install --python /opt/venv/bin/python .
+
+FROM python:3.12-slim AS runner
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/venv /opt/venv
 
 EXPOSE 8000
 

@@ -27,13 +27,9 @@ class Settings(BaseSettings):
     document_upload_max_megabytes: int = 100
     audio_upload_max_megabytes: int = 512
     video_upload_max_megabytes: int = 2048
-    embedding_model: str = "all-MiniLM-L6-v2"
     embedding_dimension: int = 384
     rag_top_k: int = 3
     ollama_base_url: str = "http://localhost:11434"
-    whisper_model: str = "base"
-    whisper_language: str | None = None
-    ffmpeg_binary_path: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

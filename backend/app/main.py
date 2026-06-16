@@ -12,16 +12,16 @@ from sqlalchemy import text
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.services.transcription_runtime import bootstrap_transcription_runtime
 from app.services.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     _ensure_vector_extension()
-    bootstrap_transcription_runtime()
     yield
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -103,6 +103,6 @@ def openapi_schema() -> JSONResponse:
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
+
 def startup_checks() -> None:
     _ensure_vector_extension()
-    bootstrap_transcription_runtime()

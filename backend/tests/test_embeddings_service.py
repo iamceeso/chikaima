@@ -1,5 +1,4 @@
 import unittest
-from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from app.services import embeddings_service
@@ -37,51 +36,55 @@ class FakeDB:
 
 
 class EmbeddingsServiceTests(unittest.TestCase):
-    def tearDown(self) -> None:
-        embeddings_service.get_embedding_model.cache_clear()
+    def test_generate_embedding_raises_when_no_provider_is_configured(self) -> None:
+        service = embeddings_service.EmbeddingsService(db=Mock())
 
-    def test_get_embedding_model_is_cached(self) -> None:
-        factory = Mock(side_effect=["model-1", "model-2"])
+        with patch.object(service, "_list_embedding_providers", return_value=[]):
+            with self.assertRaises(embeddings_service.NoEmbeddingProviderError):
+                service.generate_embedding("user-1", "hello world")
 
-        with patch("app.services.embeddings_service.SentenceTransformer", factory):
-            first = embeddings_service.get_embedding_model()
-            second = embeddings_service.get_embedding_model()
+    def test_generate_embedding_returns_first_successful_provider_vector(self) -> None:
+        service = embeddings_service.EmbeddingsService(db=Mock())
+        providers = [Mock(name="primary"), Mock(name="fallback")]
 
-        self.assertEqual(first, "model-1")
-        self.assertIs(first, second)
-        factory.assert_called_once_with(embeddings_service.settings.embedding_model)
+        with (
+            patch.object(service, "_list_embedding_providers", return_value=providers),
+            patch.object(
+                service,
+                "_generate_embedding_with_providers",
+                return_value=[0.1, 0.2, 0.3],
+            ) as generate_with_providers,
+        ):
+            result = service.generate_embedding("user-1", "")
 
-    def test_generate_embedding_uses_empty_string_fallback(self) -> None:
-        vector = SimpleNamespace(tolist=lambda: [0.1, 0.2, 0.3])
-        model = Mock()
-        model.encode.return_value = vector
-
-        with patch("app.services.embeddings_service.get_embedding_model", return_value=model):
-            service = embeddings_service.EmbeddingsService(db=SimpleNamespace())
-
-        self.assertEqual(service.generate_embedding(""), [0.1, 0.2, 0.3])
-        model.encode.assert_called_once_with("", convert_to_numpy=True, show_progress_bar=False)
+        self.assertEqual(result, [0.1, 0.2, 0.3])
+        generate_with_providers.assert_called_once_with(providers, "")
 
     def test_replace_chunks_for_source_adds_normalized_chunks_and_defaults_metadata(self) -> None:
         query = QueryRecorder()
         db = FakeDB(query)
-        service = object.__new__(embeddings_service.EmbeddingsService)
-        service.db = db
-        service.model = Mock()
-        service.generate_embedding = lambda text: [float(len(text))]  # type: ignore[method-assign]
+        service = embeddings_service.EmbeddingsService(db)
 
-        stored_chunks = service.replace_chunks_for_source(
-            user_id="user-1",
-            source_type="document",
-            source_id="doc-1",
-            asset_type="text",
-            filename="notes.txt",
-            chunks=[
-                ("  first chunk  ", None),
-                ("   ", {"ignored": True}),
-                ("second chunk", {"chunk_index": 99, "filename": "override.txt", "extra": "value"}),
-            ],
-        )
+        with (
+            patch.object(service, "_list_embedding_providers", return_value=[Mock()]),
+            patch.object(
+                service,
+                "_generate_embedding_with_providers",
+                side_effect=lambda _providers, text: [float(len(text))],
+            ),
+        ):
+            stored_chunks = service.replace_chunks_for_source(
+                user_id="user-1",
+                source_type="document",
+                source_id="doc-1",
+                asset_type="text",
+                filename="notes.txt",
+                chunks=[
+                    ("  first chunk  ", None),
+                    ("   ", {"ignored": True}),
+                    ("second chunk", {"chunk_index": 99, "filename": "override.txt", "extra": "value"}),
+                ],
+            )
 
         self.assertEqual(len(stored_chunks), 2)
         self.assertEqual(len(db.added), 2)
@@ -111,12 +114,29 @@ class EmbeddingsServiceTests(unittest.TestCase):
             },
         )
 
+    def test_replace_chunks_for_source_skips_storage_without_provider(self) -> None:
+        query = QueryRecorder()
+        db = FakeDB(query)
+        service = embeddings_service.EmbeddingsService(db)
+
+        with patch.object(service, "_list_embedding_providers", return_value=[]):
+            stored_chunks = service.replace_chunks_for_source(
+                user_id="user-1",
+                source_type="document",
+                source_id="doc-1",
+                asset_type="text",
+                filename="notes.txt",
+                chunks=[("hello", {})],
+            )
+
+        self.assertEqual(stored_chunks, [])
+        self.assertEqual(db.added, [])
+        self.assertEqual(db.flush_calls, 1)
+
     def test_delete_chunks_for_source_returns_deleted_count(self) -> None:
         query = QueryRecorder(delete_result=4)
         db = FakeDB(query)
-        service = object.__new__(embeddings_service.EmbeddingsService)
-        service.db = db
-        service.model = Mock()
+        service = embeddings_service.EmbeddingsService(db)
 
         deleted = service.delete_chunks_for_source(user_id="user-1", source_type="video", source_id="video-1")
 

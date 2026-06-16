@@ -13,10 +13,8 @@ dependencies = [
     "google-generativeai>=0.8.3",
     "greenlet>=3.1.1",
     "httpx>=0.28.1",
-    "imageio-ffmpeg",
     "numpy>=1.26.0",
     "ollama>=0.3.0",
-    "openai-whisper",
     "openpyxl>=3.1.5",
     "passlib[bcrypt]>=1.7.4",
     "pillow>=11.2.1",
@@ -30,7 +28,6 @@ dependencies = [
     "python-multipart>=0.0.12",
     "python-pptx>=1.0.2",
     "redis>=5.2.1",
-    "sentence-transformers>=3.0.1",
     "sqlalchemy>=2.0.36",
     "uvicorn[standard]>=0.32.0",
 ]

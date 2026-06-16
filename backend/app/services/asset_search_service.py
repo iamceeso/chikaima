@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.asset_chunk import AssetChunk
-from app.services.embeddings_service import EmbeddingsService
+from app.services.embeddings_service import EmbeddingProviderError, EmbeddingsService
 
 
 @dataclass
@@ -54,7 +54,10 @@ class AssetSearchService:
                 return []
 
         limit = limit or settings.rag_top_k
-        query_vector = self.embeddings.generate_embedding(query)
+        try:
+            query_vector = self.embeddings.generate_embedding(user_id, query)
+        except EmbeddingProviderError:
+            return []
 
         distance_expr = AssetChunk.embedding.cosine_distance(query_vector)
         query_obj = self.db.query(AssetChunk, distance_expr.label("distance")).filter(AssetChunk.user_id == user_id)

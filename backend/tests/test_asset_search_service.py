@@ -112,7 +112,7 @@ class AssetSearchServiceTests(unittest.TestCase):
         service = object.__new__(AssetSearchService)
         service.db = SimpleNamespace()
 
-        service.embeddings = SimpleNamespace(generate_embedding=lambda _: [0.1, 0.2, 0.3])
+        service.embeddings = SimpleNamespace(generate_embedding=lambda _user_id, _query: [0.1, 0.2, 0.3])
 
         self.assertEqual(service.search("user-1", "hello", source_filters={}), [])
 
@@ -130,7 +130,7 @@ class AssetSearchServiceTests(unittest.TestCase):
         db = FakeDB([row])
         service = object.__new__(AssetSearchService)
         service.db = db
-        service.embeddings = SimpleNamespace(generate_embedding=lambda query: [0.1, 0.2])
+        service.embeddings = SimpleNamespace(generate_embedding=lambda _user_id, _query: [0.1, 0.2])
 
         with (
             patch("app.services.asset_search_service.AssetChunk", FakeAssetChunkModel),
@@ -165,7 +165,7 @@ class AssetSearchServiceTests(unittest.TestCase):
         db = FakeDB([row])
         service = object.__new__(AssetSearchService)
         service.db = db
-        service.embeddings = SimpleNamespace(generate_embedding=lambda query: [0.3])
+        service.embeddings = SimpleNamespace(generate_embedding=lambda _user_id, _query: [0.3])
 
         with patch("app.services.asset_search_service.AssetChunk", FakeAssetChunkModel):
             results = service.search("user-1", "hello", source_ids={"doc-2"}, limit=1)
@@ -239,7 +239,7 @@ class AssetSearchServiceTests(unittest.TestCase):
         db = FakeDB(rows)
         service = object.__new__(AssetSearchService)
         service.db = db
-        service.embeddings = SimpleNamespace(generate_embedding=lambda query: [0.5])
+        service.embeddings = SimpleNamespace(generate_embedding=lambda _user_id, _query: [0.5])
 
         with (
             patch("app.services.asset_search_service.AssetChunk", FakeAssetChunkModel),

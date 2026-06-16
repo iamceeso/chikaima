@@ -159,7 +159,7 @@ class WorkerTaskTests(unittest.TestCase):
         with (
             patch("app.workers.tasks.SessionLocal", return_value=db),
             patch(
-                "app.workers.tasks.WhisperTranscriptionService"
+                "app.workers.tasks.TranscriptionProviderService"
             ) as transcription_service,
         ):
             transcription_service.return_value.transcribe_media.side_effect = (
@@ -189,7 +189,7 @@ class WorkerTaskTests(unittest.TestCase):
         with (
             patch("app.workers.tasks.SessionLocal", return_value=db),
             patch(
-                "app.workers.tasks.WhisperTranscriptionService"
+                "app.workers.tasks.TranscriptionProviderService"
             ) as transcription_service,
         ):
             transcription_service.return_value.transcribe_media.return_value = "   "
@@ -222,7 +222,7 @@ class WorkerTaskTests(unittest.TestCase):
         with (
             patch("app.workers.tasks.SessionLocal", return_value=db),
             patch(
-                "app.workers.tasks.WhisperTranscriptionService",
+                "app.workers.tasks.TranscriptionProviderService",
                 side_effect=RuntimeError("boom"),
             ),
         ):
@@ -258,7 +258,7 @@ class WorkerTaskTests(unittest.TestCase):
         with (
             patch("app.workers.tasks.SessionLocal", return_value=db),
             patch(
-                "app.workers.tasks.WhisperTranscriptionService",
+                "app.workers.tasks.TranscriptionProviderService",
                 side_effect=RuntimeError("boom"),
             ),
         ):
@@ -292,7 +292,7 @@ class WorkerTaskTests(unittest.TestCase):
         with (
             patch("app.workers.tasks.SessionLocal", return_value=db),
             patch(
-                "app.workers.tasks.WhisperTranscriptionService",
+                "app.workers.tasks.TranscriptionProviderService",
                 side_effect=RuntimeError("boom"),
             ),
         ):
@@ -328,7 +328,7 @@ class WorkerTaskTests(unittest.TestCase):
         with (
             patch("app.workers.tasks.SessionLocal", return_value=db),
             patch(
-                "app.workers.tasks.WhisperTranscriptionService"
+                "app.workers.tasks.TranscriptionProviderService"
             ) as transcription_service,
             patch("app.workers.tasks._upsert_transcript", return_value=transcript),
             patch(
@@ -377,7 +377,7 @@ class WorkerTaskTests(unittest.TestCase):
         with (
             patch("app.workers.tasks.SessionLocal", return_value=db),
             patch(
-                "app.workers.tasks.WhisperTranscriptionService"
+                "app.workers.tasks.TranscriptionProviderService"
             ) as transcription_service,
             patch("app.workers.tasks._upsert_transcript", return_value=transcript),
             patch(

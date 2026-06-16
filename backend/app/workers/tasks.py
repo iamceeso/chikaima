@@ -13,7 +13,7 @@ from app.models.video import Video
 from app.services.asset_processors import AssetProcessingError, ChunkPayload, processor_registry
 from app.services.embeddings_service import EmbeddingsService
 from app.services.llm_service import LLMService
-from app.services.whisper_transcription_service import WhisperTranscriptionService
+from app.services.transcription_provider_service import TranscriptionProviderService
 from app.workers.celery_app import celery_app
 
 MAX_LLM_SOURCE_CHARS = 12_000
@@ -60,9 +60,11 @@ def _process_resource_job(job_id: str, model: type[AudioAsset | Video | Document
 
         mime_type = getattr(resource, "mime_type", None)
         if resource_type in {"audio", "video"}:
-            extracted_text = WhisperTranscriptionService().transcribe_media(
+            extracted_text = TranscriptionProviderService(db).transcribe_media(
+                resource.user_id,
                 resource.file_path,
                 resource.name,
+                mime_type,
             ).strip()
             if resource_type == "video" and not extracted_text:
                 extracted_text = f"No spoken audio was detected in {resource.name}."

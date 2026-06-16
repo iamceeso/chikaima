@@ -38,6 +38,8 @@ try:
 except ImportError:  # pragma: no cover
     pytesseract = None
 
+from app.core.database import SessionLocal
+
 TEXT_CHUNK_SIZE = 4_000
 TEXT_CHUNK_OVERLAP = 800
 CODE_EXTENSIONS = {".js", ".ts", ".tsx", ".jsx", ".py", ".cs", ".java", ".go", ".rs"}
@@ -51,6 +53,7 @@ class IngestibleResource(Protocol):
     id: str
     name: str
     file_path: str
+    user_id: str
 
 
 @dataclass
@@ -332,9 +335,22 @@ class VideoProcessor:
 
 
 def _transcribe_media(resource: IngestibleResource) -> str:
-    from app.services.whisper_transcription_service import WhisperTranscriptionService
+    from app.services.transcription_provider_service import TranscriptionProviderService
 
-    return WhisperTranscriptionService().transcribe_media(resource.file_path, resource.name)
+    user_id = getattr(resource, "user_id", "").strip()
+    if not user_id:
+        raise AssetProcessingError(f"{resource.name} is missing a user context for transcription.")
+
+    db = SessionLocal()
+    try:
+        return TranscriptionProviderService(db).transcribe_media(
+            user_id,
+            resource.file_path,
+            resource.name,
+            getattr(resource, "mime_type", None),
+        )
+    finally:
+        db.close()
 
 
 class AssetProcessorRegistry:

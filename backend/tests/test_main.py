@@ -108,12 +108,8 @@ class MainTests(unittest.TestCase):
     def test_health_returns_ok_status(self) -> None:
         self.assertEqual(main.health(), {"status": "ok"})
 
-    def test_startup_checks_bootstraps_dependencies(self) -> None:
-        with (
-            patch("app.main._ensure_vector_extension") as ensure_vector,
-            patch("app.main.bootstrap_transcription_runtime") as bootstrap_runtime,
-        ):
+    def test_startup_checks_runs_vector_extension_setup(self) -> None:
+        with patch("app.main._ensure_vector_extension") as ensure_vector:
             main.startup_checks()
 
         ensure_vector.assert_called_once()
-        bootstrap_runtime.assert_called_once()
