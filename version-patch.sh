@@ -31,8 +31,8 @@ fi
 
 BACKEND_PYPROJECT="$ROOT_DIR/backend/pyproject.toml"
 BACKEND_MAIN="$ROOT_DIR/backend/app/main.py"
-BACKEND_UV_LOCK="$ROOT_DIR/backend/uv.lock"
 FRONTEND_PACKAGE="$ROOT_DIR/frontend/package.json"
+UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 
 CURRENT_BACKEND_VERSION="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$BACKEND_PYPROJECT" | head -n 1)"
 CURRENT_FRONTEND_VERSION="$(sed -n 's/^  "version": "\(.*\)",$/\1/p' "$FRONTEND_PACKAGE" | head -n 1)"
@@ -46,8 +46,31 @@ export VERSION
 
 perl -0pi -e 's/(\[project\]\nname = "olanma-backend"\nversion = ")[^"]+(")/$1$ENV{VERSION}$2/' "$BACKEND_PYPROJECT"
 perl -0pi -e 's/(^\s*version=")[^"]+(",\s*$)/$1$ENV{VERSION}$2/m' "$BACKEND_MAIN"
-perl -0pi -e 's/(\[\[package\]\]\nname = "olanma-backend"\nversion = ")[^"]+(")/$1$ENV{VERSION}$2/' "$BACKEND_UV_LOCK"
 perl -0pi -e 's/("name": "olanma-frontend",\n  "version": ")[^"]+(")/$1$ENV{VERSION}$2/' "$FRONTEND_PACKAGE"
+
+if command -v corepack >/dev/null 2>&1; then
+  PNPM_CMD=(corepack pnpm)
+elif command -v pnpm >/dev/null 2>&1; then
+  PNPM_CMD=(pnpm)
+else
+  echo "Could not find pnpm or corepack to refresh frontend lockfile."
+  exit 1
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "Could not find uv to refresh backend lockfile."
+  exit 1
+fi
+
+(
+  cd "$ROOT_DIR/frontend"
+  "${PNPM_CMD[@]}" install --lockfile-only
+)
+
+(
+  cd "$ROOT_DIR/backend"
+  env UV_CACHE_DIR="$UV_CACHE_DIR" uv lock
+)
 
 git tag "$TAG"
 
@@ -59,6 +82,7 @@ echo "  - backend/pyproject.toml"
 echo "  - backend/app/main.py"
 echo "  - backend/uv.lock"
 echo "  - frontend/package.json"
+echo "  - frontend/pnpm-lock.yaml"
 echo
 echo "Next:"
 echo "  ./pre-push.sh"
