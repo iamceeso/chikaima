@@ -2,7 +2,6 @@
 name = "olanma-backend"
 version = "0.1.0"
 description = "FastAPI backend for the Olanma AI workspace"
-readme = "../README.md"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.16.0",
