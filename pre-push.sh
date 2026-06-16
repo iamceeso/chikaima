@@ -10,6 +10,13 @@ JWT_SECRET_KEY="${JWT_SECRET_KEY:-change-me-development-secret}"
 JWT_REFRESH_SECRET_KEY="${JWT_REFRESH_SECRET_KEY:-change-me-too-development-secret}"
 PROVIDER_SECRET_KEY="${PROVIDER_SECRET_KEY:-replace-with-32-char-secret-key}"
 NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-/api/v1}"
+FRONTEND_DOCKER_IMAGE_TAG="${FRONTEND_DOCKER_IMAGE_TAG:-olanma-frontend-prepush}"
+BACKEND_DOCKER_IMAGE_TAG="${BACKEND_DOCKER_IMAGE_TAG:-olanma-backend-prepush}"
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Docker is required for pre-push image builds but was not found."
+  exit 1
+fi
 
 echo "Running backend lint..."
 (
@@ -55,6 +62,22 @@ echo "Running frontend build..."
 (
   cd "$FRONTEND_DIR"
   env NEXT_PUBLIC_API_BASE_URL="$NEXT_PUBLIC_API_BASE_URL" pnpm build
+)
+
+echo "Building backend Docker image..."
+(
+  cd "$ROOT_DIR"
+  docker build -f backend/Dockerfile -t "$BACKEND_DOCKER_IMAGE_TAG" backend
+)
+
+echo "Building frontend Docker image..."
+(
+  cd "$ROOT_DIR"
+  docker build \
+    -f frontend/Dockerfile \
+    --build-arg NEXT_PUBLIC_API_BASE_URL="$NEXT_PUBLIC_API_BASE_URL" \
+    -t "$FRONTEND_DOCKER_IMAGE_TAG" \
+    frontend
 )
 
 echo "Pre-push checks passed for backend and frontend."
