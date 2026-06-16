@@ -9,6 +9,7 @@ UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 JWT_SECRET_KEY="${JWT_SECRET_KEY:-change-me-development-secret}"
 JWT_REFRESH_SECRET_KEY="${JWT_REFRESH_SECRET_KEY:-change-me-too-development-secret}"
 PROVIDER_SECRET_KEY="${PROVIDER_SECRET_KEY:-replace-with-32-char-secret-key}"
+NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-/api/v1}"
 
 echo "Running backend lint..."
 (
@@ -53,7 +54,7 @@ echo "Running frontend unit tests..."
 echo "Running frontend build..."
 (
   cd "$FRONTEND_DIR"
-  pnpm build
+  env NEXT_PUBLIC_API_BASE_URL="$NEXT_PUBLIC_API_BASE_URL" pnpm build
 )
 
 echo "Pre-push checks passed for backend and frontend."
