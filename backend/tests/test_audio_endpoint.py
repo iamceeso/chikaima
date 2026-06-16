@@ -20,7 +20,13 @@ from app.models.audio import AudioAsset
 
 
 def make_audio(audio_id: str) -> AudioAsset:
-    audio = AudioAsset(user_id="user-1", name="call.wav", file_path="/tmp/call.wav", transcript="Transcript", status="completed")
+    audio = AudioAsset(
+        user_id="user-1",
+        name="call.wav",
+        file_path="/tmp/call.wav",
+        transcript="Transcript",
+        status="completed",
+    )
     audio.id = audio_id
     now = datetime.now(UTC)
     audio.created_at = now
@@ -56,7 +62,9 @@ class QueryStub:
 
 
 class AudioEndpointTests(unittest.IsolatedAsyncioTestCase):
-    async def test_upload_audio_persists_asset_dispatches_job_and_invalidates_cache(self) -> None:
+    async def test_upload_audio_persists_asset_dispatches_job_and_invalidates_cache(
+        self,
+    ) -> None:
         db_calls: list[str] = []
         db = SimpleNamespace(
             add=lambda _item: db_calls.append("add"),
@@ -71,7 +79,12 @@ class AudioEndpointTests(unittest.IsolatedAsyncioTestCase):
         upload = UploadFile(filename="call.wav", file=BytesIO(b"audio"))
 
         with (
-            patch("app.api.v1.endpoints.audio.storage_service.save_upload", new=AsyncMock(return_value={"name": "call.wav", "file_path": "/tmp/call.wav"})),
+            patch(
+                "app.api.v1.endpoints.audio.storage_service.save_upload",
+                new=AsyncMock(
+                    return_value={"name": "call.wav", "file_path": "/tmp/call.wav"}
+                ),
+            ),
             patch("app.api.v1.endpoints.audio.JobService") as job_service,
             patch("app.api.v1.endpoints.audio.LibraryService") as library_service,
         ):
@@ -80,7 +93,9 @@ class AudioEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.name, "call.wav")
         self.assertEqual(response.status, "pending")
         self.assertEqual(db_calls, ["add", "commit"])
-        job_service.return_value.create_job.assert_called_once_with("user-1", "audio_transcription", "audio", "audio-1")
+        job_service.return_value.create_job.assert_called_once_with(
+            "user-1", "audio_transcription", "audio", "audio-1"
+        )
         library_service.invalidate_user_cache.assert_called_once_with("user-1")
 
     async def test_endpoint_helpers_list_delete_and_read_audio_resources(self) -> None:
@@ -105,7 +120,10 @@ class AudioEndpointTests(unittest.IsolatedAsyncioTestCase):
             patch("app.api.v1.endpoints.audio.LibraryService") as library_service,
         ):
             transcript_service.return_value.get_for_resource.return_value = transcript
-            transcript_service.return_value.list_summaries_for_resource.return_value = [make_summary("summary"), make_summary("key_points")]
+            transcript_service.return_value.list_summaries_for_resource.return_value = [
+                make_summary("summary"),
+                make_summary("key_points"),
+            ]
 
             listed = list_audio_assets(db, current_user)
             got_transcript = get_audio_transcript("audio-1", db, current_user)
@@ -116,8 +134,12 @@ class AudioEndpointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(listed[0].name, "call.wav")
         self.assertEqual(got_transcript.content, "Transcript")
         self.assertEqual(len(got_summaries), 2)
-        transcript_service.return_value.delete_resource.assert_called_once_with("user-1", "audio", "audio-1")
-        transcript_service.return_value.delete_all_resources.assert_called_once_with("user-1", "audio")
+        transcript_service.return_value.delete_resource.assert_called_once_with(
+            "user-1", "audio", "audio-1"
+        )
+        transcript_service.return_value.delete_all_resources.assert_called_once_with(
+            "user-1", "audio"
+        )
         self.assertEqual(library_service.invalidate_user_cache.call_count, 2)
 
     async def test_not_implemented_audio_routes_raise_501(self) -> None:

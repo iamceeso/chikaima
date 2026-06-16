@@ -26,7 +26,9 @@ class JobServiceTests(unittest.TestCase):
     def test_init_builds_repository(self) -> None:
         db = SimpleNamespace()
 
-        with patch("app.services.job_service.JobRepository", return_value="repo") as repository:
+        with patch(
+            "app.services.job_service.JobRepository", return_value="repo"
+        ) as repository:
             service = job_service.JobService(db)
 
         self.assertIs(service.db, db)
@@ -70,11 +72,19 @@ class JobServiceTests(unittest.TestCase):
         service.jobs = SimpleNamespace()
 
         with (
-            patch.object(job_service, "transcribe_audio", SimpleNamespace(delay=Mock())) as transcribe_audio,
-            patch.object(job_service, "process_video", SimpleNamespace(delay=Mock())) as process_video,
-            patch.object(job_service, "analyze_document", SimpleNamespace(delay=Mock())) as analyze_document,
+            patch.object(
+                job_service, "transcribe_audio", SimpleNamespace(delay=Mock())
+            ) as transcribe_audio,
+            patch.object(
+                job_service, "process_video", SimpleNamespace(delay=Mock())
+            ) as process_video,
+            patch.object(
+                job_service, "analyze_document", SimpleNamespace(delay=Mock())
+            ) as analyze_document,
         ):
-            service.dispatch(SimpleNamespace(id="job-a", job_type="audio_transcription"))
+            service.dispatch(
+                SimpleNamespace(id="job-a", job_type="audio_transcription")
+            )
             service.dispatch(SimpleNamespace(id="job-b", job_type="video_analysis"))
             service.dispatch(SimpleNamespace(id="job-c", job_type="document_analysis"))
 
@@ -84,7 +94,10 @@ class JobServiceTests(unittest.TestCase):
 
     def test_dispatch_ignores_unknown_job_types(self) -> None:
         service = object.__new__(job_service.JobService)
-        service.db = SimpleNamespace(add=lambda item: (_ for _ in ()).throw(AssertionError("unexpected add")), commit=lambda: (_ for _ in ()).throw(AssertionError("unexpected commit")))
+        service.db = SimpleNamespace(
+            add=lambda item: (_ for _ in ()).throw(AssertionError("unexpected add")),
+            commit=lambda: (_ for _ in ()).throw(AssertionError("unexpected commit")),
+        )
         service.jobs = SimpleNamespace()
 
         service.dispatch(SimpleNamespace(id="job-1", job_type="unsupported"))
@@ -94,9 +107,18 @@ class JobServiceTests(unittest.TestCase):
         service = object.__new__(job_service.JobService)
         service.db = db
         service.jobs = SimpleNamespace()
-        job = SimpleNamespace(id="job-1", job_type="audio_transcription", status="pending", error_message=None)
+        job = SimpleNamespace(
+            id="job-1",
+            job_type="audio_transcription",
+            status="pending",
+            error_message=None,
+        )
 
-        with patch.object(job_service, "transcribe_audio", SimpleNamespace(delay=Mock(side_effect=RuntimeError("boom")))):
+        with patch.object(
+            job_service,
+            "transcribe_audio",
+            SimpleNamespace(delay=Mock(side_effect=RuntimeError("boom"))),
+        ):
             service.dispatch(job)
 
         self.assertEqual(job.status, "failed")

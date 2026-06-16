@@ -1,7 +1,7 @@
+import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
-import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -60,7 +60,9 @@ class ChatServiceTests(unittest.TestCase):
             setattr(video, key, value)
         return video
 
-    def test_build_message_content_returns_base_content_without_attachments(self) -> None:
+    def test_build_message_content_returns_base_content_without_attachments(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         service._build_attachment_context = lambda user_id, metadata: ""  # type: ignore[method-assign]
         service._build_image_parts = lambda user_id, metadata, model: []  # type: ignore[method-assign]
@@ -73,7 +75,9 @@ class ChatServiceTests(unittest.TestCase):
 
         self.assertEqual(content, "Hello")
 
-    def test_build_message_content_adds_vision_notice_when_only_images_exist(self) -> None:
+    def test_build_message_content_adds_vision_notice_when_only_images_exist(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         service._build_attachment_context = lambda user_id, metadata: ""  # type: ignore[method-assign]
         service._build_image_parts = lambda user_id, metadata, model: [  # type: ignore[method-assign]
@@ -89,7 +93,9 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIsInstance(content, list)
         self.assertIn("An image is attached", content[0]["text"])
 
-    def test_serialize_messages_includes_attachment_context_for_user_messages(self) -> None:
+    def test_serialize_messages_includes_attachment_context_for_user_messages(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         service.db = SimpleNamespace()
         service._build_attachment_context = lambda user_id, metadata: "Image attachment: chart.png\nExtracted text:\nRevenue 42"  # type: ignore[method-assign]
@@ -98,7 +104,11 @@ class ChatServiceTests(unittest.TestCase):
         message = SimpleNamespace(
             role="user",
             content="What does this image say?",
-            meta={"attachments": [{"id": "doc-1", "kind": "document", "name": "chart.png"}]},
+            meta={
+                "attachments": [
+                    {"id": "doc-1", "kind": "document", "name": "chart.png"}
+                ]
+            },
         )
         model = SimpleNamespace(capabilities={})
 
@@ -116,13 +126,19 @@ class ChatServiceTests(unittest.TestCase):
         message = SimpleNamespace(
             role="assistant",
             content="Here is the answer.",
-            meta={"attachments": [{"id": "doc-1", "kind": "document", "name": "chart.png"}]},
+            meta={
+                "attachments": [
+                    {"id": "doc-1", "kind": "document", "name": "chart.png"}
+                ]
+            },
         )
         model = SimpleNamespace(capabilities={})
 
         serialized = service._serialize_messages("user-1", [message], model)
 
-        self.assertEqual(serialized, [{"role": "assistant", "content": "Here is the answer."}])
+        self.assertEqual(
+            serialized, [{"role": "assistant", "content": "Here is the answer."}]
+        )
 
     def test_serialize_messages_adds_image_parts_for_vision_models(self) -> None:
         service = object.__new__(ChatService)
@@ -135,7 +151,11 @@ class ChatServiceTests(unittest.TestCase):
         message = SimpleNamespace(
             role="user",
             content="What does this chart show?",
-            meta={"attachments": [{"id": "doc-1", "kind": "document", "name": "chart.png"}]},
+            meta={
+                "attachments": [
+                    {"id": "doc-1", "kind": "document", "name": "chart.png"}
+                ]
+            },
         )
         model = SimpleNamespace(capabilities={"vision": True})
 
@@ -146,12 +166,20 @@ class ChatServiceTests(unittest.TestCase):
         self.assertEqual(serialized[0]["content"][0]["type"], "text")
         self.assertEqual(serialized[0]["content"][1]["type"], "image")
 
-    def test_resolve_chat_model_and_provider_prefers_same_provider_vision_model_when_enabled(self) -> None:
+    def test_resolve_chat_model_and_provider_prefers_same_provider_vision_model_when_enabled(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
-        base_model = SimpleNamespace(id="model-1", provider_id="provider-1", capabilities={"vision": False})
-        vision_model = SimpleNamespace(id="model-2", provider_id="provider-1", capabilities={"vision": True})
+        base_model = SimpleNamespace(
+            id="model-1", provider_id="provider-1", capabilities={"vision": False}
+        )
+        vision_model = SimpleNamespace(
+            id="model-2", provider_id="provider-1", capabilities={"vision": True}
+        )
         provider = SimpleNamespace(id="provider-1")
-        service.llm = SimpleNamespace(resolve_model_and_provider=lambda user_id, model_id: (base_model, provider))
+        service.llm = SimpleNamespace(
+            resolve_model_and_provider=lambda user_id, model_id: (base_model, provider)
+        )
         service._find_same_provider_vision_model = lambda provider_id: vision_model  # type: ignore[method-assign]
         service._should_auto_use_vision_model = lambda metadata, model: True  # type: ignore[method-assign]
 
@@ -173,8 +201,12 @@ class ChatServiceTests(unittest.TestCase):
             patch("app.services.chat_service.WorkspaceService") as workspace_service,
             patch.object(service, "_has_image_attachment", return_value=True),
         ):
-            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(vision_aware=False)
-            should_auto = service._should_auto_use_vision_model({"attachments": [{"id": "doc-1"}]}, model)
+            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(
+                vision_aware=False
+            )
+            should_auto = service._should_auto_use_vision_model(
+                {"attachments": [{"id": "doc-1"}]}, model
+            )
 
         self.assertFalse(should_auto)
 
@@ -182,31 +214,58 @@ class ChatServiceTests(unittest.TestCase):
         service = object.__new__(ChatService)
         service.db = SimpleNamespace(
             get=lambda model, resource_id: (
-                SimpleNamespace(mime_type="image/png") if resource_id == "doc-1" else SimpleNamespace(mime_type="application/pdf")
+                SimpleNamespace(mime_type="image/png")
+                if resource_id == "doc-1"
+                else SimpleNamespace(mime_type="application/pdf")
             )
         )
 
-        self.assertTrue(service._has_image_attachment({"attachments": [{"id": "doc-1", "kind": "document"}]}))
-        self.assertFalse(service._has_image_attachment({"attachments": [{"id": "doc-2", "kind": "document"}]}))
-        self.assertFalse(service._has_image_attachment({"attachments": [{"id": 1, "kind": "document"}]}))
+        self.assertTrue(
+            service._has_image_attachment(
+                {"attachments": [{"id": "doc-1", "kind": "document"}]}
+            )
+        )
+        self.assertFalse(
+            service._has_image_attachment(
+                {"attachments": [{"id": "doc-2", "kind": "document"}]}
+            )
+        )
+        self.assertFalse(
+            service._has_image_attachment(
+                {"attachments": [{"id": 1, "kind": "document"}]}
+            )
+        )
 
-    def test_find_same_provider_vision_model_returns_first_matching_candidate(self) -> None:
+    def test_find_same_provider_vision_model_returns_first_matching_candidate(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         candidates = [
             SimpleNamespace(capabilities={"vision": False}),
             SimpleNamespace(capabilities={"vision": True}),
         ]
-        query = SimpleNamespace(filter=lambda *_args, **_kwargs: query, order_by=lambda *_args, **_kwargs: query, all=lambda: candidates)
+        query = SimpleNamespace(
+            filter=lambda *_args, **_kwargs: query,
+            order_by=lambda *_args, **_kwargs: query,
+            all=lambda: candidates,
+        )
         service.db = SimpleNamespace(query=lambda _model: query)
 
         model = service._find_same_provider_vision_model("provider-1")
 
         self.assertIs(model, candidates[1])
 
-    def test_build_pending_attachment_notice_lists_multiple_pending_resources(self) -> None:
+    def test_build_pending_attachment_notice_lists_multiple_pending_resources(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         service._collect_pending_attachments = lambda user_id, messages: [  # type: ignore[method-assign]
-            {"id": "doc-1", "kind": "document", "name": "notes.pdf", "status": "processing"},
+            {
+                "id": "doc-1",
+                "kind": "document",
+                "name": "notes.pdf",
+                "status": "processing",
+            },
             {"id": "audio-1", "kind": "audio", "name": "call.wav", "status": "queued"},
         ]
 
@@ -216,14 +275,32 @@ class ChatServiceTests(unittest.TestCase):
         self.assertIn("notes.pdf", notice)
         self.assertIn("call.wav", notice)
 
-    def test_collect_rag_source_filters_aggregates_attachments_across_messages(self) -> None:
+    def test_collect_rag_source_filters_aggregates_attachments_across_messages(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
 
         messages = [
-            SimpleNamespace(meta={"attachments": [{"id": "doc-1", "kind": "document"}]}),
+            SimpleNamespace(
+                meta={"attachments": [{"id": "doc-1", "kind": "document"}]}
+            ),
             SimpleNamespace(meta={"attachments": [{"id": "audio-1", "kind": "audio"}]}),
-            SimpleNamespace(meta={"attachments": [{"id": "doc-1", "kind": "document"}, {"id": "video-1", "kind": "video"}]}),
-            SimpleNamespace(meta={"attachments": [{"id": 42, "kind": "document"}, {"id": "bad-1", "kind": "unknown"}]}),
+            SimpleNamespace(
+                meta={
+                    "attachments": [
+                        {"id": "doc-1", "kind": "document"},
+                        {"id": "video-1", "kind": "video"},
+                    ]
+                }
+            ),
+            SimpleNamespace(
+                meta={
+                    "attachments": [
+                        {"id": 42, "kind": "document"},
+                        {"id": "bad-1", "kind": "unknown"},
+                    ]
+                }
+            ),
         ]
 
         source_filters = service._collect_rag_source_filters(messages)
@@ -237,21 +314,35 @@ class ChatServiceTests(unittest.TestCase):
             },
         )
 
-    def test_collect_rag_source_filters_returns_empty_scope_without_attachments(self) -> None:
+    def test_collect_rag_source_filters_returns_empty_scope_without_attachments(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
 
-        source_filters = service._collect_rag_source_filters([SimpleNamespace(meta={}), SimpleNamespace(meta=None)])
+        source_filters = service._collect_rag_source_filters(
+            [SimpleNamespace(meta={}), SimpleNamespace(meta=None)]
+        )
 
         self.assertEqual(source_filters, {})
 
-    def test_collect_pending_attachments_returns_only_incomplete_resources(self) -> None:
+    def test_collect_pending_attachments_returns_only_incomplete_resources(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         resources = {
-            ("Video", "video-1"): SimpleNamespace(user_id="user-1", name="walkthrough.mp4", status="processing"),
-            ("AudioAsset", "audio-1"): SimpleNamespace(user_id="user-1", name="meeting.wav", status="completed"),
-            ("Document", "doc-1"): SimpleNamespace(user_id="user-2", name="notes.pdf", status="processing"),
+            ("Video", "video-1"): SimpleNamespace(
+                user_id="user-1", name="walkthrough.mp4", status="processing"
+            ),
+            ("AudioAsset", "audio-1"): SimpleNamespace(
+                user_id="user-1", name="meeting.wav", status="completed"
+            ),
+            ("Document", "doc-1"): SimpleNamespace(
+                user_id="user-2", name="notes.pdf", status="processing"
+            ),
         }
-        service.db = SimpleNamespace(get=lambda model, resource_id: resources.get((model.__name__, resource_id)))
+        service.db = SimpleNamespace(
+            get=lambda model, resource_id: resources.get((model.__name__, resource_id))
+        )
 
         messages = [
             SimpleNamespace(
@@ -270,64 +361,158 @@ class ChatServiceTests(unittest.TestCase):
 
         self.assertEqual(
             pending,
-            [{"id": "video-1", "kind": "video", "name": "walkthrough.mp4", "status": "processing"}],
+            [
+                {
+                    "id": "video-1",
+                    "kind": "video",
+                    "name": "walkthrough.mp4",
+                    "status": "processing",
+                }
+            ],
         )
 
-    def test_build_attachment_context_handles_invalid_metadata_and_char_limit(self) -> None:
+    def test_build_attachment_context_handles_invalid_metadata_and_char_limit(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         service._build_attachment_section = lambda user_id, attachment: "x" * 3000  # type: ignore[method-assign]
 
         self.assertEqual(service._build_attachment_context("user-1", None), "")
-        context = service._build_attachment_context("user-1", {"attachments": [{"id": "doc-1"}]})
+        context = service._build_attachment_context(
+            "user-1", {"attachments": [{"id": "doc-1"}]}
+        )
         self.assertEqual(len(context), 2500)
 
-    def test_build_image_parts_reads_supported_images_and_skips_missing_files(self) -> None:
+    def test_build_image_parts_reads_supported_images_and_skips_missing_files(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         with tempfile.TemporaryDirectory() as temp_dir:
             image_path = Path(temp_dir) / "chart.png"
             image_path.write_bytes(b"png-data")
             resources = {
-                "doc-1": SimpleNamespace(user_id="user-1", mime_type="image/png", file_path=str(image_path)),
-                "doc-2": SimpleNamespace(user_id="user-1", mime_type="image/png", file_path=str(image_path) + ".missing"),
-                "doc-3": SimpleNamespace(user_id="user-1", mime_type="application/pdf", file_path=str(image_path)),
+                "doc-1": SimpleNamespace(
+                    user_id="user-1", mime_type="image/png", file_path=str(image_path)
+                ),
+                "doc-2": SimpleNamespace(
+                    user_id="user-1",
+                    mime_type="image/png",
+                    file_path=str(image_path) + ".missing",
+                ),
+                "doc-3": SimpleNamespace(
+                    user_id="user-1",
+                    mime_type="application/pdf",
+                    file_path=str(image_path),
+                ),
             }
-            service.db = SimpleNamespace(get=lambda model, resource_id: resources.get(resource_id))
+            service.db = SimpleNamespace(
+                get=lambda model, resource_id: resources.get(resource_id)
+            )
 
             image_parts = service._build_image_parts(
                 "user-1",
-                {"attachments": [{"id": "doc-1", "kind": "document"}, {"id": "doc-2", "kind": "document"}, {"id": "doc-3", "kind": "document"}]},
+                {
+                    "attachments": [
+                        {"id": "doc-1", "kind": "document"},
+                        {"id": "doc-2", "kind": "document"},
+                        {"id": "doc-3", "kind": "document"},
+                    ]
+                },
                 SimpleNamespace(capabilities={"vision": True}),
             )
 
         self.assertEqual(len(image_parts), 1)
         self.assertEqual(image_parts[0]["mime_type"], "image/png")
 
-    def test_build_attachment_section_covers_missing_and_processing_resources(self) -> None:
+    def test_build_attachment_section_covers_missing_and_processing_resources(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         now = datetime.now(UTC)
         resources = {
-            ("document", "doc-1"): self._make_document("doc-1", name="chart.png", mime_type="image/png", status="processing"),
-            ("audio", "audio-1"): self._make_audio("audio-1", name="call.wav", status="processing", transcript=""),
-            ("video", "video-1"): self._make_video("video-1", name="walkthrough.mp4", status="processing", transcript="", summary=""),
+            ("document", "doc-1"): self._make_document(
+                "doc-1", name="chart.png", mime_type="image/png", status="processing"
+            ),
+            ("audio", "audio-1"): self._make_audio(
+                "audio-1", name="call.wav", status="processing", transcript=""
+            ),
+            ("video", "video-1"): self._make_video(
+                "video-1",
+                name="walkthrough.mp4",
+                status="processing",
+                transcript="",
+                summary="",
+            ),
         }
         service.db = SimpleNamespace(
-            get=lambda model, resource_id: resources.get((model.__name__.replace("Asset", "").lower(), resource_id)),
-            query=lambda _model: SimpleNamespace(filter=lambda *_args, **_kwargs: SimpleNamespace(order_by=lambda *_a, **_k: SimpleNamespace(first=lambda: SimpleNamespace(content="", created_at=now)))),
+            get=lambda model, resource_id: resources.get(
+                (model.__name__.replace("Asset", "").lower(), resource_id)
+            ),
+            query=lambda _model: SimpleNamespace(
+                filter=lambda *_args, **_kwargs: SimpleNamespace(
+                    order_by=lambda *_a, **_k: SimpleNamespace(
+                        first=lambda: SimpleNamespace(content="", created_at=now)
+                    )
+                )
+            ),
         )
 
-        self.assertIn("could not be loaded", service._build_attachment_section("user-1", {"id": "missing", "kind": "document", "name": "missing.pdf"}))
-        self.assertIn("OCR/analysis may still be processing", service._build_attachment_section("user-1", {"id": "doc-1", "kind": "document"}))
-        self.assertIn("Transcription may still be processing", service._build_attachment_section("user-1", {"id": "audio-1", "kind": "audio"}))
-        self.assertIn("Transcription may still be processing", service._build_attachment_section("user-1", {"id": "video-1", "kind": "video"}))
+        self.assertIn(
+            "could not be loaded",
+            service._build_attachment_section(
+                "user-1", {"id": "missing", "kind": "document", "name": "missing.pdf"}
+            ),
+        )
+        self.assertIn(
+            "OCR/analysis may still be processing",
+            service._build_attachment_section(
+                "user-1", {"id": "doc-1", "kind": "document"}
+            ),
+        )
+        self.assertIn(
+            "Transcription may still be processing",
+            service._build_attachment_section(
+                "user-1", {"id": "audio-1", "kind": "audio"}
+            ),
+        )
+        self.assertIn(
+            "Transcription may still be processing",
+            service._build_attachment_section(
+                "user-1", {"id": "video-1", "kind": "video"}
+            ),
+        )
 
     def test_build_attachment_section_covers_completed_resources(self) -> None:
         service = object.__new__(ChatService)
         now = datetime.now(UTC)
         resources = {
-            ("document", "doc-image"): self._make_document("doc-image", name="chart.png", mime_type="image/png", status="completed", summary=None),
-            ("document", "doc-text"): self._make_document("doc-text", name="notes.pdf", mime_type="application/pdf", status="completed", summary="Summary"),
-            ("audio", "audio-1"): self._make_audio("audio-1", name="call.wav", status="completed", transcript="",),
-            ("video", "video-1"): self._make_video("video-1", name="walkthrough.mp4", status="completed", transcript="", summary="Video summary"),
+            ("document", "doc-image"): self._make_document(
+                "doc-image",
+                name="chart.png",
+                mime_type="image/png",
+                status="completed",
+                summary=None,
+            ),
+            ("document", "doc-text"): self._make_document(
+                "doc-text",
+                name="notes.pdf",
+                mime_type="application/pdf",
+                status="completed",
+                summary="Summary",
+            ),
+            ("audio", "audio-1"): self._make_audio(
+                "audio-1",
+                name="call.wav",
+                status="completed",
+                transcript="",
+            ),
+            ("video", "video-1"): self._make_video(
+                "video-1",
+                name="walkthrough.mp4",
+                status="completed",
+                transcript="",
+                summary="Video summary",
+            ),
         }
         transcripts = {
             "doc-image": SimpleNamespace(content="Revenue 42", created_at=now),
@@ -363,27 +548,61 @@ class ChatServiceTests(unittest.TestCase):
 
         service.db = SimpleNamespace(get=get_resource, query=query_transcript)
 
-        self.assertIn("Extracted text", service._build_attachment_section("user-1", {"id": "doc-image", "kind": "document"}))
-        self.assertIn("Summary", service._build_attachment_section("user-1", {"id": "doc-text", "kind": "document"}))
-        self.assertIn("Audio transcript", service._build_attachment_section("user-1", {"id": "audio-1", "kind": "audio"}))
-        self.assertIn("Video summary", service._build_attachment_section("user-1", {"id": "video-1", "kind": "video"}))
+        self.assertIn(
+            "Extracted text",
+            service._build_attachment_section(
+                "user-1", {"id": "doc-image", "kind": "document"}
+            ),
+        )
+        self.assertIn(
+            "Summary",
+            service._build_attachment_section(
+                "user-1", {"id": "doc-text", "kind": "document"}
+            ),
+        )
+        self.assertIn(
+            "Audio transcript",
+            service._build_attachment_section(
+                "user-1", {"id": "audio-1", "kind": "audio"}
+            ),
+        )
+        self.assertIn(
+            "Video summary",
+            service._build_attachment_section(
+                "user-1", {"id": "video-1", "kind": "video"}
+            ),
+        )
 
     def test_add_message_rejects_missing_conversation_and_non_user_roles(self) -> None:
         service = object.__new__(ChatService)
         service.conversations = SimpleNamespace(get=lambda conversation_id: None)
 
         with self.assertRaises(HTTPException) as missing_context:
-            service.add_message("user-1", "conv-1", SimpleNamespace(role="user", content="Hi", metadata={}))
+            service.add_message(
+                "user-1",
+                "conv-1",
+                SimpleNamespace(role="user", content="Hi", metadata={}),
+            )
         self.assertEqual(missing_context.exception.status_code, 404)
 
-        conversation = SimpleNamespace(user_id="user-1", model_id="model-1", messages=[])
-        service.conversations = SimpleNamespace(get=lambda conversation_id: conversation)
+        conversation = SimpleNamespace(
+            user_id="user-1", model_id="model-1", messages=[]
+        )
+        service.conversations = SimpleNamespace(
+            get=lambda conversation_id: conversation
+        )
 
         with self.assertRaises(HTTPException) as role_context:
-            service.add_message("user-1", "conv-1", SimpleNamespace(role="assistant", content="Nope", metadata={}))
+            service.add_message(
+                "user-1",
+                "conv-1",
+                SimpleNamespace(role="assistant", content="Nope", metadata={}),
+            )
         self.assertEqual(role_context.exception.status_code, 400)
 
-    def test_create_conversation_uses_pending_notice_when_attachments_are_processing(self) -> None:
+    def test_create_conversation_uses_pending_notice_when_attachments_are_processing(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         commits: list[str] = []
         service.db = SimpleNamespace(
@@ -414,10 +633,14 @@ class ChatServiceTests(unittest.TestCase):
 
     def test_add_message_uses_non_rag_reply_path(self) -> None:
         service = object.__new__(ChatService)
-        message = SimpleNamespace(id="message-1")
-        conversation = SimpleNamespace(user_id="user-1", model_id="model-1", messages=[])
+        SimpleNamespace(id="message-1")
+        conversation = SimpleNamespace(
+            user_id="user-1", model_id="model-1", messages=[]
+        )
         commits: list[str] = []
-        service.conversations = SimpleNamespace(get=lambda conversation_id: conversation)
+        service.conversations = SimpleNamespace(
+            get=lambda conversation_id: conversation
+        )
         service.db = SimpleNamespace(
             add=lambda _item: None,
             flush=lambda: None,
@@ -442,7 +665,9 @@ class ChatServiceTests(unittest.TestCase):
         self.assertEqual(result.role, "user")
         self.assertEqual(commits, ["commit"])
 
-    def test_update_message_edits_user_message_and_regenerates_non_rag_reply(self) -> None:
+    def test_update_message_edits_user_message_and_regenerates_non_rag_reply(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         conversation = SimpleNamespace(user_id="user-1", model_id="model-1")
         message = SimpleNamespace(
@@ -485,7 +710,9 @@ class ChatServiceTests(unittest.TestCase):
         service._serialize_messages = lambda *args, **kwargs: [{"role": "user", "content": "Updated"}]  # type: ignore[method-assign]
         service.llm = SimpleNamespace(generate_reply=lambda **kwargs: "assistant reply")
 
-        updated = service.update_message("user-1", "message-1", "Updated", use_rag=False)
+        updated = service.update_message(
+            "user-1", "message-1", "Updated", use_rag=False
+        )
 
         self.assertEqual(updated.content, "Updated")
         self.assertTrue(updated.meta["edited"])
@@ -493,8 +720,16 @@ class ChatServiceTests(unittest.TestCase):
 
     def test_regenerate_message_uses_non_rag_reply_path(self) -> None:
         service = object.__new__(ChatService)
-        message = SimpleNamespace(id="message-1", role="assistant", created_at=2, conversation_id="conv-1", meta={})
-        conversation = SimpleNamespace(user_id="user-1", model_id="model-1", messages=[message])
+        message = SimpleNamespace(
+            id="message-1",
+            role="assistant",
+            created_at=2,
+            conversation_id="conv-1",
+            meta={},
+        )
+        conversation = SimpleNamespace(
+            user_id="user-1", model_id="model-1", messages=[message]
+        )
         message.conversation = conversation
         commits: list[str] = []
         service.messages = SimpleNamespace(get=lambda message_id: message)
@@ -520,22 +755,40 @@ class ChatServiceTests(unittest.TestCase):
     def test_build_pending_attachment_notice_mentions_video_transcription(self) -> None:
         service = object.__new__(ChatService)
         service._collect_pending_attachments = lambda user_id, messages: [  # type: ignore[method-assign]
-            {"id": "video-1", "kind": "video", "name": "2. IMDhub Registration & Signin.mp4", "status": "processing"}
+            {
+                "id": "video-1",
+                "kind": "video",
+                "name": "2. IMDhub Registration & Signin.mp4",
+                "status": "processing",
+            }
         ]
 
-        notice = service._build_pending_attachment_notice("user-1", [SimpleNamespace(meta={})])
+        notice = service._build_pending_attachment_notice(
+            "user-1", [SimpleNamespace(meta={})]
+        )
 
         self.assertIn("transcription is still processing", notice)
         self.assertIn("2. IMDhub Registration & Signin.mp4", notice)
 
-    def test_delete_conversation_removes_attached_resources_and_conversation(self) -> None:
+    def test_delete_conversation_removes_attached_resources_and_conversation(
+        self,
+    ) -> None:
         service = object.__new__(ChatService)
         conversation = SimpleNamespace(
             id="conv-1",
             user_id="user-1",
             messages=[
-                SimpleNamespace(meta={"attachments": [{"id": "doc-1", "kind": "document"}]}),
-                SimpleNamespace(meta={"attachments": [{"id": "video-1", "kind": "video"}, {"id": "doc-1", "kind": "document"}]}),
+                SimpleNamespace(
+                    meta={"attachments": [{"id": "doc-1", "kind": "document"}]}
+                ),
+                SimpleNamespace(
+                    meta={
+                        "attachments": [
+                            {"id": "video-1", "kind": "video"},
+                            {"id": "doc-1", "kind": "document"},
+                        ]
+                    }
+                ),
             ],
         )
         repo_state = {"conversation": conversation}
@@ -543,7 +796,9 @@ class ChatServiceTests(unittest.TestCase):
         commit_calls: list[str] = []
         cleaned_resources: list[tuple[str, str, str]] = []
 
-        service.conversations = SimpleNamespace(get=lambda conversation_id: repo_state["conversation"])
+        service.conversations = SimpleNamespace(
+            get=lambda conversation_id: repo_state["conversation"]
+        )
         service.db = SimpleNamespace(
             delete=lambda item: delete_calls.append(item.id),
             commit=lambda: commit_calls.append("commit"),
@@ -554,7 +809,9 @@ class ChatServiceTests(unittest.TestCase):
             patch("app.services.chat_service.LibraryService") as library_service,
         ):
             transcript_service.return_value.delete_resource.side_effect = (
-                lambda user_id, resource_type, resource_id: cleaned_resources.append((user_id, resource_type, resource_id))
+                lambda user_id, resource_type, resource_id: cleaned_resources.append(
+                    (user_id, resource_type, resource_id)
+                )
             )
 
             def delete_and_clear(item):

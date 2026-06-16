@@ -1,16 +1,16 @@
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
-from tempfile import TemporaryDirectory
 
 from app.services.asset_processors import (
-    CodeProcessor,
-    ImageProcessor,
-    TextProcessor,
     AssetProcessorRegistry,
     AudioProcessor,
+    CodeProcessor,
+    ImageProcessor,
     OfficeProcessor,
+    TextProcessor,
     VideoProcessor,
     chunk_text,
 )

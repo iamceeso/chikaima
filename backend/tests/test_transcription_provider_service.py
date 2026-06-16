@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import httpx
+
 from app.services.asset_processors import AssetProcessingError
 from app.services.transcription_provider_service import (
     DEFAULT_BASE_URLS,

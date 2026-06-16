@@ -14,8 +14,8 @@ from app.services.providers.base import (
     _extract_stream_error_detail,
     _extract_system_prompt,
     _iter_sse_json_events,
-    _merge_message_content,
     _merge_consecutive_messages,
+    _merge_message_content,
     _normalize_messages,
     _text_from_content,
 )
