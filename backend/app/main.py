@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,12 +17,19 @@ from app.services.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    _ensure_vector_extension()
+    bootstrap_transcription_runtime()
+    yield
+
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -94,8 +103,6 @@ def openapi_schema() -> JSONResponse:
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
-
-@app.on_event("startup")
 def startup_checks() -> None:
     _ensure_vector_extension()
     bootstrap_transcription_runtime()

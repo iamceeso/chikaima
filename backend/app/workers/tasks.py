@@ -128,7 +128,7 @@ def _build_chunks(content: str) -> list[ChunkPayload]:
     chunks: list[ChunkPayload] = []
     start = 0
     index = 0
-    while start < len(normalized):
+    while start < len(normalized):  # pragma: no branch
         end = min(len(normalized), start + chunk_size)
         section = normalized[start:end].strip()
         if section:

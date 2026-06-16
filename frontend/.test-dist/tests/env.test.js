@@ -9,6 +9,12 @@ const node_util_1 = require("node:util");
 const node_test_1 = __importDefault(require("node:test"));
 const originalApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 const execFileAsync = (0, node_util_1.promisify)(node_child_process_1.execFile);
+function buildEnv(overrides) {
+    return {
+        ...process.env,
+        ...overrides,
+    };
+}
 node_test_1.default.afterEach(() => {
     if (originalApiBaseUrl === undefined) {
         delete process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -26,7 +32,7 @@ node_test_1.default.afterEach(() => {
     const script = 'import("./.test-dist/lib/env.js").catch((error) => { console.error(error.message); process.exit(1); });';
     await strict_1.default.rejects(() => execFileAsync(process.execPath, ["--input-type=module", "-e", script], {
         cwd: process.cwd(),
-        env: {},
+        env: buildEnv({ NEXT_PUBLIC_API_BASE_URL: undefined }),
     }), (error) => typeof error === "object" &&
         error !== null &&
         "stderr" in error &&
@@ -37,9 +43,9 @@ node_test_1.default.afterEach(() => {
     const script = 'import("./.test-dist/lib/env.js").catch((error) => { console.error(error.message); process.exit(1); });';
     await strict_1.default.rejects(() => execFileAsync(process.execPath, ["--input-type=module", "-e", script], {
         cwd: process.cwd(),
-        env: {
+        env: buildEnv({
             NEXT_PUBLIC_API_BASE_URL: "   ",
-        },
+        }),
     }), (error) => typeof error === "object" &&
         error !== null &&
         "stderr" in error &&

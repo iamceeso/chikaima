@@ -6,6 +6,13 @@ import test from "node:test";
 const originalApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 const execFileAsync = promisify(execFile);
 
+function buildEnv(overrides: Partial<NodeJS.ProcessEnv>): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    ...overrides,
+  };
+}
+
 test.afterEach(() => {
   if (originalApiBaseUrl === undefined) {
     delete process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -29,7 +36,7 @@ test("env throws when NEXT_PUBLIC_API_BASE_URL is missing", async () => {
     () =>
       execFileAsync(process.execPath, ["--input-type=module", "-e", script], {
         cwd: process.cwd(),
-        env: {},
+        env: buildEnv({ NEXT_PUBLIC_API_BASE_URL: undefined }),
       }),
     (error: unknown) =>
       typeof error === "object" &&
@@ -47,9 +54,9 @@ test("env throws when NEXT_PUBLIC_API_BASE_URL is blank after trimming", async (
     () =>
       execFileAsync(process.execPath, ["--input-type=module", "-e", script], {
         cwd: process.cwd(),
-        env: {
+        env: buildEnv({
           NEXT_PUBLIC_API_BASE_URL: "   ",
-        },
+        }),
       }),
     (error: unknown) =>
       typeof error === "object" &&
