@@ -24,6 +24,11 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "Working tree is not clean. Commit or stash existing changes before running this script."
+  exit 1
+fi
+
 if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null 2>&1; then
   echo "Git tag already exists: $TAG"
   exit 1
@@ -72,10 +77,19 @@ fi
   env UV_CACHE_DIR="$UV_CACHE_DIR" uv lock
 )
 
+git add \
+  "$BACKEND_PYPROJECT" \
+  "$BACKEND_MAIN" \
+  "$ROOT_DIR/backend/uv.lock" \
+  "$FRONTEND_PACKAGE" \
+  "$ROOT_DIR/frontend/pnpm-lock.yaml"
+
+git commit -m "chore: bump version to $TAG"
 git tag "$TAG"
 
 echo "Updated backend version: $CURRENT_BACKEND_VERSION -> $VERSION"
 echo "Updated frontend version: $CURRENT_FRONTEND_VERSION -> $VERSION"
+echo "Created git commit: chore: bump version to $TAG"
 echo "Created git tag: $TAG"
 echo "Synced files:"
 echo "  - backend/pyproject.toml"
@@ -86,5 +100,5 @@ echo "  - frontend/pnpm-lock.yaml"
 echo
 echo "Next:"
 echo "  ./pre-push.sh"
-echo "  git push origin main"
+echo "  git push origin HEAD"
 echo "  git push origin $TAG"
