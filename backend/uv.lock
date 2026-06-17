@@ -323,6 +323,83 @@ wheels = [
 ]
 
 [[package]]
+name = "chikaima-backend"
+version = "0.1.6"
+source = { virtual = "." }
+dependencies = [
+    { name = "alembic" },
+    { name = "anthropic" },
+    { name = "celery", extra = ["redis"] },
+    { name = "cryptography" },
+    { name = "email-validator" },
+    { name = "fastapi" },
+    { name = "google-generativeai" },
+    { name = "greenlet" },
+    { name = "httpx" },
+    { name = "numpy" },
+    { name = "ollama" },
+    { name = "openpyxl" },
+    { name = "passlib", extra = ["bcrypt"] },
+    { name = "pgvector" },
+    { name = "pillow" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic-settings" },
+    { name = "pyjwt" },
+    { name = "pymupdf" },
+    { name = "pytesseract" },
+    { name = "python-docx" },
+    { name = "python-multipart" },
+    { name = "python-pptx" },
+    { name = "redis" },
+    { name = "sqlalchemy" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.16.0" },
+    { name = "anthropic", specifier = ">=0.42.0" },
+    { name = "celery", extras = ["redis"], specifier = ">=5.4.0" },
+    { name = "cryptography", specifier = ">=43.0.0" },
+    { name = "email-validator", specifier = ">=2.2.0" },
+    { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "google-generativeai", specifier = ">=0.8.3" },
+    { name = "greenlet", specifier = ">=3.1.1" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "numpy", specifier = ">=1.26.0" },
+    { name = "ollama", specifier = ">=0.3.0" },
+    { name = "openpyxl", specifier = ">=3.1.5" },
+    { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
+    { name = "pgvector", specifier = ">=0.3.0" },
+    { name = "pillow", specifier = ">=11.2.1" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
+    { name = "pydantic-settings", specifier = ">=2.6.0" },
+    { name = "pyjwt", specifier = ">=2.10.1" },
+    { name = "pymupdf", specifier = ">=1.26.1" },
+    { name = "pytesseract", specifier = ">=0.3.13" },
+    { name = "python-docx", specifier = ">=1.1.2" },
+    { name = "python-multipart", specifier = ">=0.0.12" },
+    { name = "python-pptx", specifier = ">=1.0.2" },
+    { name = "redis", specifier = ">=5.2.1" },
+    { name = "sqlalchemy", specifier = ">=2.0.36" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "pytest-cov", specifier = ">=6.2.1" },
+    { name = "ruff", specifier = ">=0.15.16" },
+]
+
+[[package]]
 name = "click"
 version = "8.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1251,83 +1328,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/9c/50/0753655aa844c99cd9e018aacf76f130f1bd81d881bb74bc0aef5d73a8ba/numpy-2.4.6-cp314-cp314t-win32.whl", hash = "sha256:260a5d70215b61ab4fadf5c7baacd64821842975eea312125ed3c39a6391b063", size = 6156982, upload-time = "2026-05-18T23:36:40.817Z" },
     { url = "https://files.pythonhosted.org/packages/b2/d4/7c67becf668f973cb490cec3e98dfd799d866f9c989a54d355672cfa0db6/numpy-2.4.6-cp314-cp314t-win_amd64.whl", hash = "sha256:81a1cca95ed5bb92aa8b10dd2cdc9a0d3853a50fad926c28b5d7e8ea54389627", size = 12638908, upload-time = "2026-05-18T23:36:43.996Z" },
     { url = "https://files.pythonhosted.org/packages/43/bb/e1c71a4295b1b1d1393d50dbb4f2a36283c6859d9d3892e84f00ec5a91d5/numpy-2.4.6-cp314-cp314t-win_arm64.whl", hash = "sha256:0c9136e14ed34a9e343a31c533d78a9813a69a3148332bce5e9821cb2f996e66", size = 10565867, upload-time = "2026-05-18T23:36:47.114Z" },
-]
-
-[[package]]
-name = "chikaima-backend"
-version = "0.1.5"
-source = { virtual = "." }
-dependencies = [
-    { name = "alembic" },
-    { name = "anthropic" },
-    { name = "celery", extra = ["redis"] },
-    { name = "cryptography" },
-    { name = "email-validator" },
-    { name = "fastapi" },
-    { name = "google-generativeai" },
-    { name = "greenlet" },
-    { name = "httpx" },
-    { name = "numpy" },
-    { name = "ollama" },
-    { name = "openpyxl" },
-    { name = "passlib", extra = ["bcrypt"] },
-    { name = "pgvector" },
-    { name = "pillow" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic-settings" },
-    { name = "pyjwt" },
-    { name = "pymupdf" },
-    { name = "pytesseract" },
-    { name = "python-docx" },
-    { name = "python-multipart" },
-    { name = "python-pptx" },
-    { name = "redis" },
-    { name = "sqlalchemy" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alembic", specifier = ">=1.16.0" },
-    { name = "anthropic", specifier = ">=0.42.0" },
-    { name = "celery", extras = ["redis"], specifier = ">=5.4.0" },
-    { name = "cryptography", specifier = ">=43.0.0" },
-    { name = "email-validator", specifier = ">=2.2.0" },
-    { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "google-generativeai", specifier = ">=0.8.3" },
-    { name = "greenlet", specifier = ">=3.1.1" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "numpy", specifier = ">=1.26.0" },
-    { name = "ollama", specifier = ">=0.3.0" },
-    { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
-    { name = "pgvector", specifier = ">=0.3.0" },
-    { name = "pillow", specifier = ">=11.2.1" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
-    { name = "pydantic-settings", specifier = ">=2.6.0" },
-    { name = "pyjwt", specifier = ">=2.10.1" },
-    { name = "pymupdf", specifier = ">=1.26.1" },
-    { name = "pytesseract", specifier = ">=0.3.13" },
-    { name = "python-docx", specifier = ">=1.1.2" },
-    { name = "python-multipart", specifier = ">=0.0.12" },
-    { name = "python-pptx", specifier = ">=1.0.2" },
-    { name = "redis", specifier = ">=5.2.1" },
-    { name = "sqlalchemy", specifier = ">=2.0.36" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov", specifier = ">=6.2.1" },
-    { name = "ruff", specifier = ">=0.15.16" },
 ]
 
 [[package]]
