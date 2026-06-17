@@ -128,10 +128,15 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertEqual(context.exception.status_code, 403)
 
     def test_list_models_builds_responses_for_admins(self) -> None:
-        actor = SimpleNamespace(is_superuser=True)
+        actor = SimpleNamespace(id="user-1", is_superuser=True)
         model = SimpleNamespace(id="model-1")
         provider = SimpleNamespace(id="provider-1")
-        query = SimpleNamespace(join=lambda *_args, **_kwargs: query, order_by=lambda *_args, **_kwargs: query, all=lambda: [(model, provider)])
+        query = SimpleNamespace(
+            join=lambda *_args, **_kwargs: query,
+            filter=lambda *_args, **_kwargs: query,
+            order_by=lambda *_args, **_kwargs: query,
+            all=lambda: [(model, provider)],
+        )
         db = SimpleNamespace(query=lambda *_args, **_kwargs: query)
         service = WorkspaceService(db)
 
@@ -150,12 +155,16 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertEqual(context.exception.status_code, 403)
 
     def test_update_model_visibility_updates_default_and_availability(self) -> None:
-        actor = SimpleNamespace(is_superuser=True)
+        actor = SimpleNamespace(id="user-1", is_superuser=True)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=False)
         added: list[object] = []
         db = SimpleNamespace(
-            query=lambda _model: SimpleNamespace(all=lambda: [model_a, model_b]),
+            query=lambda _model: SimpleNamespace(
+                join=lambda *_args, **_kwargs: SimpleNamespace(
+                    filter=lambda *_args, **_kwargs: SimpleNamespace(all=lambda: [model_a, model_b])
+                )
+            ),
             add=lambda item: added.append(item),
             commit=lambda: added.append("commit"),
         )
@@ -165,7 +174,7 @@ class WorkspaceServiceTests(unittest.TestCase):
             model_fields_set={"default_model_id"},
         )
         service = WorkspaceService(db)
-        service.list_models = lambda current_actor: ["model-response"]
+        service.list_models = lambda current_actor, scope_user=None: ["model-response"]
 
         responses = service.update_model_visibility(actor, payload)
 
@@ -176,11 +185,15 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertTrue(model_b.is_available)
 
     def test_update_model_visibility_clears_default_when_existing_default_is_disabled(self) -> None:
-        actor = SimpleNamespace(is_superuser=True)
+        actor = SimpleNamespace(id="user-1", is_superuser=True)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=True)
         db = SimpleNamespace(
-            query=lambda _model: SimpleNamespace(all=lambda: [model_a, model_b]),
+            query=lambda _model: SimpleNamespace(
+                join=lambda *_args, **_kwargs: SimpleNamespace(
+                    filter=lambda *_args, **_kwargs: SimpleNamespace(all=lambda: [model_a, model_b])
+                )
+            ),
             add=lambda _item: None,
             commit=lambda: None,
         )
@@ -190,7 +203,7 @@ class WorkspaceServiceTests(unittest.TestCase):
             model_fields_set=set(),
         )
         service = WorkspaceService(db)
-        service.list_models = lambda current_actor: []
+        service.list_models = lambda current_actor, scope_user=None: []
 
         service.update_model_visibility(actor, payload)
 
@@ -198,11 +211,15 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertTrue(model_b.is_available)
 
     def test_update_model_visibility_keeps_default_when_it_remains_enabled(self) -> None:
-        actor = SimpleNamespace(is_superuser=True)
+        actor = SimpleNamespace(id="user-1", is_superuser=True)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=True)
         db = SimpleNamespace(
-            query=lambda _model: SimpleNamespace(all=lambda: [model_a, model_b]),
+            query=lambda _model: SimpleNamespace(
+                join=lambda *_args, **_kwargs: SimpleNamespace(
+                    filter=lambda *_args, **_kwargs: SimpleNamespace(all=lambda: [model_a, model_b])
+                )
+            ),
             add=lambda _item: None,
             commit=lambda: None,
         )
@@ -212,7 +229,7 @@ class WorkspaceServiceTests(unittest.TestCase):
             model_fields_set=set(),
         )
         service = WorkspaceService(db)
-        service.list_models = lambda current_actor: []
+        service.list_models = lambda current_actor, scope_user=None: []
 
         service.update_model_visibility(actor, payload)
 

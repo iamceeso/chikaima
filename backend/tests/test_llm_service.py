@@ -1,7 +1,6 @@
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
-
 from fastapi import HTTPException
 
 from app.services.asset_search_service import ChunkSearchHit, RetrievalSource
@@ -30,28 +29,22 @@ class QueryStub:
 
 
 class LLMServiceTests(unittest.TestCase):
-    def test_resolve_model_and_provider_scopes_to_current_user_when_authentication_enabled(self) -> None:
+    def test_resolve_model_and_provider_scopes_to_current_user(self) -> None:
         service = make_service()
         query = QueryStub()
         service.db = SimpleNamespace(query=lambda *_args: query)
 
-        with patch("app.services.llm_service.WorkspaceService") as workspace_service:
-            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(authentication_enabled=True)
-
-            model, provider = service.resolve_model_and_provider("user-1", None)
+        model, provider = service.resolve_model_and_provider("user-1", None)
 
         self.assertEqual(model.id, "model-1")
         self.assertEqual(provider.id, "provider-1")
 
-    def test_resolve_model_and_provider_uses_workspace_models_when_authentication_disabled(self) -> None:
+    def test_resolve_model_and_provider_scopes_public_actor_to_its_models(self) -> None:
         service = make_service()
         query = QueryStub()
         service.db = SimpleNamespace(query=lambda *_args: query)
 
-        with patch("app.services.llm_service.WorkspaceService") as workspace_service:
-            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(authentication_enabled=False)
-
-            model, provider = service.resolve_model_and_provider("workspace-public", None)
+        model, provider = service.resolve_model_and_provider("workspace-public", None)
 
         self.assertEqual(model.id, "model-1")
         self.assertEqual(provider.id, "provider-1")

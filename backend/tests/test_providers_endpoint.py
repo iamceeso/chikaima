@@ -37,14 +37,20 @@ class ProvidersEndpointTests(unittest.TestCase):
             provider_service.return_value.list_for_user.return_value = [with_secret, without_secret]
             provider_service.return_value.create.return_value = with_secret
             provider_service.return_value.update.return_value = without_secret
-
-            listed = list_providers(db, admin)
-            created = create_provider(SimpleNamespace(name="Primary"), db, admin)
-            updated = update_provider("provider-2", SimpleNamespace(name="Renamed"), db, admin)
-            deleted = delete_provider("provider-2", db, admin)
+            with patch(
+                "app.api.v1.endpoints.providers.get_settings_owner_user",
+                return_value=SimpleNamespace(id="workspace-public"),
+            ):
+                listed = list_providers(db, admin)
+                created = create_provider(SimpleNamespace(name="Primary"), db, admin)
+                updated = update_provider("provider-2", SimpleNamespace(name="Renamed"), db, admin)
+                deleted = delete_provider("provider-2", db, admin)
 
         self.assertEqual([item.masked_secret for item in listed], ["**********", None])
         self.assertEqual(created.masked_secret, "**********")
         self.assertIsNone(updated.masked_secret)
-        provider_service.return_value.delete.assert_called_once_with("user-1", "provider-2")
+        provider_service.return_value.list_for_user.assert_called_once_with("workspace-public")
+        provider_service.return_value.create.assert_called_once_with("workspace-public", SimpleNamespace(name="Primary"))
+        provider_service.return_value.update.assert_called_once_with("workspace-public", "provider-2", SimpleNamespace(name="Renamed"))
+        provider_service.return_value.delete.assert_called_once_with("workspace-public", "provider-2")
         self.assertEqual(deleted.status_code, 204)

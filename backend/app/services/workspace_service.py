@@ -60,7 +60,12 @@ class WorkspaceService:
             first_user_registration_required=total_users == 0,
         )
 
-    def update(self, actor: User, payload: WorkspaceConfigUpdate) -> WorkspaceConfigResponse:
+    def update(
+        self,
+        actor: User,
+        payload: WorkspaceConfigUpdate,
+        scope_user: User | None = None,
+    ) -> WorkspaceConfigResponse:
         if not actor.is_superuser:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
 
@@ -72,15 +77,17 @@ class WorkspaceService:
         self.db.add(workspace)
         self.db.commit()
         self.db.refresh(workspace)
-        return self.get_summary(actor)
+        return self.get_summary(scope_user or actor)
 
-    def list_models(self, actor: User) -> list[AIModelResponse]:
+    def list_models(self, actor: User, scope_user: User | None = None) -> list[AIModelResponse]:
         if not actor.is_superuser:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
 
+        owner = scope_user or actor
         models = (
             self.db.query(AIModel, Provider)
             .join(Provider, Provider.id == AIModel.provider_id)
+            .filter(Provider.user_id == owner.id)
             .order_by(
                 Provider.name.asc(),
                 AIModel.is_default.desc(),
@@ -94,13 +101,20 @@ class WorkspaceService:
         self,
         actor: User,
         payload: WorkspaceModelVisibilityUpdate,
+        scope_user: User | None = None,
     ) -> list[AIModelResponse]:
         if not actor.is_superuser:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
 
+        owner = scope_user or actor
         enabled_ids = {model_id for model_id in payload.enabled_model_ids}
         default_model_id_supplied = "default_model_id" in payload.model_fields_set
-        models = self.db.query(AIModel).all()
+        models = (
+            self.db.query(AIModel)
+            .join(Provider, Provider.id == AIModel.provider_id)
+            .filter(Provider.user_id == owner.id)
+            .all()
+        )
         current_default_model = next((model for model in models if model.is_default), None)
 
         if default_model_id_supplied and payload.default_model_id:
@@ -115,4 +129,4 @@ class WorkspaceService:
             self.db.add(model)
 
         self.db.commit()
-        return self.list_models(actor)
+        return self.list_models(actor, owner)

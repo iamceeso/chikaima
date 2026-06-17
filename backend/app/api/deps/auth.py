@@ -109,3 +109,10 @@ def get_current_admin_user(
         raise _admin_auth_required_error()
 
     return user
+
+
+def get_settings_owner_user(db: Session, actor: User) -> User:
+    workspace = WorkspaceService(db).get_or_create()
+    if workspace.authentication_enabled:
+        return actor
+    return _get_or_create_public_actor(db, UserRepository(db))

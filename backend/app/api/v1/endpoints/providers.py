@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import get_current_admin_user
+from app.api.deps.auth import get_current_admin_user, get_settings_owner_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.provider import ProviderCreate, ProviderResponse, ProviderUpdate
@@ -23,7 +23,8 @@ def list_providers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ) -> list[ProviderResponse]:
-    providers = ProviderService(db).list_for_user(current_user.id)
+    owner = get_settings_owner_user(db, current_user)
+    providers = ProviderService(db).list_for_user(owner.id)
     return [
         ProviderResponse(
             **provider.__dict__,
@@ -39,7 +40,8 @@ def create_provider(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ) -> ProviderResponse:
-    provider = ProviderService(db).create(current_user.id, payload)
+    owner = get_settings_owner_user(db, current_user)
+    provider = ProviderService(db).create(owner.id, payload)
     return ProviderResponse(
         **provider.__dict__,
         masked_secret=_mask(provider.encrypted_config.get("api_key")),
@@ -53,7 +55,8 @@ def update_provider(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ) -> ProviderResponse:
-    provider = ProviderService(db).update(current_user.id, provider_id, payload)
+    owner = get_settings_owner_user(db, current_user)
+    provider = ProviderService(db).update(owner.id, provider_id, payload)
     return ProviderResponse(
         **provider.__dict__,
         masked_secret=_mask(provider.encrypted_config.get("api_key")),
@@ -66,7 +69,8 @@ def resync_provider_models(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ) -> ProviderResponse:
-    provider = ProviderService(db).resync_models(current_user.id, provider_id)
+    owner = get_settings_owner_user(db, current_user)
+    provider = ProviderService(db).resync_models(owner.id, provider_id)
     return ProviderResponse(
         **provider.__dict__,
         masked_secret=_mask(provider.encrypted_config.get("api_key")),
@@ -79,5 +83,6 @@ def delete_provider(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ) -> Response:
-    ProviderService(db).delete(current_user.id, provider_id)
+    owner = get_settings_owner_user(db, current_user)
+    ProviderService(db).delete(owner.id, provider_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

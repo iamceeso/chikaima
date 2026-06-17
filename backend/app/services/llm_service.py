@@ -11,8 +11,6 @@ from app.models.ai_model import AIModel
 from app.models.provider import Provider
 from app.services.asset_search_service import AssetSearchService
 from app.services.providers.factory import AdapterFactory
-from app.services.workspace_service import WorkspaceService
-
 RAG_SEARCH_LIMIT = 3
 RAG_CHUNKS_PER_SOURCE = 1
 
@@ -23,11 +21,8 @@ class LLMService:
         self.asset_search = AssetSearchService(db)
 
     def resolve_model_and_provider(self, user_id: str, model_id: str | None) -> tuple[AIModel, Provider]:
-        workspace = WorkspaceService(self.db).get_or_create()
         query = self.db.query(AIModel, Provider).join(Provider, Provider.id == AIModel.provider_id)
-
-        if workspace.authentication_enabled:
-            query = query.filter(Provider.user_id == user_id)
+        query = query.filter(Provider.user_id == user_id)
 
         query = query.filter(
             Provider.is_enabled.is_(True),
@@ -36,6 +31,8 @@ class LLMService:
 
         if model_id:
             selection = query.filter(AIModel.id == model_id).first()
+            if not selection:
+                selection = query.order_by(AIModel.is_default.desc(), AIModel.created_at.asc()).first()
         else:
             selection = query.order_by(AIModel.is_default.desc(), AIModel.created_at.asc()).first()
 
