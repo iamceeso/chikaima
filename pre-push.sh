@@ -10,8 +10,8 @@ JWT_SECRET_KEY="${JWT_SECRET_KEY:-change-me-development-secret}"
 JWT_REFRESH_SECRET_KEY="${JWT_REFRESH_SECRET_KEY:-change-me-too-development-secret}"
 PROVIDER_SECRET_KEY="${PROVIDER_SECRET_KEY:-replace-with-32-char-secret-key}"
 NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-/api/v1}"
-FRONTEND_DOCKER_IMAGE_TAG="${FRONTEND_DOCKER_IMAGE_TAG:-olanma-frontend-prepush}"
-BACKEND_DOCKER_IMAGE_TAG="${BACKEND_DOCKER_IMAGE_TAG:-olanma-backend-prepush}"
+FRONTEND_DOCKER_IMAGE_TAG="${FRONTEND_DOCKER_IMAGE_TAG:-chikaima-frontend-prepush}"
+BACKEND_DOCKER_IMAGE_TAG="${BACKEND_DOCKER_IMAGE_TAG:-chikaima-backend-prepush}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is required for pre-push image builds but was not found."

@@ -5,7 +5,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen bg-background">
       <section className="hidden flex-1 border-r border-border bg-surface p-12 lg:flex lg:flex-col lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Olanma</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Chikaima</p>
           <h1 className="text-5xl font-semibold leading-tight text-foreground max-w-lg">
             Your self-hosted media intelligence workspace.
           </h1>

@@ -3,13 +3,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: olanma-frontend
+    container_name: chikaima-frontend
     depends_on:
       backend:
         condition: service_started
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
-      NEXT_PUBLIC_APP_NAME: Olanma
+      NEXT_PUBLIC_APP_NAME: Chikaima
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -18,7 +18,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: olanma-backend
+    container_name: chikaima-backend
     env_file:
       - ./backend/.env
     depends_on:
@@ -27,10 +27,10 @@ services:
       redis:
         condition: service_healthy
     environment:
-      APP_NAME: Olanma API
+      APP_NAME: Chikaima API
       APP_ENV: development
       APP_DEBUG: "true"
-      DATABASE_URL: postgresql+psycopg://olanma:olanma@postgres:5432/olanma
+      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: http://localhost:3000
     ports:
@@ -43,7 +43,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: olanma-celery-worker
+    container_name: chikaima-celery-worker
     command: celery -A app.workers.celery_app.celery_app worker --loglevel=info
     env_file:
       - ./backend/.env
@@ -53,10 +53,10 @@ services:
       redis:
         condition: service_healthy
     environment:
-      APP_NAME: Olanma API
+      APP_NAME: Chikaima API
       APP_ENV: development
       APP_DEBUG: "true"
-      DATABASE_URL: postgresql+psycopg://olanma:olanma@postgres:5432/olanma
+      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: http://localhost:3000
     restart: unless-stopped
@@ -65,13 +65,13 @@ services:
 
   postgres:
     image: pgvector/pgvector:pg17
-    container_name: olanma-postgres
+    container_name: chikaima-postgres
     environment:
-      POSTGRES_DB: olanma
-      POSTGRES_USER: olanma
-      POSTGRES_PASSWORD: olanma
+      POSTGRES_DB: chikaima
+      POSTGRES_USER: chikaima
+      POSTGRES_PASSWORD: chikaima
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U olanma -d olanma"]
+      test: ["CMD-SHELL", "pg_isready -U chikaima -d chikaima"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -83,7 +83,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: olanma-redis
+    container_name: chikaima-redis
     command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

@@ -5,7 +5,7 @@ export default function RegisterPage() {
     <main className="flex min-h-screen bg-background">
       <section className="hidden flex-1 border-r border-border bg-surface p-12 lg:flex lg:flex-col lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Olanma</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Chikaima</p>
           <h1 className="text-5xl font-semibold leading-tight text-foreground max-w-lg">
             Build your private content intelligence stack.
           </h1>

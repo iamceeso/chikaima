@@ -60,9 +60,9 @@ fi
 
 export VERSION
 
-perl -0pi -e 's/(\[project\]\nname = "olanma-backend"\nversion = ")[^"]+(")/$1$ENV{VERSION}$2/' "$BACKEND_PYPROJECT"
+perl -0pi -e 's/(\[project\]\nname = "chikaima-backend"\nversion = ")[^"]+(")/$1$ENV{VERSION}$2/' "$BACKEND_PYPROJECT"
 perl -0pi -e 's/(^\s*version=")[^"]+(",\s*$)/$1$ENV{VERSION}$2/m' "$BACKEND_MAIN"
-perl -0pi -e 's/("name": "olanma-frontend",\n  "version": ")[^"]+(")/$1$ENV{VERSION}$2/' "$FRONTEND_PACKAGE"
+perl -0pi -e 's/("name": "chikaima-frontend",\n  "version": ")[^"]+(")/$1$ENV{VERSION}$2/' "$FRONTEND_PACKAGE"
 
 if command -v corepack >/dev/null 2>&1; then
   PNPM_CMD=(corepack pnpm)

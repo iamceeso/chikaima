@@ -581,7 +581,7 @@ export default function WorkspaceSettingsPage() {
             <AlertDialogDescription>
               {workspaceQuery.data?.vision_aware
                 ? "Image requests will stay on the exact selected model, even if that model cannot analyze images directly."
-                : "Olanma will be allowed to use a vision-capable model from the same provider when image analysis is needed."}
+                : "Chikaima will be allowed to use a vision-capable model from the same provider when image analysis is needed."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

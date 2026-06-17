@@ -1,6 +1,6 @@
 # Database
 
-Olanma uses PostgreSQL as the primary store and `pgvector` for retrieval over asset chunks.
+Chikaima uses PostgreSQL as the primary store and `pgvector` for retrieval over asset chunks.
 
 ## ORM And Migrations
 

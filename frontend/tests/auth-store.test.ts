@@ -95,7 +95,7 @@ test("setSession defaults user to null", async () => {
 
 test("rehydrate loads persisted auth state and marks the store hydrated", async () => {
   const { useAuthStore } = await importAuthStore({
-    "olanma-auth": JSON.stringify({
+    "chikaima-auth": JSON.stringify({
       state: {
         tokens: {
           access_token: "persisted-access",

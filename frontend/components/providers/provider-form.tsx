@@ -63,10 +63,10 @@ const providerDefaults: Record<ProviderType, { name: string; baseUrl: string; ap
 
 const providerSupportNotes: Record<ProviderType, string> = {
   openai: "Chat, embeddings, and transcription are wired.",
-  anthropic: "Chat is wired. Embeddings and transcription are not routed through Anthropic in Olanma.",
+  anthropic: "Chat is wired. Embeddings and transcription are not routed through Anthropic in Chikaima.",
   gemini: "Chat and embeddings are wired. Audio transcription currently uses OpenAI-compatible providers.",
-  ollama: "Chat and embeddings are wired. Audio transcription is not routed through Ollama in Olanma.",
-  openrouter: "Chat and embeddings are wired. Audio transcription is not routed through OpenRouter in Olanma.",
+  ollama: "Chat and embeddings are wired. Audio transcription is not routed through Ollama in Chikaima.",
+  openrouter: "Chat and embeddings are wired. Audio transcription is not routed through OpenRouter in Chikaima.",
   litellm: "Chat, embeddings, and transcription are wired when your LiteLLM proxy exposes OpenAI-compatible endpoints.",
   local: "Chat, embeddings, and transcription are wired when your local OpenAI-compatible gateway exposes those endpoints.",
 };

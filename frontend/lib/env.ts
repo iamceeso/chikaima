@@ -7,6 +7,6 @@ function requireEnv(value: string | undefined, name: string): string {
 }
 
 export const env = {
-  appName: "Olanma",
+  appName: "Chikaima",
   apiBaseUrl: requireEnv(process.env.NEXT_PUBLIC_API_BASE_URL, "NEXT_PUBLIC_API_BASE_URL"),
 };

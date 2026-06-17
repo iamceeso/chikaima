@@ -34,7 +34,7 @@ Minimum backend settings for local work:
 JWT_SECRET_KEY=change-me-development-secret
 JWT_REFRESH_SECRET_KEY=change-me-too-development-secret
 PROVIDER_SECRET_KEY=replace-with-32-char-secret-key
-DATABASE_URL=postgresql+psycopg://olanma:olanma@localhost:5432/olanma
+DATABASE_URL=postgresql+psycopg://chikaima:chikaima@localhost:5432/chikaima
 REDIS_URL=redis://localhost:6379/0
 ```
 

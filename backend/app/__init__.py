@@ -1,1 +1,1 @@
-"""Olanma backend package."""
+"""Chikaima backend package."""

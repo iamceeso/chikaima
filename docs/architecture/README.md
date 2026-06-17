@@ -82,7 +82,7 @@ Uploaded files are stored on disk under the configured media root. The default l
 
 ## Inference Strategy
 
-Olanma is now provider-oriented rather than model-runtime-oriented.
+Chikaima is now provider-oriented rather than model-runtime-oriented.
 
 That means:
 

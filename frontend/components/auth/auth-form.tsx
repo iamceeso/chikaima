@@ -120,9 +120,8 @@ export function RegisterForm() {
   return (
     <Card className="w-full max-w-md bg-surface-raised p-4">
       <div className="mb-8">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Olanma</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">
-          Join {workspaceQuery.data?.name ?? "your workspace"}
+          Join Chikaima
         </h1>
       </div>
       {workspaceQuery.data?.first_user_registration_required ? (
@@ -254,7 +253,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md bg-surface-raised p-8">
       <div className="mb-8">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Olanma</p>
+        <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Chikaima</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">Welcome back</h1>
         <p className="mt-2 text-sm text-foreground-muted">Sign in to manage providers, media jobs, and extracted knowledge.</p>
       </div>

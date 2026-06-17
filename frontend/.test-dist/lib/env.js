@@ -9,6 +9,6 @@ function requireEnv(value, name) {
     return normalized;
 }
 exports.env = {
-    appName: "Olanma",
+    appName: "Chikaima",
     apiBaseUrl: requireEnv(process.env.NEXT_PUBLIC_API_BASE_URL, "NEXT_PUBLIC_API_BASE_URL"),
 };

@@ -1175,7 +1175,7 @@ export function ChatLayout() {
               </p>
               <h3 className="mt-1 text-lg font-semibold text-foreground">{statusLabel}</h3>
               <p className="mt-2 text-sm text-foreground-muted">
-                {voiceStatus ?? "Start talking naturally and Olanma will keep the voice loop going."}
+                {voiceStatus ?? "Start talking naturally and Chikaima will keep the voice loop going."}
               </p>
             </div>
             <button
@@ -1306,7 +1306,7 @@ export function ChatLayout() {
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleComposerKeyDown}
-          placeholder="Ask Olanma about your content"
+          placeholder="Ask Chikaima about your content"
           className={cn(
             "resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-5 shadow-none focus:ring-0",
             "min-h-0 max-h-24",
@@ -1478,7 +1478,7 @@ export function ChatLayout() {
             </div>
             <h3 className="mt-4 text-lg font-semibold text-foreground">Drop files into this chat</h3>
             <p className="mt-2 text-sm text-foreground-muted">
-              Add PDFs, documents, images, audio, video, or a whole folder and Olanma will attach them to this conversation.
+              Add PDFs, documents, images, audio, video, or a whole folder and Chikaima will attach them to this conversation.
             </p>
             <div className="mt-4 inline-flex items-center rounded-full border border-border bg-background-secondary px-3 py-1 text-xs text-foreground-muted">
               Uploads appear directly in the composer when dropped
@@ -1520,7 +1520,7 @@ export function ChatLayout() {
                     )}
                   >
                     <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
-                      <span>{isUser ? "You" : "Olanma"}</span>
+                      <span>{isUser ? "You" : "Chikaima"}</span>
                       {message.metadata?.edited ? <PencilLine className="h-2.5 w-2.5" /> : null}
                       {message.metadata?.regenerated_from ? <Sparkles className="h-2.5 w-2.5" /> : null}
                     </div>
@@ -1602,7 +1602,7 @@ export function ChatLayout() {
                             </div>
                             <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-100/80">
                               {pendingProcessingAttachments.length > 0
-                                ? "Olanma will keep watching this attachment and continue automatically when processing finishes."
+                                ? "Chikaima will keep watching this attachment and continue automatically when processing finishes."
                                 : resumeBlockedMessage.isPending
                                   ? "Your original request is being continued automatically."
                                   : "Your original request is ready to continue."}

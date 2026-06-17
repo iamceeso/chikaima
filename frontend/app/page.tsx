@@ -33,7 +33,7 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <header className="py-8 sm:py-12 flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted mb-1">Olanma</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted mb-1">Chikaima</p>
             <h1 className="text-xl sm:text-2xl font-semibold">Media intelligence workspace</h1>
           </div>
           {isAuthenticated ? (

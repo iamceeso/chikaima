@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
       setHydrated: (hydrated) => set({ hydrated }),
     }),
     {
-      name: "olanma-auth",
+      name: "chikaima-auth",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ tokens: state.tokens, user: state.user }),
       onRehydrateStorage: () => (state) => {

@@ -1,1 +1,1 @@
-export const SESSIONLESS_ACCESS_TOKEN = "__olanma_no_auth__";
+export const SESSIONLESS_ACCESS_TOKEN = "__CHIKAIMA_no_auth__";

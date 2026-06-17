@@ -63,7 +63,7 @@ Data services:
 
 The current system is intentionally provider-based.
 
-Olanma:
+Chikaima:
 
 - stores conversations, assets, transcripts, summaries, and vectors
 - orchestrates model/provider calls

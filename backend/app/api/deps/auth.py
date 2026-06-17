@@ -14,8 +14,8 @@ from app.repositories.users import UserRepository
 from app.services.workspace_service import WorkspaceService
 
 DBSession = Annotated[Session, Depends(get_db)]
-LEGACY_PUBLIC_WORKSPACE_EMAIL = "workspace-public@olanma.local"
-PUBLIC_WORKSPACE_EMAIL = "workspace-public@olanma.app"
+LEGACY_PUBLIC_WORKSPACE_EMAIL = "workspace-public@chikaima.local"
+PUBLIC_WORKSPACE_EMAIL = "workspace-public@chikaima.app"
 PUBLIC_WORKSPACE_NAME = "Workspace Public"
 
 

@@ -49,7 +49,7 @@ Check provider configuration first:
 - LiteLLM
 - local OpenAI-compatible gateway
 
-Anthropic does not currently provide embeddings in Olanma.
+Anthropic does not currently provide embeddings in Chikaima.
 
 ## Audio Or Video Transcription Fails
 

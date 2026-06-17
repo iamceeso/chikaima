@@ -1254,7 +1254,7 @@ wheels = [
 ]
 
 [[package]]
-name = "olanma-backend"
+name = "chikaima-backend"
 version = "0.1.5"
 source = { virtual = "." }
 dependencies = [

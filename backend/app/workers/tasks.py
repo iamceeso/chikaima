@@ -19,17 +19,17 @@ from app.workers.celery_app import celery_app
 MAX_LLM_SOURCE_CHARS = 12_000
 
 
-@celery_app.task(name="olanma.video.process")
+@celery_app.task(name="chikaima.video.process")
 def process_video(job_id: str) -> dict[str, str]:
     return _process_resource_job(job_id, Video, "video")
 
 
-@celery_app.task(name="olanma.document.analyze")
+@celery_app.task(name="chikaima.document.analyze")
 def analyze_document(job_id: str) -> dict[str, str]:
     return _process_resource_job(job_id, Document, "document")
 
 
-@celery_app.task(name="olanma.audio.transcribe")
+@celery_app.task(name="chikaima.audio.transcribe")
 def transcribe_audio(job_id: str) -> dict[str, str]:
     return _process_resource_job(job_id, AudioAsset, "audio")
 

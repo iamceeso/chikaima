@@ -17,7 +17,7 @@ const monoFont = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Olanma",
+  title: "Chikaima",
   description: "Unified AI workspace for self-hosted and cloud models.",
 };
 

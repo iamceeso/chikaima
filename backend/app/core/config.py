@@ -10,11 +10,11 @@ PLACEHOLDER_PROVIDER_SECRET = "replace-with-32-char-secret"
 
 
 class Settings(BaseSettings):
-    app_name: str = "Olanma API"
+    app_name: str = "Chikaima API"
     app_env: str = "development"
     app_debug: bool = True
     api_v1_prefix: str = "/api/v1"
-    database_url: str = "postgresql+psycopg://olanma:olanma@localhost:5432/olanma"
+    database_url: str = "postgresql+psycopg://chikaima:chikaima@localhost:5432/chikaima"
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret_key: str = Field(..., min_length=16)
     jwt_refresh_secret_key: str = Field(..., min_length=16)

@@ -77,7 +77,7 @@ Frontend default URL: `http://localhost:3000`
 Default frontend env:
 
 ```env
-NEXT_PUBLIC_APP_NAME=Olanma
+NEXT_PUBLIC_APP_NAME=Chikaima
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 ```
 

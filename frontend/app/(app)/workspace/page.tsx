@@ -137,7 +137,7 @@ export default function WorkspacePage() {
     <>
         <Topbar
           title="Video workspace"
-          description="Open a local folder of videos, send them through the queue one by one, and let Olanma transcribe them with its built-in Whisper pipeline."
+          description="Open a local folder of videos, send them through the queue one by one, and let Chikaima transcribe them with its built-in Whisper pipeline."
         />
 
       <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
@@ -147,7 +147,7 @@ export default function WorkspacePage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Local Folder Intake</p>
               <h2 className="mt-3 text-2xl font-semibold text-foreground">Batch-run a folder of videos from your computer</h2>
               <p className="mt-3 text-sm leading-7 text-foreground-muted">
-                Pick a folder in the browser, Olanma filters out the video files, uploads them one at a time, and creates
+                Pick a folder in the browser, Chikaima filters out the video files, uploads them one at a time, and creates
                 analysis jobs automatically. Videos with speech go through Whisper transcription, and the per-file upload limit is controlled by backend configuration.
               </p>
             </div>
@@ -221,7 +221,7 @@ export default function WorkspacePage() {
             <div>
               <h2 className="text-lg font-semibold text-foreground">What happens per video</h2>
               <div className="mt-3 space-y-3 text-sm leading-7 text-foreground-muted">
-                <p>1. The selected local video file is uploaded into Olanma storage.</p>
+                <p>1. The selected local video file is uploaded into Chikaima storage.</p>
                 <p>2. A Celery job transcribes that file with the local Whisper pipeline.</p>
                 <p>3. Returned transcript text is saved and indexed.</p>
                 <p>4. Summaries and follow-on analysis are generated from the transcript.</p>

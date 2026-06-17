@@ -1,6 +1,6 @@
 # Features
 
-This page documents what Olanma currently ships, not the older planned feature set.
+This page documents what Chikaima currently ships, not the older planned feature set.
 
 ## Core Product Areas
 

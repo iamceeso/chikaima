@@ -72,34 +72,34 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-ensure_port_available 8000 "Olanma backend"
-ensure_port_available 3000 "Olanma frontend"
+ensure_port_available 8000 "Chikaima backend"
+ensure_port_available 3000 "Chikaima frontend"
 
 BACKEND_SERVER_CMD="$(resolve_backend_command uvicorn)"
 CELERY_CMD="$(resolve_backend_command celery)"
 
-echo "Starting Olanma backend..."
+echo "Starting Chikaima backend..."
 (
   cd "$BACKEND_DIR"
   $BACKEND_SERVER_CMD app.main:app --reload --host 0.0.0.0 --port 8000
 ) &
 BACKEND_PID=$!
 
-echo "Starting Olanma Celery worker..."
+echo "Starting Chikaima Celery worker..."
 (
   cd "$BACKEND_DIR"
   $CELERY_CMD -A app.workers.celery_app.celery_app worker --loglevel=info
 ) &
 CELERY_PID=$!
 
-echo "Starting Olanma frontend..."
+echo "Starting Chikaima frontend..."
 (
   cd "$FRONTEND_DIR"
   pnpm dev
 ) &
 FRONTEND_PID=$!
 
-echo "Olanma is starting:"
+echo "Chikaima is starting:"
 echo "  Frontend: http://localhost:3000"
 echo "  Backend:  http://localhost:8000"
 echo "  Worker:   celery"

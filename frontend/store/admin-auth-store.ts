@@ -23,7 +23,7 @@ export const useAdminAuthStore = create<AdminAuthState>()(
       setHydrated: (hydrated) => set({ hydrated }),
     }),
     {
-      name: "olanma-admin-auth",
+      name: "chikaima-admin-auth",
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({ email: state.email, authHeader: state.authHeader }),
       onRehydrateStorage: () => (state) => {

@@ -4,7 +4,7 @@ import app.models  # noqa: F401  Ensure all SQLAlchemy models are registered bef
 from app.core.config import settings
 
 celery_app = Celery(
-    "olanma",
+    "chikaima",
     broker=settings.redis_url,
     backend=settings.redis_url,
     include=["app.workers.tasks"],

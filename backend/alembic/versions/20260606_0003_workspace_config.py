@@ -27,7 +27,7 @@ def upgrade() -> None:
             "name",
             sa.String(length=120),
             nullable=False,
-            server_default="Olanma Workspace",
+            server_default="Chikaima Workspace",
         ),
         sa.Column(
             "public_registration_enabled",
@@ -46,7 +46,7 @@ def upgrade() -> None:
             """
         ).bindparams(
             id=str(uuid.uuid4()),
-            name="Olanma Workspace",
+            name="Chikaima Workspace",
             enabled=True,
         )
     )

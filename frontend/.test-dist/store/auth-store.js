@@ -12,7 +12,7 @@ exports.useAuthStore = (0, zustand_1.create)()((0, middleware_1.persist)((set) =
     clearSession: () => set({ tokens: null, user: null }),
     setHydrated: (hydrated) => set({ hydrated }),
 }), {
-    name: "olanma-auth",
+    name: "chikaima-auth",
     storage: (0, middleware_1.createJSONStorage)(() => localStorage),
     partialize: (state) => ({ tokens: state.tokens, user: state.user }),
     onRehydrateStorage: () => (state) => {

@@ -50,7 +50,7 @@ class WorkspaceServiceTests(unittest.TestCase):
         actor = SimpleNamespace(id="user-1", is_superuser=True)
         workspace = SimpleNamespace(
             id="workspace-1",
-            name="Olanma",
+            name="Chikaima",
             authentication_enabled=True,
             docs_enabled=False,
             public_registration_enabled=True,
@@ -72,7 +72,7 @@ class WorkspaceServiceTests(unittest.TestCase):
     def test_get_public_settings_marks_first_registration_when_no_users_exist(self) -> None:
         db = SimpleNamespace(query=lambda _model: QueryStub(0))
         workspace = SimpleNamespace(
-            name="Olanma",
+            name="Chikaima",
             authentication_enabled=True,
             docs_enabled=True,
             public_registration_enabled=False,

@@ -10,7 +10,7 @@ export function useTheme() {
       return "dark";
     }
 
-    const savedTheme = window.localStorage.getItem("olanma-theme") as Theme | null;
+    const savedTheme = window.localStorage.getItem("chikaima-theme") as Theme | null;
     return savedTheme ?? "dark";
   });
 
@@ -20,7 +20,7 @@ export function useTheme() {
 
   const updateTheme = (nextTheme: Theme) => {
     setTheme(nextTheme);
-    window.localStorage.setItem("olanma-theme", nextTheme);
+    window.localStorage.setItem("chikaima-theme", nextTheme);
   };
 
   return { theme, setTheme: updateTheme };

@@ -9,11 +9,11 @@ The source of truth is [backend/.env.example](../../backend/.env.example).
 Current variables:
 
 ```env
-APP_NAME=Olanma API
+APP_NAME=Chikaima API
 APP_ENV=development
 APP_DEBUG=true
 API_V1_PREFIX=/api/v1
-DATABASE_URL=postgresql+psycopg://olanma:olanma@localhost:5432/olanma
+DATABASE_URL=postgresql+psycopg://chikaima:chikaima@localhost:5432/chikaima
 REDIS_URL=redis://localhost:6379/0
 JWT_SECRET_KEY=change-me-development-secret
 JWT_REFRESH_SECRET_KEY=change-me-too-development-secret
@@ -47,7 +47,7 @@ The source of truth is [frontend/.env.example](../../frontend/.env.example).
 Current variables:
 
 ```env
-NEXT_PUBLIC_APP_NAME=Olanma
+NEXT_PUBLIC_APP_NAME=Chikaima
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 ```
 

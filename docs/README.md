@@ -1,12 +1,12 @@
-# Olanma Documentation
+# Chikaima Documentation
 
-This docs tree is the current high-level reference for the Olanma monorepo.
+This docs tree is the current high-level reference for the Chikaima monorepo.
 
 It is intentionally centered on the README pages that actually exist in this repository today. Older references to dozens of sub-pages and future-planned guides have been removed so the docs stay aligned with the codebase.
 
-## What Olanma Is
+## What Chikaima Is
 
-Olanma is a self-hosted AI workspace built around:
+Chikaima is a self-hosted AI workspace built around:
 
 - a Next.js frontend
 - a FastAPI backend

@@ -131,20 +131,20 @@ export function Sidebar({
         {!collapsed || mobile ? (
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <Image
-              src="/olanma-logo.png"
-              alt="Olanma logo"
+              src="/chikaima-logo.png"
+              alt="Chikaima logo"
               width={32}
               height={32}
               className="h-8 w-8 shrink-0 object-contain"
               priority
             />
-            <p className="truncate text-xs font-semibold uppercase tracking-[0.24em] text-foreground">OLANMA</p>
+            <p className="truncate text-xs font-semibold uppercase tracking-[0.24em] text-foreground">CHIKAIMA</p>
           </div>
         ) : (
           <div className="flex flex-1 justify-center">
             <Image
-              src="/olanma-logo.png"
-              alt="Olanma logo"
+              src="/chikaima-logo.png"
+              alt="Chikaima logo"
               width={28}
               height={28}
               className="h-7 w-7 object-contain"
