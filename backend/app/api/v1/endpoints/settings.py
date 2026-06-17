@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import get_current_admin_user, get_settings_owner_user
+from app.api.deps.auth import get_current_admin_user, get_current_user, get_settings_owner_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.provider import AIModelResponse
@@ -47,7 +47,7 @@ def update_workspace_settings(
 @router.get("/models", response_model=list[AIModelResponse])
 def get_workspace_models(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AIModelResponse]:
     owner = get_settings_owner_user(db, current_user)
     return WorkspaceService(db).list_models(current_user, owner)
@@ -57,7 +57,7 @@ def get_workspace_models(
 def update_workspace_models(
     payload: WorkspaceModelVisibilityUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AIModelResponse]:
     owner = get_settings_owner_user(db, current_user)
     return WorkspaceService(db).update_model_visibility(current_user, payload, owner)

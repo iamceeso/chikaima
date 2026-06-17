@@ -42,8 +42,8 @@ const navItems = [
 
 const settingsItems = [
   { href: "/settings/workspace", label: "Workspace", icon: Cog, adminOnly: false },
-  { href: "/settings/models", label: "Models", icon: Sparkles, adminOnly: true },
-  { href: "/settings/providers", label: "Providers", icon: Settings, adminOnly: true },
+  { href: "/settings/models", label: "Models", icon: Sparkles, adminOnly: false },
+  { href: "/settings/providers", label: "Providers", icon: Settings, adminOnly: false },
   { href: "/settings/users", label: "Users", icon: FolderKanban, adminOnly: true },
 ];
 

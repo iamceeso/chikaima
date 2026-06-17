@@ -119,16 +119,8 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertEqual(result, ("summary", "user-1"))
         self.assertEqual(refreshed, [workspace])
 
-    def test_list_models_rejects_non_superusers(self) -> None:
-        service = WorkspaceService(SimpleNamespace())
-
-        with self.assertRaises(HTTPException) as context:
-            service.list_models(SimpleNamespace(is_superuser=False))
-
-        self.assertEqual(context.exception.status_code, 403)
-
-    def test_list_models_builds_responses_for_admins(self) -> None:
-        actor = SimpleNamespace(id="user-1", is_superuser=True)
+    def test_list_models_builds_responses_for_owner(self) -> None:
+        actor = SimpleNamespace(id="user-1", is_superuser=False)
         model = SimpleNamespace(id="model-1")
         provider = SimpleNamespace(id="provider-1")
         query = SimpleNamespace(
@@ -146,16 +138,8 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertEqual(responses, ["response"])
         builder.assert_called_once_with(model, provider)
 
-    def test_update_model_visibility_rejects_non_superusers(self) -> None:
-        service = WorkspaceService(SimpleNamespace())
-
-        with self.assertRaises(HTTPException) as context:
-            service.update_model_visibility(SimpleNamespace(is_superuser=False), SimpleNamespace())
-
-        self.assertEqual(context.exception.status_code, 403)
-
     def test_update_model_visibility_updates_default_and_availability(self) -> None:
-        actor = SimpleNamespace(id="user-1", is_superuser=True)
+        actor = SimpleNamespace(id="user-1", is_superuser=False)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=False)
         added: list[object] = []
@@ -185,7 +169,7 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertTrue(model_b.is_available)
 
     def test_update_model_visibility_clears_default_when_existing_default_is_disabled(self) -> None:
-        actor = SimpleNamespace(id="user-1", is_superuser=True)
+        actor = SimpleNamespace(id="user-1", is_superuser=False)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=True)
         db = SimpleNamespace(
@@ -211,7 +195,7 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertTrue(model_b.is_available)
 
     def test_update_model_visibility_keeps_default_when_it_remains_enabled(self) -> None:
-        actor = SimpleNamespace(id="user-1", is_superuser=True)
+        actor = SimpleNamespace(id="user-1", is_superuser=False)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=True)
         db = SimpleNamespace(

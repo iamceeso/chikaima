@@ -22,6 +22,54 @@ import { Card } from "@/components/ui/card";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 
+function WorkspaceAccountSection({
+  user,
+  clearAnalysisPending,
+  onClearAnalysis,
+}: {
+  user: ReturnType<typeof useAuthStore.getState>["user"];
+  clearAnalysisPending: boolean;
+  onClearAnalysis: () => void;
+}) {
+  return (
+    <Card className="mx-auto w-full max-w-2xl p-6">
+      <div className="mb-5 flex items-center gap-3">
+        <UserCircle2 className="h-5 w-5 text-primary" />
+        <div>
+          <h2 className="font-semibold">Account</h2>
+          <p className="text-sm text-foreground-muted">Manage your session and personal workspace data.</p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-background-secondary p-4">
+        <p className="font-medium">{user?.full_name ?? "Your account"}</p>
+
+        {user?.email ? <p className="text-sm text-foreground-muted">{user.email}</p> : null}
+      </div>
+
+      <div className="mt-5">
+        <SignOutButton redirectTo="/" className="w-full sm:w-auto" />
+      </div>
+
+      <div className="mt-6 rounded-xl border border-destructive/30 p-4">
+        <h3 className="font-medium text-destructive">Danger Zone</h3>
+
+        <p className="mt-1 text-sm text-foreground-muted">Permanently remove chats, documents, videos and audio.</p>
+
+        <Button
+          variant="outline"
+          className="mt-4 w-full sm:w-auto"
+          onClick={onClearAnalysis}
+          disabled={clearAnalysisPending}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          {clearAnalysisPending ? "Clearing..." : "Clear Analysis"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 export default function WorkspaceSettingsPage() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const user = useAuthStore((state) => state.user);
@@ -156,12 +204,19 @@ export default function WorkspaceSettingsPage() {
     return (
       <SettingsShell
         title="Workspace"
-        description="Manage access, routing, jobs, and account settings."
+        description="Manage your account and personal workspace data."
       >
-        <AdminAccessGate
-          title="Admin credentials required"
-          description="Workspace sign-in is disabled, so changing workspace settings requires an existing administrator email and password."
-        />
+        <div className="mx-auto w-full max-w-4xl space-y-6 p-1">
+          <WorkspaceAccountSection
+            user={user}
+            clearAnalysisPending={clearAnalysis.isPending}
+            onClearAnalysis={() => setClearAnalysisDialogOpen(true)}
+          />
+          <AdminAccessGate
+            title="Unlock admin controls"
+            description="Workspace sign-in is disabled. Enter an administrator email and password only if you need to manage workspace-wide settings."
+          />
+        </div>
       </SettingsShell>
     );
   }
@@ -170,11 +225,15 @@ export default function WorkspaceSettingsPage() {
     return (
       <SettingsShell
         title="Workspace"
-        description="Manage access, routing, jobs, and account settings."
+        description="Manage your account and personal workspace data."
       >
-        <Card className="p-6">
-          <p className="text-sm text-foreground-muted">You need an admin account to manage workspace settings.</p>
-        </Card>
+        <div className="mx-auto w-full max-w-4xl space-y-6 p-1">
+          <WorkspaceAccountSection
+            user={user}
+            clearAnalysisPending={clearAnalysis.isPending}
+            onClearAnalysis={() => setClearAnalysisDialogOpen(true)}
+          />
+        </div>
       </SettingsShell>
     );
   }

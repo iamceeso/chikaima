@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps.auth import get_current_admin_user, get_settings_owner_user
+from app.api.deps.auth import get_current_user, get_settings_owner_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.provider import ProviderCreate, ProviderResponse, ProviderUpdate
@@ -21,7 +21,7 @@ def _mask(provider_secret: str | None) -> str | None:
 @router.get("", response_model=list[ProviderResponse])
 def list_providers(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[ProviderResponse]:
     owner = get_settings_owner_user(db, current_user)
     providers = ProviderService(db).list_for_user(owner.id)
@@ -38,7 +38,7 @@ def list_providers(
 def create_provider(
     payload: ProviderCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_user),
 ) -> ProviderResponse:
     owner = get_settings_owner_user(db, current_user)
     provider = ProviderService(db).create(owner.id, payload)
@@ -53,7 +53,7 @@ def update_provider(
     provider_id: str,
     payload: ProviderUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_user),
 ) -> ProviderResponse:
     owner = get_settings_owner_user(db, current_user)
     provider = ProviderService(db).update(owner.id, provider_id, payload)
@@ -67,7 +67,7 @@ def update_provider(
 def resync_provider_models(
     provider_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_user),
 ) -> ProviderResponse:
     owner = get_settings_owner_user(db, current_user)
     provider = ProviderService(db).resync_models(owner.id, provider_id)
@@ -81,7 +81,7 @@ def resync_provider_models(
 def delete_provider(
     provider_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     owner = get_settings_owner_user(db, current_user)
     ProviderService(db).delete(owner.id, provider_id)

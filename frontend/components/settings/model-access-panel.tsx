@@ -4,16 +4,16 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, RefreshCw, Search, Sparkles, Star } from "lucide-react";
 
-import { useAdminAccess } from "@/hooks/use-admin-access";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
+import { useAuthStore } from "@/store/auth-store";
 import type { AIModel } from "@/types";
 
 export function ModelAccessPanel() {
-  const { access, hasAdminAccess } = useAdminAccess();
+  const token = useAuthStore((state) => state.tokens?.access_token);
   const queryClient = useQueryClient();
   const [providerSearch, setProviderSearch] = useState<Record<string, string>>({});
   const [collapsedProviders, setCollapsedProviders] = useState<Record<string, boolean>>({});
@@ -22,12 +22,12 @@ export function ModelAccessPanel() {
   const workspaceModelsQuery = useQuery({
     queryKey: ["workspace-models"],
     queryFn: () => {
-      if (!access) {
-        return Promise.reject(new Error("Administrator access is required."));
+      if (!token) {
+        return Promise.reject(new Error("Please sign in first."));
       }
-      return api.getWorkspaceModels(access);
+      return api.getWorkspaceModels({ token });
     },
-    enabled: Boolean(access),
+    enabled: Boolean(token),
     staleTime: 5 * 60_000,
   });
 
@@ -39,10 +39,10 @@ export function ModelAccessPanel() {
       enabledModelIds: string[];
       defaultModelId?: string | null;
     }) => {
-      if (!access) {
-        throw new Error("Administrator access is required.");
+      if (!token) {
+        throw new Error("Please sign in first.");
       }
-      return api.updateWorkspaceModels(access, {
+      return api.updateWorkspaceModels({ token }, {
         enabled_model_ids: enabledModelIds,
         ...(defaultModelId !== undefined ? { default_model_id: defaultModelId } : {}),
       });
@@ -55,10 +55,10 @@ export function ModelAccessPanel() {
 
   const resyncProviderModels = useMutation({
     mutationFn: async (providerId: string) => {
-      if (!access) {
-        throw new Error("Administrator access is required.");
+      if (!token) {
+        throw new Error("Please sign in first.");
       }
-      return api.resyncProviderModels(access, providerId);
+      return api.resyncProviderModels({ token }, providerId);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["providers"] });
@@ -196,11 +196,7 @@ export function ModelAccessPanel() {
         </div>
       </div>
 
-      {!hasAdminAccess ? (
-        <div className="rounded-xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">
-          Admin only.
-        </div>
-      ) : workspaceModelsQuery.isLoading ? (
+      {workspaceModelsQuery.isLoading ? (
         <div className="rounded-xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">
           Loading models...
         </div>

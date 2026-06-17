@@ -5,13 +5,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
-import { useAdminAccess } from "@/hooks/use-admin-access";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createFormResolver } from "@/lib/form-resolver";
 import { api } from "@/services/api";
+import { useAuthStore } from "@/store/auth-store";
 import type { ProviderType } from "@/types";
 
 const providerSchema = z.object({
@@ -72,7 +72,7 @@ const providerSupportNotes: Record<ProviderType, string> = {
 };
 
 export function ProviderForm() {
-  const { access } = useAdminAccess();
+  const token = useAuthStore((state) => state.tokens?.access_token);
   const queryClient = useQueryClient();
   const form = useForm<ProviderValues>({
     resolver: createFormResolver<ProviderValues>(providerSchema),
@@ -110,10 +110,10 @@ export function ProviderForm() {
 
   const mutation = useMutation({
     mutationFn: async (values: ProviderValues) => {
-      if (!access) {
-        throw new Error("Administrator access is required.");
+      if (!token) {
+        throw new Error("Please sign in first.");
       }
-      return api.createProvider(access, {
+      return api.createProvider({ token }, {
         ...values,
         base_url: values.base_url || undefined,
       });
