@@ -47,7 +47,11 @@ class ChatService:
         if attachments:
             for resource_type, resource_ids in attachments.items():
                 for resource_id in resource_ids:
-                    transcript_service.delete_resource(user_id, resource_type, resource_id)
+                    try:
+                        transcript_service.delete_resource(user_id, resource_type, resource_id)
+                    except HTTPException as exc:
+                        if exc.status_code != status.HTTP_404_NOT_FOUND:
+                            raise
 
         refreshed_conversation = self.conversations.get(conversation_id)
         if refreshed_conversation and refreshed_conversation.user_id == user_id:

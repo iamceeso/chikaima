@@ -171,11 +171,14 @@ export default function WorkspaceSettingsPage() {
 
       const conversations = await api.getConversations(token);
 
+      for (const conversation of conversations) {
+        await api.deleteConversation(token, conversation.id);
+      }
+
       await Promise.all([
         api.clearDocuments(token),
         api.clearAudioAssets(token),
         api.clearVideos(token),
-        ...conversations.map((conversation) => api.deleteConversation(token, conversation.id)),
       ]);
     },
     onSuccess: async () => {
@@ -186,6 +189,51 @@ export default function WorkspaceSettingsPage() {
       ]);
     },
   });
+
+  const clearAnalysisDialog = (
+    <AlertDialog
+      open={clearAnalysisDialogOpen}
+      onOpenChange={(open) => {
+        if (!clearAnalysis.isPending) {
+          setClearAnalysisDialogOpen(open);
+        }
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear all analysis?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently remove every chat, document, audio file, and video in your workspace library for this account.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            className="border border-border"
+            disabled={clearAnalysis.isPending}
+            onClick={() => setClearAnalysisDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={clearAnalysis.isPending}
+            onClick={() =>
+              clearAnalysis.mutate(undefined, {
+                onSuccess: async () => {
+                  setClearAnalysisDialogOpen(false);
+                  await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
+                },
+              })
+            }
+          >
+            {clearAnalysis.isPending ? "Clearing..." : "Clear all analysis"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 
   if (publicWorkspaceQuery.isLoading || (workspaceAuthDisabled && !adminAuthHydrated)) {
     return (
@@ -202,39 +250,45 @@ export default function WorkspaceSettingsPage() {
 
   if (workspaceAuthDisabled && !hasAdminAccess) {
     return (
-      <SettingsShell
-        title="Workspace"
-        description="Manage your account and personal workspace data."
-      >
-        <div className="mx-auto w-full max-w-4xl space-y-6 p-1">
-          <WorkspaceAccountSection
-            user={user}
-            clearAnalysisPending={clearAnalysis.isPending}
-            onClearAnalysis={() => setClearAnalysisDialogOpen(true)}
-          />
-          <AdminAccessGate
-            title="Unlock admin controls"
-            description="Workspace sign-in is disabled. Enter an administrator email and password only if you need to manage workspace-wide settings."
-          />
-        </div>
-      </SettingsShell>
+      <>
+        <SettingsShell
+          title="Workspace"
+          description="Manage your account and personal workspace data."
+        >
+          <div className="mx-auto w-full max-w-4xl space-y-6 p-1">
+            <WorkspaceAccountSection
+              user={user}
+              clearAnalysisPending={clearAnalysis.isPending}
+              onClearAnalysis={() => setClearAnalysisDialogOpen(true)}
+            />
+            <AdminAccessGate
+              title="Unlock admin controls"
+              description="Workspace sign-in is disabled. Enter an administrator email and password only if you need to manage workspace-wide settings."
+            />
+          </div>
+        </SettingsShell>
+        {clearAnalysisDialog}
+      </>
     );
   }
 
   if (!hasAdminAccess) {
     return (
-      <SettingsShell
-        title="Workspace"
-        description="Manage your account and personal workspace data."
-      >
-        <div className="mx-auto w-full max-w-4xl space-y-6 p-1">
-          <WorkspaceAccountSection
-            user={user}
-            clearAnalysisPending={clearAnalysis.isPending}
-            onClearAnalysis={() => setClearAnalysisDialogOpen(true)}
-          />
-        </div>
-      </SettingsShell>
+      <>
+        <SettingsShell
+          title="Workspace"
+          description="Manage your account and personal workspace data."
+        >
+          <div className="mx-auto w-full max-w-4xl space-y-6 p-1">
+            <WorkspaceAccountSection
+              user={user}
+              clearAnalysisPending={clearAnalysis.isPending}
+              onClearAnalysis={() => setClearAnalysisDialogOpen(true)}
+            />
+          </div>
+        </SettingsShell>
+        {clearAnalysisDialog}
+      </>
     );
   }
 
@@ -562,48 +616,7 @@ export default function WorkspaceSettingsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={clearAnalysisDialogOpen}
-        onOpenChange={(open) => {
-          if (!clearAnalysis.isPending) {
-            setClearAnalysisDialogOpen(open);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear all analysis?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove every chat, document, audio file, and video in your workspace library for this account.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              className="border border-border"
-              disabled={clearAnalysis.isPending}
-              onClick={() => setClearAnalysisDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={clearAnalysis.isPending}
-              onClick={() =>
-                clearAnalysis.mutate(undefined, {
-                  onSuccess: async () => {
-                    setClearAnalysisDialogOpen(false);
-                    await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
-                  },
-                })
-              }
-            >
-              {clearAnalysis.isPending ? "Clearing..." : "Clear all analysis"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {clearAnalysisDialog}
 
       <AlertDialog
         open={registrationDialogOpen}

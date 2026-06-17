@@ -838,3 +838,46 @@ class ChatServiceTests(unittest.TestCase):
             service.delete_conversation("user-1", "missing")
 
         self.assertEqual(context.exception.status_code, 404)
+
+    def test_delete_conversation_ignores_missing_attachment_resources(self) -> None:
+        service = object.__new__(ChatService)
+        conversation = SimpleNamespace(
+            id="conv-1",
+            user_id="user-1",
+            messages=[
+                SimpleNamespace(
+                    meta={"attachments": [{"id": "doc-1", "kind": "document"}]}
+                )
+            ],
+        )
+        repo_state = {"conversation": conversation}
+        delete_calls: list[str] = []
+        commit_calls: list[str] = []
+
+        service.conversations = SimpleNamespace(
+            get=lambda conversation_id: repo_state["conversation"]
+        )
+
+        def delete_and_clear(item):
+            delete_calls.append(item.id)
+            repo_state["conversation"] = None
+
+        service.db = SimpleNamespace(
+            delete=delete_and_clear,
+            commit=lambda: commit_calls.append("commit"),
+        )
+
+        with (
+            patch("app.services.chat_service.TranscriptService") as transcript_service,
+            patch("app.services.chat_service.LibraryService") as library_service,
+        ):
+            transcript_service.return_value.delete_resource.side_effect = HTTPException(
+                status_code=404, detail="Resource not found"
+            )
+
+            service.delete_conversation("user-1", "conv-1")
+
+            library_service.invalidate_user_cache.assert_called_once_with("user-1")
+
+        self.assertEqual(delete_calls, ["conv-1"])
+        self.assertEqual(commit_calls, ["commit"])
