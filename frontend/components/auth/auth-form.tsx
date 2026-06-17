@@ -71,7 +71,9 @@ function PasswordField({
 export function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const setSession = useAuthStore((state) => state.setSession);
+  const setUser = useAuthStore((state) => state.setUser);
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: createFormResolver<z.infer<typeof registerSchema>>(registerSchema),
     mode: "onChange",
@@ -91,31 +93,44 @@ export function RegisterForm() {
       }
       return api.login({ email: values.email, password: values.password });
     },
-    onSuccess: (tokens) => {
+    onSuccess: async (tokens) => {
+      const next = searchParams.get("next") || "/library";
+      router.prefetch(next);
+
       if (tokens) {
         setSession(tokens);
+        const profilePromise = api.getProfile(tokens.access_token).then((user) => {
+          setUser(user);
+          queryClient.setQueryData(["profile", tokens.access_token], user);
+          return user;
+        });
+        await Promise.allSettled([
+          queryClient.invalidateQueries({ queryKey: ["public-workspace-settings"] }),
+          profilePromise,
+          prefetchLibrary(queryClient, tokens.access_token),
+        ]);
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ["public-workspace-settings"] });
       }
-      router.replace(searchParams.get("next") || "/library");
+
+      router.replace(next);
     },
   });
 
   return (
-    <Card className="w-full max-w-md bg-surface-raised p-8">
+    <Card className="w-full max-w-md bg-surface-raised p-4">
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Olanma</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">
           Join {workspaceQuery.data?.name ?? "your workspace"}
         </h1>
-        <p className="mt-2 text-sm text-foreground-muted">
-          Set up Olanma and start processing audio, video, and documents.
-        </p>
       </div>
       {workspaceQuery.data?.first_user_registration_required ? (
         <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
           <div className="rounded-2xl border border-border bg-background-secondary p-4">
             <p className="text-sm font-medium text-foreground">Create the first workspace account</p>
             <p className="mt-2 text-sm text-foreground-muted">
-              The first account becomes the workspace administrator and unlocks the rest of setup.
+              The first account is the administrator and unlocks the rest of setup.
             </p>
           </div>
           <div>
@@ -150,7 +165,7 @@ export function RegisterForm() {
           </Button>
         </form>
       ) : workspaceQuery.data?.public_registration_enabled === false ? (
-        <div className="mt-8 rounded-2xl border border-border bg-background-secondary p-4">
+        <div className=" rounded-2xl border border-border bg-background-secondary p-4">
           <p className="text-sm font-medium text-foreground">Public registration is disabled</p>
           <p className="mt-2 text-sm text-foreground-muted">
             Ask a workspace administrator to create your account from Settings.
