@@ -1,411 +1,142 @@
 # Troubleshooting
 
-Solutions to common problems.
+These notes match the current stack and scripts in the repo.
 
-## Backend Issues
+## Backend Will Not Start
 
-### Backend won't start
+Check:
 
-Error: Application startup failed
-
-Solutions:
 ```bash
-# Check Python version
-python --version  # Should be 3.10+
-
-# Check dependencies
-uv sync
-
-# Check for syntax errors
-python -m py_compile app/main.py
-
-# Run with verbose output
-uvicorn app.main:app --reload --log-level debug
-
-# Check port availability
-lsof -i :8000
-```
-
-### Database connection failed
-
-Error: psycopg2.OperationalError: could not connect to server
-
-Solutions:
-```bash
-# Check PostgreSQL running
-sudo systemctl status postgresql
-
-# Verify connection string
-echo $DATABASE_URL
-
-# Test connection
-psql $DATABASE_URL -c "SELECT 1"
-
-# For Docker
-docker-compose ps postgres
-docker-compose logs postgres
-```
-
-### Redis connection failed
-
-Error: redis.exceptions.ConnectionError
-
-Solutions:
-```bash
-# Check Redis running
-redis-cli ping  # Should return PONG
-
-# Start Redis
-redis-server
-
-# Check connection in .env
-REDIS_URL=redis://localhost:6379/0
-
-# For Docker
-docker-compose up -d redis
-```
-
-### PyPDF2 import error
-
-Error: ModuleNotFoundError: No module named 'PyPDF2'
-
-Solution:
-```bash
-# Install PyPDF2
-pip install PyPDF2
-
-# Or update pyproject.toml
-# Then sync
-uv sync
-```
-
-### Celery tasks not running
-
-Background jobs not executing
-
-Solutions:
-```bash
-# Start Celery worker
-celery -A app.workers.celery_app worker --loglevel=info
-
-# Check Redis connection
-redis-cli ping
-
-# Monitor tasks
-celery -A app.workers.celery_app inspect active
-celery -A app.workers.celery_app inspect reserved
-
-# Clear queue if stuck
-celery -A app.workers.celery_app purge
-```
-
-## Frontend Issues
-
-### Port already in use
-
-Error: listen EADDRINUSE
-
-Solutions:
-```bash
-# Kill process using port
-lsof -ti:3000 | xargs kill -9
-
-# Or use different port
-npm run dev -- -p 3001
-```
-
-### API connection issues
-
-Frontend can't reach backend
-
-Solutions:
-```bash
-# Check backend is running
-curl http://localhost:8000/api/health
-
-# Check NEXT_PUBLIC_API_URL in .env.local
-NEXT_PUBLIC_API_URL=http://localhost:8000/api
-
-# Check CORS in backend .env
-BACKEND_CORS_ORIGINS=["http://localhost:3000"]
-
-# Clear browser cache
-Ctrl+Shift+R
-```
-
-### SSE streaming stops
-
-Chat response cuts off
-
-Solutions:
-```bash
-# Check browser console for errors
-# Open DevTools, Network tab, look for SSE connection
-
-# Increase Nginx timeout
-proxy_read_timeout 300s;
-proxy_send_timeout 300s;
-
-# Check backend logs
-docker-compose logs -f backend
-```
-
-## Database Issues
-
-### Migrations failed
-
-Error: Column already exists
-
-Solutions:
-```bash
-# Check migration status
-alembic current
-
-# Downgrade and re-apply
-alembic downgrade -1
-alembic upgrade head
-
-# Manual fix
-alembic stamp head
-```
-
-### Database locked
-
-Solutions:
-```bash
-# Restart database
-docker-compose restart postgres
-
-# Or
-sudo systemctl restart postgresql
-```
-
-### Slow queries
-
-Solutions:
-```bash
-# Enable query logging
-echo "true" > app/core/database.py
-
-# Analyze slow query
-EXPLAIN ANALYZE SELECT * FROM conversations WHERE ...;
-
-# Add indexes
-alembic revision --autogenerate -m "Add indexes"
-alembic upgrade head
-```
-
-## Authentication Issues
-
-### Token invalid
-
-Error: Invalid token
-
-Solutions:
-```bash
-# Generate new token
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password"}'
-
-# Check token format
-# Should be: "Authorization: Bearer {token}"
-
-# Use refresh token
-curl -X POST http://localhost:8000/api/v1/auth/refresh \
-  -H "Authorization: Bearer {refresh_token}"
-```
-
-### Login not working
-
-Solutions:
-```bash
-# Check user exists
-SELECT * FROM users WHERE email = 'user@example.com';
-
-# Reset password
-python -c "
-from app.core.database import SessionLocal
-from app.core.security import hash_password
-from app.models.user import User
-
-db = SessionLocal()
-user = db.query(User).filter(User.email == 'user@example.com').first()
-user.hashed_password = hash_password('newpassword')
-db.commit()
-"
-
-# Verify CORS
-BACKEND_CORS_ORIGINS=["http://localhost:3000"]
-```
-
-## Chat Issues
-
-### LLM API errors
-
-Error: Invalid API key
-
-Solutions:
-```bash
-# Check API key
-echo $OPENAI_API_KEY
-
-# Test directly
-python -c "
-import openai
-openai.api_key = 'sk-...'
-print(openai.Model.list())
-"
-
-# Verify key has permissions
-# Check provider dashboard
-```
-
-### Chat response empty
-
-Solutions:
-```bash
-# Try without attachments
-# Check message serialization
-# Check LLM model is accessible
-
-curl http://localhost:8000/api/v1/models \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-## Document Processing Issues
-
-### PDF not extracting
-
-Document stays "pending"
-
-Solutions:
-```bash
-# Check Celery worker running
-celery -A app.workers.celery_app inspect active
-
-# Check file exists
-ls -la storage/{user_id}/
-
-# Check PyPDF2 installed
-pip list | grep PyPDF2
-
-# Test PDF reading
-python -c "
-import PyPDF2
-with open('document.pdf', 'rb') as f:
-    reader = PyPDF2.PdfReader(f)
-    print(len(reader.pages))
-"
-```
-
-### File too large
-
-Error: 413 Payload Too Large
-
-Solutions:
-```bash
-# Increase the relevant backend limit in backend/.env
-VIDEO_UPLOAD_MAX_MEGABYTES=2048
-DOCUMENT_UPLOAD_MAX_MEGABYTES=100
-AUDIO_UPLOAD_MAX_MEGABYTES=512
-
-# If you run behind Nginx or an ingress proxy, raise that limit too
-client_max_body_size 2G;
-```
-
-FastAPI itself does not set a global upload cap here. In Olanma, uploads are streamed through `StorageService`, which returns `413` when the configured backend limit is exceeded. If the response is coming from a proxy before the request reaches FastAPI, the proxy limit is the one that needs to be increased.
-
-### Whisper or ffmpeg startup failure
-
-Symptoms:
-
-- API container exits during startup
-- Celery worker exits before accepting jobs
-- Logs mention `ffmpeg is unavailable` or `Whisper could not access ffmpeg`
-
-Solutions:
-```bash
-# Local development: reinstall backend dependencies so imageio-ffmpeg is present
 cd backend
-uv sync
-
-# Check the resolved binary if you are overriding it
-echo $FFMPEG_BINARY_PATH
-
-# Optional: point Olanma at a native binary explicitly
-FFMPEG_BINARY_PATH=/usr/bin/ffmpeg
+uv sync --group dev
+uv run uvicorn app.main:app --reload
 ```
 
-Olanma startup prefers `FFMPEG_BINARY_PATH`, then a system `ffmpeg`, and finally the bundled `imageio-ffmpeg` binary. The resolved binary directory is prepended to `PATH` before Whisper validation runs.
+Common causes:
 
-## Deployment Issues
+- missing `.env`
+- invalid JWT or provider secret settings
+- PostgreSQL not reachable
+- Redis not reachable
 
-### Container won't start
+## Uploads Stay Pending
 
-Solutions:
+The API can accept uploads while the worker is down.
+
+If files stay `pending`, start the worker:
+
 ```bash
-# Check logs
-docker-compose logs backend
-
-# Build without cache
-docker-compose build --no-cache
-
-# Check environment
-docker-compose config | head
-
-# Verify dependencies
-docker-compose logs postgres
+cd backend
+uv run celery -A app.workers.celery_app.celery_app worker --loglevel=info
 ```
 
-### Out of memory
+Also verify Redis is reachable.
 
-Solutions:
+## Retrieval Returns Nothing
+
+Common causes:
+
+- no embedding-capable provider is configured
+- asset processing has not completed
+- embeddings provider request failed during chunk indexing
+
+Check provider configuration first:
+
+- OpenAI
+- Gemini
+- Ollama
+- OpenRouter
+- LiteLLM
+- local OpenAI-compatible gateway
+
+Anthropic does not currently provide embeddings in Olanma.
+
+## Audio Or Video Transcription Fails
+
+Current transcription is provider-based.
+
+That means you need an enabled transcription-capable provider path, currently:
+
+- OpenAI
+- LiteLLM with OpenAI-compatible transcription endpoints
+- local OpenAI-compatible gateway with the same endpoint shape
+
+Gemini, Anthropic, Ollama, and OpenRouter are not currently used for the transcription flow in this codebase.
+
+## Docker Build Issues
+
+Use:
+
 ```bash
-# Check memory usage
-docker stats
-
-# Increase limit
-services:
-  backend:
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-
-# Reduce workers
-gunicorn app.main:app -w 2
+./pre-push.sh
 ```
 
-### High CPU usage
+This builds both Docker images locally and catches many CI failures before tagging.
 
-Solutions:
+If Docker image size looks wrong, re-check:
+
+- `.dockerignore`
+- multi-stage Dockerfiles
+- dependency lockfiles
+
+## CI Passed Locally But GitHub Failed
+
+Local success is a strong signal, but not a guarantee.
+
+Common differences:
+
+- registry/network behavior
+- clean checkout behavior
+- cross-platform image builds
+- secrets and tag-based workflow conditions
+
+Check the relevant workflow:
+
+- [ci.yml](../../.github/workflows/ci.yml)
+- [docker-release.yml](../../.github/workflows/docker-release.yml)
+
+## `pgvector` Problems
+
+The backend expects the PostgreSQL `vector` extension to exist.
+
+In Docker Compose this is handled by the `pgvector/pgvector` image.
+
+If running your own database, make sure the extension can be created:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+## Confusing Provider Behavior
+
+Current provider support is intentionally uneven:
+
+- Anthropic: chat only
+- Gemini: chat and embeddings
+- Ollama: chat and embeddings
+- OpenAI: chat, embeddings, transcription
+- OpenRouter: chat and embeddings
+- LiteLLM: depends on proxy-exposed endpoints
+- local gateway: depends on gateway-exposed endpoints
+
+If the UI and behavior ever disagree, trust the current backend services and update the docs.
+
+## Release/Tag Problems
+
+Use the helper instead of editing versions manually:
+
 ```bash
-# Find process
-top
-
-# Add logging to identify bottleneck
-# Optimize database queries
-# Reduce worker concurrency
+./version-patch.sh
 ```
 
-## FAQ
+If it refuses to run, it usually means:
 
-Q: Can I use SQLite?
-A: Not recommended for production, but possible for development
+- the working tree is not clean
+- the tag already exists
+- `uv` or `pnpm` is not available
 
-Q: What LLM providers work?
-A: OpenAI, Anthropic, Cohere, HuggingFace
+Related:
 
-Q: How do I backup data?
-A: Use pg_dump and tar for files. See Backup Guide.
-
-Q: Can I run on Windows?
-A: Yes, use WSL2 or Docker Desktop
-
-Q: How do I scale?
-A: Use Kubernetes or multiple Docker Compose instances
-
----
-
-Need more help? Check documentation or open issue on GitHub.
+- [Getting Started](../getting-started/README.md)
+- [Deployment](../deployment/README.md)
+- [Development](../development/README.md)

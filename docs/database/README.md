@@ -1,351 +1,128 @@
 # Database
 
-Database schema, models, and migrations.
+Olanma uses PostgreSQL as the primary store and `pgvector` for retrieval over asset chunks.
 
-## Overview
+## ORM And Migrations
 
-Olanma uses PostgreSQL as the primary data store with SQLAlchemy ORM.
+- ORM: SQLAlchemy
+- migrations: Alembic
+- vector support: `pgvector`
 
-## Core Models
+The backend attempts to enable the `vector` extension on startup in [backend/app/main.py](../../backend/app/main.py).
 
-### User
+## Active Tables / Models
 
-Represents a user account.
+These are the current model files in `backend/app/models`.
 
-```
-id: UUID (primary key)
-email: VARCHAR(255) unique
-hashed_password: VARCHAR(255)
-is_active: BOOLEAN
-is_superuser: BOOLEAN
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+Core identity and workspace:
 
-Relationships:
-- Conversations (1:N)
-- Workspaces (1:N)
-- Documents (1:N)
-- Providers (1:N)
+- `users`
+- `settings`
+- `workspace_configs`
 
-### Conversation
+Chat:
 
-Represents a chat conversation.
+- `conversations`
+- `messages`
 
-```
-id: UUID (primary key)
-user_id: UUID (foreign key -> users)
-workspace_id: UUID (foreign key -> workspaces, nullable)
-title: VARCHAR(255)
-model_id: UUID (foreign key -> ai_models, nullable)
-is_pinned: BOOLEAN default false
-is_deleted: BOOLEAN default false
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+Providers:
 
-Relationships:
-- User (N:1)
-- Workspace (N:1, optional)
-- Messages (1:N)
-- AIModel (N:1, optional)
+- `providers`
+- `ai_models`
 
-### Message
+Media and knowledge:
 
-Represents a single message in a conversation.
+- `documents`
+- `audio_assets`
+- `videos`
+- `transcripts`
+- `summary_artifacts`
+- `asset_chunks`
+- `embeddings`
 
-```
-id: UUID (primary key)
-conversation_id: UUID (foreign key -> conversations)
-role: VARCHAR(50) enum: user, assistant, system
-content: TEXT
-meta: JSON (attachments, rag_context, etc)
-tokens_used: INTEGER nullable
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+Operations:
 
-Relationships:
-- Conversation (N:1)
+- `jobs`
 
-Meta structure:
-```json
-{
-  "attachments": [
-    {
-      "id": "doc-uuid",
-      "name": "file.pdf",
-      "kind": "document"
-    }
-  ],
-  "rag_context": [
-    {
-      "document_id": "doc-uuid",
-      "score": 0.95
-    }
-  ]
-}
-```
+## What Each Area Stores
 
-### Document
+### Users
 
-Represents an uploaded document.
+Authentication and account-level flags.
 
-```
-id: UUID (primary key)
-user_id: UUID (foreign key -> users)
-name: VARCHAR(255)
-file_path: VARCHAR(500)
-mime_type: VARCHAR(100)
-file_size: INTEGER
-status: VARCHAR(50) enum: pending, processing, completed, failed
-summary: TEXT nullable
-extracted_text: TEXT nullable
-error_message: TEXT nullable
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+### Providers And Models
 
-Relationships:
-- User (N:1)
+- provider connection metadata
+- encrypted provider config
+- synced model catalog
+- default/available model flags
 
-Status flow: pending -> processing -> completed (or failed)
+### Conversations And Messages
 
-### AudioAsset
+- chat history
+- chosen model
+- attachment metadata
+- response/provider metadata
 
-Represents an uploaded audio file.
+### Documents, Audio, And Videos
 
-```
-id: UUID (primary key)
-user_id: UUID (foreign key -> users)
-name: VARCHAR(255)
-file_path: VARCHAR(500)
-mime_type: VARCHAR(100)
-duration_seconds: INTEGER nullable
-status: VARCHAR(50) enum: pending, processing, completed, failed
-transcript: TEXT nullable
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+- uploaded asset identity
+- processing status
+- summary/transcript fields on the asset itself
 
-### VideoAsset
+### Transcripts And Summaries
 
-Represents an uploaded video file.
+- canonical transcript body
+- summary artifacts such as summary text and key points
 
-```
-id: UUID (primary key)
-user_id: UUID (foreign key -> users)
-name: VARCHAR(255)
-file_path: VARCHAR(500)
-mime_type: VARCHAR(100)
-duration_seconds: INTEGER nullable
-status: VARCHAR(50) enum: pending, processing, completed, failed
-summary: TEXT nullable
-transcript: TEXT nullable
-action_items: JSON array
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+### Asset Chunks
 
-### Provider
+This is the main retrieval table used for current RAG.
 
-Represents an LLM API provider.
+It stores:
 
-```
-id: UUID (primary key)
-user_id: UUID (foreign key -> users)
-provider_type: VARCHAR(50) enum: openai, anthropic, cohere, huggingface
-secret_key: VARCHAR(1000) encrypted
-is_enabled: BOOLEAN default true
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+- source identity
+- chunk text
+- vector embedding
+- location metadata for citations
 
-Relationships:
-- User (N:1)
-- AIModels (1:N)
+### Legacy `embeddings` Table
 
-### AIModel
+There is also an `embeddings` table still present in the model set. It is used in cleanup paths, but the current retrieval flow is centered on `asset_chunks`.
 
-Represents an available AI model.
+That means the database has some transitional shape today, and future cleanup may consolidate more of this logic.
 
-```
-id: UUID (primary key)
-provider_id: UUID (foreign key -> providers)
-model_key: VARCHAR(255)
-name: VARCHAR(255)
-description: TEXT nullable
-is_enabled: BOOLEAN default true
-is_default: BOOLEAN default false
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+## Ownership Model
 
-Relationships:
-- Provider (N:1)
+Current storage relationships are mostly user-scoped through `user_id`.
 
-### Workspace
+Important practical note:
 
-Represents a workspace for organizing conversations.
+- deletion paths for assets also clear transcripts, summaries, jobs, legacy embeddings, and asset chunks
 
-```
-id: UUID (primary key)
-user_id: UUID (foreign key -> users)
-name: VARCHAR(255)
-description: VARCHAR(1000) nullable
-icon: VARCHAR(100) nullable
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
+## Current Database Caveats
 
-Unique constraint: (user_id, name)
+- collaboration/workspace membership tables described in older docs are not part of the current model set
+- older docs that mention `is_deleted` conversation soft-delete or workspace collaborator tables are outdated
+- the live retrieval path is tied to the fixed `asset_chunks.embedding` vector width configured in the backend settings
 
-Relationships:
-- User (N:1)
-- Conversations (1:N)
-- WorkspaceCollaborators (1:N)
-
-### WorkspaceCollaborator
-
-Represents a collaborator in a workspace.
-
-```
-id: UUID (primary key)
-workspace_id: UUID (foreign key -> workspaces)
-user_id: UUID (foreign key -> users)
-role: VARCHAR(50) enum: owner, editor, viewer
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
-
-Unique constraint: (workspace_id, user_id)
-
-### Job
-
-Represents a background job.
-
-```
-id: UUID (primary key)
-user_id: UUID (foreign key -> users)
-job_type: VARCHAR(100)
-status: VARCHAR(50) enum: pending, processing, completed, failed
-data: JSON
-result: JSON nullable
-error: TEXT nullable
-celery_task_id: VARCHAR(255) nullable
-progress: INTEGER default 0
-created_at: TIMESTAMP
-updated_at: TIMESTAMP
-```
-
-## Schema Diagram
-
-```
-users
-├── conversations
-│   ├── messages
-│   └── ai_models
-├── workspaces
-│   ├── workspace_collaborators
-│   └── conversations
-├── documents
-├── audio_assets
-├── video_assets
-├── providers
-│   └── ai_models
-└── jobs
-```
-
-## Migrations
-
-Create new migration:
-```bash
-uv run alembic revision --autogenerate -m "Add new column"
-```
+## Useful Commands
 
 Apply migrations:
+
 ```bash
+cd backend
 uv run alembic upgrade head
 ```
 
-Revert migration:
+Create a migration:
+
 ```bash
-uv run alembic downgrade -1
+uv run alembic revision --autogenerate -m "describe change"
 ```
 
-View migration status:
-```bash
-uv run alembic current
-uv run alembic history
-```
+Related:
 
-## Indexing Strategy
-
-Key indexes for performance:
-
-```python
-# User lookups
-Index('idx_users_email', 'email')
-
-# Conversation queries
-Index('idx_conversations_user_id', 'user_id')
-Index('idx_conversations_user_created', 'user_id', 'created_at')
-
-# Message queries
-Index('idx_messages_conversation_id', 'conversation_id')
-Index('idx_messages_conversation_created', 'conversation_id', 'created_at')
-
-# Document queries
-Index('idx_documents_user_id', 'user_id')
-Index('idx_documents_user_status', 'user_id', 'status')
-```
-
-## Connection Pool
-
-PostgreSQL connection pooling configuration:
-
-```python
-from sqlalchemy import create_engine
-
-engine = create_engine(
-    database_url,
-    pool_size=10,           # connections to maintain
-    max_overflow=20,        # additional connections
-    pool_pre_ping=True,     # verify connections before use
-    pool_recycle=3600,      # recycle connections hourly
-)
-```
-
-## Backup and Recovery
-
-Backup:
-```bash
-pg_dump -U olanma olanma > backup.sql
-```
-
-Restore:
-```bash
-psql -U olanma olanma < backup.sql
-```
-
-## Performance Optimization
-
-Query optimization:
-
-```python
-# Avoid N+1 queries
-from sqlalchemy.orm import joinedload
-
-conversations = db.query(Conversation).options(
-    joinedload(Conversation.messages)
-).filter(...).all()
-
-# Use only needed columns
-from sqlalchemy import select
-
-users = db.query(User.id, User.email).filter(...).all()
-```
-
----
-
-See specific model documentation and migration guides.
+- [Backend](../backend/README.md)
+- [Architecture](../architecture/README.md)
+- [Development](../development/README.md)

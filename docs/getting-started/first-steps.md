@@ -1,147 +1,99 @@
 # First Steps
 
-Your guide to creating your first conversation and uploading documents.
+This guide walks through the first real product flow in the current app.
 
-## Sign In
+## 1. Register Or Sign In
 
-1. Open http://localhost:3000
-2. Click "Sign Up"
-3. Enter email and password
-4. Click "Create Account"
+Open `http://localhost:3000`.
 
-You're logged in! 🎉
+Use:
 
-## Create Your First Conversation
+- `/register` to create the first account
+- `/login` to sign in
 
-### Step 1: Select a Model
+## 2. Add A Provider
 
-1. In the sidebar, look for "Models"
-2. Click the settings icon
-3. Add your first LLM provider:
-   - Choose "OpenAI", "Anthropic", or other
-   - Paste your API key
-4. Select a model (e.g., GPT-4, Claude)
+Before chat or most processing features are useful, configure at least one provider.
 
-### Step 2: Start a Conversation
+Open:
 
-1. Click "New Chat" or "+"
-2. Type a title (e.g., "Project Analysis")
-3. Select your LLM model
-4. Click "Create"
+- `/settings/providers`
 
-### Step 3: Send Your First Message
+Typical first choices:
 
-In the chat box, type:
-```
-Hello! Can you help me analyze documents?
-```
+- OpenAI
+- Anthropic
+- Gemini
+- Ollama
+- OpenRouter
+- LiteLLM
 
-Click send and watch the AI respond! 💬
+Then confirm models are available at:
 
-## Upload Your First Document
+- `/settings/models`
 
-### Step 1: Go to Library
+## 3. Upload An Asset
 
-1. Click "Library" in the sidebar
-2. Click "Upload" or drag & drop files
+Use one of:
 
-### Step 2: Upload a Document
+- `/uploads`
+- `/library`
+- `/workspace` for the batch video intake flow
 
-Supported formats:
-- PDF (.pdf)
-- Text (.txt)
-- Word (.docx) - coming soon
+Supported product areas today include:
 
-Select a file and upload. The document will show as "Processing" while it extracts content.
+- documents
+- audio
+- video
 
-### Step 3: Use Document in Chat
+After upload:
 
-1. In your conversation
-2. Look for the attachment button (📎)
-3. Click and select your uploaded document
-4. Ask questions about it:
-   ```
-   Summarize this document
-   What are the main points?
-   Extract action items from this document
-   ```
+1. the backend stores the file
+2. a job is created
+3. the Celery worker processes it
+4. transcript, summary, and retrieval data become available when the job completes
 
-The AI will read the document content and answer based on it! 📄
+## 4. Check Processing
 
-## Understanding the Interface
+Open:
 
-### Sidebar
-- **New Chat**: Start a new conversation
-- **Recent**: Your recent chats
-- **Library**: Your uploaded documents
-- **Settings**: Configure providers and models
-- **Workspace**: Team collaboration
+- `/processing`
 
-### Main Chat Area
-- **Message Input**: Type your question
-- **Attachment Button**: Upload or select documents
-- **Send Button**: Send your message
-- **Chat History**: See all messages in conversation
+If work stalls in `pending`, the worker is usually not running.
 
-### Right Sidebar (Desktop)
-- **Conversation Info**: Title, model, creation date
-- **Documents**: List of attached documents
-- **Settings**: Conversation-specific options
+## 5. Chat With Retrieved Context
 
-## Tips & Tricks
+Open:
 
-### Pro Tips
+- `/chat`
 
-1. **Context is Key**: The more documents you provide, the better the answers
-2. **Be Specific**: Ask clear, detailed questions
-3. **Use Attachments**: Always attach relevant documents
-4. **Review Source**: Check which documents the AI used
+Then:
 
-### Keyboard Shortcuts
+1. create a conversation
+2. choose a model
+3. ask a question about an uploaded asset
 
-- `Ctrl/Cmd + N`: New conversation
-- `Ctrl/Cmd + K`: Search conversations
-- `Shift + Enter`: New line in message
-- `Ctrl/Cmd + Enter`: Send message
+The current chat experience supports:
 
-### Document Tips
+- streaming responses
+- model selection
+- retrieval over processed asset chunks
+- citations
 
-- PDFs work best (automatic text extraction)
-- Keep documents under 100MB
-- Split large documents into chunks
-- Use OCR for scanned documents
+## Current Product Notes
 
-## Common Questions
+- `/dashboard` redirects to `/library`
+- `/providers` redirects to `/settings/providers`
+- the current workspace area is operational/configuration-focused, not a full collaboration suite
 
-**Q: How do I add more documents?**
-A: Click the attachment button in any chat, then select "Add Document"
+## Good Smoke Test Prompts
 
-**Q: Can I use multiple LLM providers?**
-A: Yes! Add multiple providers in Settings, then choose which to use per conversation
+- `Summarize the uploaded file.`
+- `List the key action items from this asset.`
+- `What evidence supports your answer?`
 
-**Q: How do I share a conversation?**
-A: Create a Workspace and invite collaborators (coming soon)
+Continue with:
 
-**Q: What happens to my documents?**
-A: They're stored securely on your server. Never sent to third parties (unless you use cloud providers)
-
-## Next Steps
-
-Congratulations! You've completed the basics. 🚀
-
-**Ready to explore more?**
-
-- [Features Guide](../features/README.md) - Learn all features
-- [Chat Features](../features/chat.md) - Deep dive into chat
-- [Document Processing](../features/documents.md) - Advanced document handling
-- [RAG Guide](../features/rag.md) - Retrieval-Augmented Generation
-
-**Want to customize?**
-
-- [Configuration Guide](./configuration.md) - Configure settings
-- [Provider Setup](../guides/add-provider.md) - Add more LLM providers
-- [Deployment Guide](../deployment/README.md) - Deploy to production
-
----
-
-Have fun exploring Olanma! 🎉
+- [Features](../features/README.md)
+- [API](../api/README.md)
+- [Troubleshooting](../troubleshooting/README.md)

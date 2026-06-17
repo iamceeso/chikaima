@@ -1,214 +1,112 @@
 # Development
 
-Development workflow and contributing guidelines.
+This page documents the current development workflow used by the repo.
 
-## Setup Local Development
-
-Prerequisites:
-- Python 3.10+
-- Node.js 18+
-- PostgreSQL
-- Redis
-
-Follow the Getting Started guide for initial setup.
-
-## Development Commands
+## Tooling
 
 Backend:
+
+- Python `3.12`
+- `uv`
+- `pytest`
+- `ruff`
+
+Frontend:
+
+- Node `22`
+- `pnpm`
+- TypeScript
+- ESLint
+
+## Daily Commands
+
+Backend install:
+
 ```bash
 cd backend
-
-# Format code
-uv run ruff format app/
-
-# Lint code
-uv run ruff check app/
-
-# Run tests
-uv run python -m unittest discover -s tests -p 'test_*.py'
-
-# Run with hot reload
-uv run uvicorn app.main:app --reload
-
-# Interactive shell
-uv run ipython
+uv sync --group dev
 ```
 
-Frontend:
+Backend checks:
+
+```bash
+uv run ruff check .
+uv run pytest
+```
+
+Frontend install:
+
 ```bash
 cd frontend
-
-# Format code
-npm run format
-
-# Lint code
-npm run lint
-
-# Type checking
-npm run type-check
-
-# Run tests
-npm test
-
-# Build
-npm run build
+corepack enable
+pnpm install
 ```
 
-## Testing
+Frontend checks:
 
-Backend tests:
 ```bash
-# All tests
-uv run python -m unittest discover -s tests -p 'test_*.py'
-
-# Specific file
-uv run python -m unittest tests.test_chat_service
-
-# Specific test
-uv run python -m unittest tests.test_chat_service.ChatServiceTests.test_serialize_messages_leaves_assistant_messages_unchanged
+pnpm lint
+pnpm typecheck
+pnpm test:unit
+pnpm build
 ```
 
-Frontend tests:
+## Local Full-Stack Validation
+
+From the repo root:
+
 ```bash
-# All tests
-npm test
-
-# Watch mode
-npm test -- --watch
-
-# Coverage
-npm test -- --coverage
+./pre-push.sh
 ```
 
-## Git Workflow
+This is the closest thing to a local CI gate and should be your default confidence check before pushing.
 
-Branch naming:
-```
-feature/feature-name          New features
-bugfix/bug-name              Bug fixes
-docs/documentation-update    Documentation
-chore/dependency-update      Maintenance
-```
+## Versioning And Releases
 
-Commit messages:
-```
-feat(scope): description
-fix(scope): description
-docs(scope): description
-chore(scope): description
-```
+The current release helper is:
 
-Example:
-```
-git checkout -b feature/chat-streaming
-git commit -m "feat(chat): add message streaming with SSE"
-git push origin feature/chat-streaming
-```
-
-Create pull request and request review.
-
-## Code Standards
-
-Python:
-- Line length: 100
-- Use type hints
-- Follow PEP 8
-- Docstrings for public functions
-
-TypeScript:
-- Use strict mode
-- Use interfaces for types
-- Const for immutable values
-- JSDoc comments for public APIs
-
-## Database Development
-
-Create migration:
 ```bash
-# Auto-detect changes
-uv run alembic revision --autogenerate -m "Add new column"
-
-# Manual
-uv run alembic revision -m "Custom migration"
+./version-patch.sh
 ```
 
-Apply migration:
-```bash
-uv run alembic upgrade head
-```
+Behavior:
 
-Edit migration file and make changes.
+- no argument increments the patch version
+- explicit versions are accepted with or without a leading `v`
+- backend and frontend versions are kept in sync
+- lockfiles are refreshed
+- a commit and tag are created
 
-## Debugging
+## CI Behavior
 
-Backend:
-```python
-# Breakpoint
-breakpoint()
+Current workflows:
 
-# Or
-import ipdb; ipdb.set_trace()
+- `main` branch pushes run backend and frontend checks on Ubuntu and macOS
+- version tag pushes build and publish backend and frontend images to GHCR
 
-# Logging
-import logging
-logger = logging.getLogger(__name__)
-logger.debug("Message")
-```
+The workflow files are:
 
-Frontend:
-```typescript
-// Log to console
-console.log("Debug:", value);
+- [ci.yml](../../.github/workflows/ci.yml)
+- [docker-release.yml](../../.github/workflows/docker-release.yml)
 
-// Debugger statement
-debugger;
+## Current Repo Conventions
 
-// React DevTools browser extension
-```
+- backend dependency management uses `uv`
+- frontend dependency management uses `pnpm`
+- backend tests use `pytest`
+- frontend tests use the TypeScript compile-to-Node flow in `package.json`
+- manual version changes should generally go through `version-patch.sh`
 
-## Performance Profiling
+## Current Improvement Areas
 
-Backend:
-```bash
-# Profile with cProfile
-uv run python -m cProfile -s cumulative app/main.py
-```
+These are worth knowing as a contributor:
 
-Frontend:
-```bash
-# Lighthouse audit
-npm run build
-npm run start
-# Open DevTools -> Lighthouse
-```
+- the docs have historically drifted from the code; keep docs edits close to behavior changes
+- there is some stale repo clutter such as an unused dashboard draft page
+- ownership semantics around conversation deletion and asset deletion need care before changing adjacent behavior
 
-## CI/CD
+Related:
 
-GitHub Actions workflows in `.github/workflows/`
-
-Workflows:
-- Tests on push
-- Linting
-- Type checking
-- Build verification
-- Deployment on merge to main
-
-## Release Process
-
-1. Update version in package.json and pyproject.toml
-2. Update CHANGELOG
-3. Create git tag: git tag v1.2.3
-4. Push tag: git push origin v1.2.3
-5. GitHub Actions builds and publishes
-
-## Documentation
-
-- Update docs in /docs folder
-- Follow existing structure
-- Include code examples
-- Link to related sections
-- No icons/emoji in tutorial
-
----
-
-Contributing Guidelines: Testing, Code Standards, Git Workflow
+- [Backend](../backend/README.md)
+- [Frontend](../frontend/README.md)
+- [Guides](../guides/README.md)

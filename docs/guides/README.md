@@ -1,214 +1,87 @@
 # Guides
 
-Step-by-step guides for common tasks.
+This page contains practical extension notes based on the current codebase.
 
-## Adding a New LLM Provider
+## Add A New Chat Provider
 
-Step 1: Create Provider Class
+The current provider path is:
 
-```python
-# app/services/providers/new_provider.py
-from app.services.providers.base import LLMProvider
+1. add or update provider metadata in [provider_service.py](../../backend/app/services/provider_service.py)
+2. add adapter behavior in [base.py](../../backend/app/services/providers/base.py)
+3. wire provider selection in [factory.py](../../backend/app/services/providers/factory.py)
+4. update tests:
+   - `backend/tests/test_provider_service.py`
+   - `backend/tests/test_provider_factory.py`
+   - `backend/tests/test_provider_adapters.py`
 
-class NewProvider(LLMProvider):
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.client = NewProviderClient(api_key)
-    
-    def generate_reply(self, model: str, messages: list[dict]) -> str:
-        response = self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-        )
-        return response.choices[0].message.content
-    
-    def stream_reply(self, model: str, messages: list[dict]):
-        stream = self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-            stream=True,
-        )
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
-```
+Use this path when the provider needs a custom request format.
 
-Step 2: Register Provider
+If the provider is OpenAI-compatible, prefer extending the OpenAI-compatible path instead of creating a completely new adapter.
 
-```python
-# app/services/providers/factory.py
-def create_provider(provider: Provider, model: AIModel):
-    if provider.provider_type == "new_provider":
-        return NewProvider(provider.secret_key)
-```
+## Add Provider-Based Embeddings Support
 
-Step 3: Add API Key Environment Variable
+Embedding support lives in [embeddings_service.py](../../backend/app/services/embeddings_service.py).
 
-```env
-NEW_PROVIDER_API_KEY=...
-```
+You will usually need to:
 
-Step 4: Test
+1. add the provider type to the supported embedding set
+2. define its default base URL and model
+3. implement the provider-specific embedding request
+4. add tests for success and failure behavior
 
-```python
-# tests/test_new_provider.py
-def test_generate_reply():
-    provider = NewProvider("test-key")
-    response = provider.generate_reply("model", [
-        {"role": "user", "content": "Hello"}
-    ])
-    assert isinstance(response, str)
-```
+## Add Provider-Based Transcription Support
 
-## Creating Custom Components
+Transcription support lives in [transcription_provider_service.py](../../backend/app/services/transcription_provider_service.py).
 
-React Component:
-```typescript
-// components/CustomComponent.tsx
-import React from 'react';
+The current implementation is intentionally narrower than chat support. Additions here should be explicit because transcription endpoint formats vary more than chat formats.
 
-interface CustomComponentProps {
-  title: string;
-  onAction: () => void;
-}
+## Add A New API Endpoint
 
-export function CustomComponent({ title, onAction }: CustomComponentProps) {
-  return (
-    <div className="custom-component">
-      <h1>{title}</h1>
-      <button onClick={onAction}>Action</button>
-    </div>
-  );
-}
-```
+The current backend pattern is:
 
-Use in page:
-```typescript
-import { CustomComponent } from '@/components/CustomComponent';
+1. create or update a schema in `backend/app/schemas`
+2. add service logic in `backend/app/services`
+3. add the endpoint in `backend/app/api/v1/endpoints`
+4. register it in [api.py](../../backend/app/api/v1/api.py) if needed
+5. add endpoint and service tests
 
-export default function MyPage() {
-  return (
-    <CustomComponent
-      title="My Component"
-      onAction={() => console.log('Clicked')}
-    />
-  );
-}
-```
+## Add A New Asset Processing Path
 
-## Data Migration
+Asset extraction starts in [asset_processors.py](../../backend/app/services/asset_processors.py), while background orchestration happens in [tasks.py](../../backend/app/workers/tasks.py).
 
-Migrate from Other Tools:
+The normal pattern is:
 
-1. Export data from source
-2. Create migration script
-3. Transform data
-4. Import to Olanma
-5. Verify completeness
+1. teach the processor how to recognize the asset type
+2. return extracted content and chunks
+3. let the worker pipeline handle transcript, summaries, and embeddings
 
-Example:
-```python
-import json
-from app.core.database import SessionLocal
-from app.models.conversation import Conversation
+## Ship A Release
 
-# Read exported data
-with open('export.json') as f:
-    data = json.load(f)
+Recommended flow:
 
-db = SessionLocal()
-
-for conv in data['conversations']:
-    conversation = Conversation(
-        user_id=user_id,
-        title=conv['title'],
-        # Map other fields
-    )
-    db.add(conversation)
-
-db.commit()
-print(f"Migrated {len(data['conversations'])} conversations")
-```
-
-## Backup and Recovery
-
-Daily Backup Script:
 ```bash
-#!/bin/bash
-BACKUP_DIR="/backups"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-
-# PostgreSQL backup
-pg_dump olanma | gzip > $BACKUP_DIR/olanma_$TIMESTAMP.sql.gz
-
-# Uploaded files backup
-tar -czf $BACKUP_DIR/storage_$TIMESTAMP.tar.gz storage/
-
-# Upload to S3
-aws s3 sync $BACKUP_DIR s3://my-bucket/olanma-backups/
-
-# Keep 30 days
-find $BACKUP_DIR -mtime +30 -delete
+./pre-push.sh
+./version-patch.sh
+git push origin HEAD
+git push origin vX.Y.Z
 ```
 
-Recovery:
-```bash
-# Restore database
-gunzip olanma_20260607_120000.sql.gz
-psql olanma < olanma_20260607_120000.sql
+The tag push triggers image publishing through GitHub Actions.
 
-# Restore files
-tar -xzf storage_20260607_120000.tar.gz
-```
+## Keep Docs Honest
 
-## Multi-tenant Setup
+If you change:
 
-Configure for Multiple Users:
+- provider capabilities
+- upload types
+- routes
+- release flow
+- runtime dependencies
 
-```python
-# app/core/config.py
-MULTI_TENANT = True
-TENANT_SUBDOMAIN_ENABLED = True
+update the matching page in `docs/` in the same change if possible.
 
-# Users access via: tenant1.your-domain.com, tenant2.your-domain.com
-```
+Related:
 
-Database schema supports multi-tenant by design:
-- Each user is isolated (user_id foreign keys)
-- No cross-user data access
-- Row-level security possible
-
-Scale with separate database per tenant:
-```python
-def get_tenant_db(subdomain: str):
-    db_url = f"postgresql://user:pass@host/{subdomain}_db"
-    return SessionLocal(bind=create_engine(db_url))
-```
-
-## Scaling to Production
-
-1. Database Optimization
-   - Add indexes
-   - Configure connection pool
-   - Enable query caching
-
-2. Application Scaling
-   - Run multiple API instances
-   - Scale Celery workers
-   - Implement caching layer
-
-3. Infrastructure
-   - Load balancing (Nginx, HAProxy)
-   - Auto-scaling groups
-   - Monitoring and alerting
-   - Backup and disaster recovery
-
-4. Performance
-   - CDN for static assets
-   - Database read replicas
-   - Redis for caching
-   - Background job optimization
-
----
-
-See Related: Add Provider, Custom Components, Data Migration, Backup, Multi-tenant, Scaling
+- [Development](../development/README.md)
+- [API](../api/README.md)
+- [Architecture](../architecture/README.md)

@@ -1,343 +1,69 @@
 # Data Flow
 
-How data moves through the system in key scenarios.
+This page focuses on the three flows that define the current product: chat, ingestion, and retrieval.
 
-## Chat Message Flow
+## Chat Flow
 
-### Step 1: User Sends Message
+1. The frontend sends a chat request to the backend.
+2. The backend authenticates the user and loads the conversation.
+3. The selected model and provider are resolved.
+4. If retrieval is enabled, the backend gathers relevant `asset_chunks`.
+5. The provider adapter streams or returns the model response.
+6. SSE events are sent back to the frontend as `metadata`, `token`, `done`, or `error`.
+7. The assistant message is persisted after a successful completion.
 
-User Types Message
-  │
-  ├─ Validate message length (1-5000 chars)
-  ├─ Validate conversation access
-  │
-  └─→ POST /api/v1/chat/stream
-       │
-       ├─ Body: {
-       │   conversation_id: "conv-123",
-       │   content: "Analyze this",
-       │   metadata: { attachments: [...] }
-       │ }
-       │
-       └─→ Backend Receives
+Important files:
 
+- [backend/app/services/chat_service.py](../../backend/app/services/chat_service.py)
+- [backend/app/services/llm_service.py](../../backend/app/services/llm_service.py)
 
-### Step 2: Backend Processes
+## Asset Ingestion Flow
 
-Backend API
-  │
-  ├─ Authenticate JWT token
-  ├─ Load conversation from DB
-  ├─ Verify user owns conversation
-  │
-  └─→ Create Message Record
-       │
-       ├─ message_id = UUID
-       ├─ role = "user"
-       ├─ content = message text
-       ├─ meta = { attachments: [...] }
-       │
-       └─→ Save to PostgreSQL
-            │
-            └─→ Message created
+1. A document, audio file, or video is uploaded.
+2. The backend validates the file and stores it under the media root.
+3. A job row is created.
+4. The Celery worker picks up the job from Redis.
+5. The worker extracts transcript/content data.
+6. Summaries and structured outputs are generated through a configured provider.
+7. Chunks are embedded when an embedding-capable provider is available.
+8. Results are written back to PostgreSQL.
 
+Important files:
 
-### Step 3: Serialize Messages with Context
+- [backend/app/services/job_service.py](../../backend/app/services/job_service.py)
+- [backend/app/workers/tasks.py](../../backend/app/workers/tasks.py)
+- [backend/app/services/asset_processors.py](../../backend/app/services/asset_processors.py)
 
-Fetch Previous Messages
-  │
-  ├─ Load all messages for conversation
-  ├─ Order by created_at
-  │
-  └─→ Process Each Message
-       │
-       ├─ Check for attachments in meta
-       │  │
-       │  ├─ If PDF:
-       │  │  └─ Extract text (first 5 pages)
-       │  │     └─ Limit to 10K chars
-       │  │
-       │  ├─ If Audio:
-       │  │  └─ Get transcript from AudioAsset
-       │  │
-       │  └─ If Video:
-       │     └─ Get summary from VideoAsset
-       │
-       └─→ Append to message content
-            │
-            └─→ Serialized Messages Ready
+## Retrieval Flow
 
+1. The user asks a question.
+2. The query is embedded through the configured provider path.
+3. Similar rows are fetched from `asset_chunks`.
+4. The top matches are formatted into context and citations.
+5. The final provider request includes that context.
 
-### Step 4: Add RAG Context (if enabled)
+Important files:
 
-If use_rag = true:
-  │
-  ├─ Get user's query: "Analyze this"
-  │
-  ├─ Convert to embedding
-  │  └─ Using text-embedding-3-small
-  │
-  ├─ Search vector database
-  │  └─ Find similar document chunks
-  │     └─ Top 5 results with score > 0.7
-  │
-  ├─ Retrieve full document text
-  │
-  └─→ Add to system prompt
-       │
-       └─→ Context Added
+- [backend/app/services/embeddings_service.py](../../backend/app/services/embeddings_service.py)
+- [backend/app/services/asset_search_service.py](../../backend/app/services/asset_search_service.py)
 
+## Provider Flow
 
-### Step 5: Call LLM Provider
+1. An admin configures a provider in the settings UI.
+2. The backend stores encrypted provider configuration.
+3. Supported models are synced and stored in `ai_models`.
+4. Chat, embeddings, and transcription services select the provider path at runtime.
 
-Prepare LLM Request
-  │
-  ├─ Model: GPT-4
-  ├─ Messages: [system, previous, current]
-  ├─ Temperature: 0.7
-  ├─ Max tokens: 2048
-  │
-  └─→ Stream to OpenAI API
-       │
-       ├─ Connection established
-       │
-       └─→ Tokens Stream In
-            │
-            token: "The"
-            token: " analysis"
-            token: " shows"
-            ...
+This keeps the core app lightweight while allowing multiple inference backends.
 
+## Current Behavioral Caveats
 
-### Step 6: Stream Tokens to Client
+- Anthropic is currently used for chat, not embeddings or transcription.
+- Some providers are only partially wired because the backend only calls them where the code supports them.
+- Deleting a conversation currently has stronger cleanup side effects than the docs historically implied.
 
-Backend Streams (SSE)
-  │
-  ├─ event: metadata
-  │  data: { user_message_id: "msg-123", ... }
-  │
-  ├─ event: token
-  │  data: { text: "The" }
-  │
-  ├─ event: token
-  │  data: { text: " analysis" }
-  │
-  ├─ event: token (repeated)
-  │  data: { text: "..." }
-  │
-  └─ event: done
-     data: { status: "completed" }
-          │
-          └─→ Client Receives (Real-Time)
+Continue with:
 
-
-### Step 7: Client Updates UI
-
-Frontend (React)
-  │
-  ├─ Parse SSE events
-  ├─ Update message state
-  ├─ Re-render chat window
-  │  │
-  │  └─ Display tokens as they arrive
-  │
-  ├─ On "done" event:
-  │  └─ Mark message complete
-  │     └─ Enable input
-  │
-  └─→ User Sees Response
-
-
-### Step 8: Save Response
-
-Backend Saves Assistant Message
-  │
-  ├─ Full response assembled
-  │
-  ├─ Create Message Record
-  │  │
-  │  ├─ message_id = UUID
-  │  ├─ role = "assistant"
-  │  ├─ content = full response
-  │  ├─ meta = { rag_context: [...] }
-  │  │
-  │  └─→ Save to PostgreSQL
-  │
-  ├─ Update conversation
-  │  └─ updated_at = now
-  │
-  └─→ Complete
-
-
-## Document Upload Flow
-
-User Selects File
-  │
-  ├─ File: report.pdf (2.3 MB)
-  │
-  └─→ POST /api/v1/documents/upload
-      │
-      │ Multipart form-data:
-      │ - file: binary PDF data
-      │
-
-Backend Receives Upload
-  │
-  ├─ Validate file type
-  │  └─ Allowed: .pdf, .txt, .docx
-  │
-  ├─ Check file size
-  │  └─ Max: 500 MB (configurable)
-  │
-  ├─ Generate unique filename
-  │  └─ storage/{user_id}/{uuid}-report.pdf
-  │
-  ├─ Save to disk/S3
-  │
-  ├─ Create Document record
-  │  │
-  │  ├─ document_id = UUID
-  │  ├─ user_id = current_user_id
-  │  ├─ name = "report.pdf"
-  │  ├─ file_path = "storage/..."
-  │  ├─ status = "pending"
-  │  │
-  │  └─→ Save to PostgreSQL
-  │
-  ├─ Return 201 Created with document_id
-  │
-  └─→ Frontend Receives
-      │
-      └─ Display document as "Processing..."
-
-
-Background Processing (Celery)
-
-Celery Worker Receives Task
-  │
-  ├─ Task ID: process_document
-  ├─ Parameters: document_id, file_path
-  │
-  └─→ Load Document from DB
-      │
-      ├─ file_path = "storage/user-1/abc123-report.pdf"
-      │
-      ├─ Open file from storage
-      │
-      ├─ Extract Text using PyPDF2
-      │  │
-      │  └─ For each page (max 5):
-      │     └─ extract_text()
-      │
-      ├─ Generate Summary
-      │  │
-      │  └─ Use LLM to summarize first 2000 chars
-      │
-      ├─ Store Results
-      │  │
-      │  ├─ Update Document record:
-      │  │  ├─ status = "completed"
-      │  │  ├─ summary = "This document..."
-      │  │  ├─ extracted_text = "..."
-      │  │
-      │  └─→ Save to PostgreSQL
-      │
-      ├─ Queue Embedding Task
-      │
-      └─→ Complete
-
-
-Frontend Updates (Polling)
-
-Frontend Polls Status
-  │
-  ├─ Every 2 seconds:
-  │  └─ GET /api/v1/documents/{doc_id}
-  │
-  ├─ Response: status = "completed"
-  │
-  ├─ Update UI
-  │  └─ Document now ready to use
-  │
-  └─→ User Can Reference Document
-
-
-## RAG Query Flow
-
-User Asks Question
-  │
-  ├─ "Summarize the key findings"
-  │
-  └─→ Backend Processes
-
-
-Generate Query Embedding
-  │
-  ├─ Text: "Summarize the key findings"
-  │
-  ├─ Call Embeddings API
-  │  └─ OpenAI text-embedding-3-small
-  │
-  ├─ Result: [0.12, -0.45, 0.89, ...]
-  │  └─ 1536 dimensional vector
-  │
-  └─→ Embedding Ready
-
-
-Vector Database Search
-  │
-  ├─ Query embedding: [0.12, -0.45, ...]
-  │
-  ├─ Search pgvector/Milvus
-  │  │
-  │  ├─ Calculate similarity scores
-  │  │  └─ Cosine similarity to all chunks
-  │  │
-  │  └─ Return top 5 results:
-  │     ├─ Chunk 1: score 0.92 (match!)
-  │     ├─ Chunk 2: score 0.88 (match!)
-  │     ├─ Chunk 3: score 0.85 (match!)
-  │     ├─ Chunk 4: score 0.82 (match)
-  │     └─ Chunk 5: score 0.78 (match)
-  │
-  └─→ Top Documents Found
-
-
-Retrieve Full Content
-  │
-  ├─ For each top result:
-  │  │
-  │  ├─ Load Document from DB
-  │  │
-  │  ├─ Get chunk text:
-  │  │  └─ "The findings show..."
-  │  │
-  │  └─ Add to context
-  │
-  └─→ RAG Context Ready
-
-
-Augment LLM Request
-  │
-  ├─ System Prompt:
-  │  "You are an AI analyst. Use the provided context..."
-  │
-  ├─ Context:
-  │  "From analysis of documents:
-  │   - Chunk 1: The findings show..."
-  │   - Chunk 2: Key metrics indicate..."
-  │   - ..."
-  │
-  ├─ User Question:
-  │  "Summarize the key findings"
-  │
-  └─→ Send to LLM
-      │
-      └─→ LLM Generates Response
-          │
-          └─→ "Based on the documents, the key findings are..."
-
-
----
-
-**Next**: [Technology Stack](./tech-stack.md)
+- [Architecture](./README.md)
+- [Database](../database/README.md)
+- [Troubleshooting](../troubleshooting/README.md)

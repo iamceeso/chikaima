@@ -1,122 +1,165 @@
 # Getting Started
 
-Welcome to Olanma! This section helps you get up and running quickly.
+This guide covers the setup paths that are real in the repository today.
 
-## Quick Navigation
+## Recommended Paths
 
-- [Local Development Setup](./local-setup.md) - Set up on your machine
-- [Docker Compose Setup](./docker-setup.md) - Containerized setup
-- [First Steps](./first-steps.md) - Your first conversation
-- [Configuration](./configuration.md) - Environment variables
+- Local development
+  Best if you are changing code.
+- Docker Compose
+  Best if you want the whole stack up quickly with PostgreSQL, Redis, backend, frontend, and a Celery worker.
 
-## Choose Your Path
+## Current Prerequisites
 
-### 🖥️ Local Development (Recommended for Development)
+For local development:
 
-Best if you want to develop features or contribute.
+- Python `3.12`
+- `uv`
+- Node.js `22`
+- `pnpm` via Corepack or a direct install
+- PostgreSQL
+- Redis
 
-```bash
-# Prerequisites: Python 3.10+, Node.js 18+, PostgreSQL, Redis
-git clone https://github.com/iamceeso/olanma.git
-cd olanma
+For Docker:
 
-# Follow Local Development Setup
+- Docker Desktop or Docker Engine with Compose support
+
+## Environment Variables
+
+The backend example file is [backend/.env.example](../../backend/.env.example).
+
+Minimum backend settings for local work:
+
+```env
+JWT_SECRET_KEY=change-me-development-secret
+JWT_REFRESH_SECRET_KEY=change-me-too-development-secret
+PROVIDER_SECRET_KEY=replace-with-32-char-secret-key
+DATABASE_URL=postgresql+psycopg://olanma:olanma@localhost:5432/olanma
+REDIS_URL=redis://localhost:6379/0
 ```
 
-→ [Local Development Setup](./local-setup.md)
+## Local Development Setup
 
-### 🐳 Docker Compose (Recommended for Production)
-
-Best if you want a complete self-contained setup.
+### 1. Backend
 
 ```bash
-docker-compose up -d
-```
-
-→ [Docker Compose Setup](./docker-setup.md)
-
-### ☁️ Kubernetes (Advanced)
-
-For production deployments with scaling.
-
-→ [See Deployment Guide](../deployment/kubernetes.md)
-
-## 5-Minute Quick Start
-
-### Using Docker Compose
-
-```bash
-# 1. Clone repository
-git clone https://github.com/iamceeso/olanma.git
-cd olanma
-
-# 2. Create .env file
+cd backend
+uv sync --group dev
 cp .env.example .env
-# Edit .env with your API keys
-
-# 3. Start services
-docker-compose up -d
-
-# 4. Wait for services to be healthy
-docker-compose ps
-
-# 5. Visit http://localhost:3000
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload
 ```
 
-### Verify Installation
+The backend serves on `http://localhost:8000` by default.
+
+### 2. Worker
+
+Open another terminal:
 
 ```bash
-# Check backend is running
-curl http://localhost:8000/health
-
-# Check frontend is running
-curl http://localhost:3000
-
-# Check database
-docker-compose exec postgres psql -U olanma -d olanma -c "SELECT 1"
+cd backend
+uv run celery -A app.workers.celery_app.celery_app worker --loglevel=info
 ```
 
-## Next Steps
+### 3. Frontend
 
-Once installed:
+```bash
+cd frontend
+corepack enable
+pnpm install
+pnpm dev
+```
 
-1. [Take your first steps](./first-steps.md) - Create a conversation
-2. [Learn the architecture](../architecture/system-overview.md) - Understand how it works
-3. [Explore features](../features/README.md) - What you can do
-4. [Read API reference](../api/README.md) - Integrate with other tools
+The frontend serves on `http://localhost:3000`.
 
-## System Requirements
+## Docker Compose Setup
 
-### Minimum (Development)
-- 4GB RAM
-- 10GB Disk
-- Python 3.10+
-- Node.js 18+
+From the repo root:
 
-### Recommended (Production)
-- 16GB+ RAM
-- 100GB+ Disk
-- PostgreSQL 13+
-- Redis 6+
-- Dedicated CPU (4+ cores)
+```bash
+docker compose up --build
+```
 
-### Supported Platforms
-- macOS (Intel & Apple Silicon)
-- Linux (Ubuntu, Debian, etc.)
-- Windows (WSL2 recommended)
-- Docker (any platform)
+This starts:
 
-## Common Issues
+- frontend
+- backend
+- celery worker
+- PostgreSQL
+- Redis
 
-**Can't connect to database?**
-→ [Database Issues](../troubleshooting/database.md)
+The Compose file is [docker-compose.yml](../../docker-compose.yml).
 
-**Frontend won't load?**
-→ [Frontend Issues](../troubleshooting/frontend.md)
+## First Product Surfaces To Check
 
-**Don't have an API key?**
-→ [Get API Keys](./configuration.md#api-keys)
+After startup, the main surfaces are:
 
----
+- `/login`
+- `/register`
+- `/chat`
+- `/library`
+- `/processing`
+- `/settings/providers`
+- `/settings/models`
+- `/settings/workspace`
 
-**Next**: [Local Development Setup](./local-setup.md) or [Docker Compose Setup](./docker-setup.md)
+Notes:
+
+- `/dashboard` currently redirects to `/library`.
+- `/providers` currently redirects to `/settings/providers`.
+- `/workspace` is a video intake workflow, not the main chat surface.
+
+## First Functional Steps
+
+1. Register the first user.
+2. Add at least one provider in the provider settings page.
+3. Confirm that models appear in model settings.
+4. Upload a document, audio file, or video.
+5. Wait for the processing job to finish.
+6. Open chat and ask a question with RAG enabled.
+
+## Quick Verification Commands
+
+Backend:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Backend tests:
+
+```bash
+cd backend
+uv run pytest
+```
+
+Frontend checks:
+
+```bash
+cd frontend
+pnpm lint
+pnpm typecheck
+pnpm test:unit
+pnpm build
+```
+
+Full local verification:
+
+```bash
+./pre-push.sh
+```
+
+## Common Setup Gotchas
+
+- No provider configured
+  Chat and retrieval need at least one enabled provider/model.
+- No worker running
+  Uploads will stay pending if Celery is not running.
+- Database missing `pgvector`
+  Use the provided `pgvector/pgvector` image in Docker or enable the extension in your local database.
+
+Continue with:
+
+- [Architecture](../architecture/README.md)
+- [Features](../features/README.md)
+- [Development](../development/README.md)
