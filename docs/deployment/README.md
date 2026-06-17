@@ -95,7 +95,7 @@ Important production categories:
 - media root
 - CORS origins
 
-Provider API keys are stored through the provider admin UI rather than as static global env vars.
+Provider API keys are stored through the provider settings UI rather than as static global env vars.
 
 ## What This Repo Does Not Currently Ship
 

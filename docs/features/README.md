@@ -54,12 +54,16 @@ RAG is built from:
 
 ### Provider Management
 
-Admins can:
+Signed-in users can:
 
 - add providers
 - sync model catalogs
 - enable/disable models
-- pick workspace defaults indirectly through model availability/default flags
+- pick per-account defaults indirectly through model availability/default flags
+
+Admins additionally can:
+
+- manage workspace-wide auth, docs, registration, and user administration
 
 ## Current Provider Capability Matrix
 
@@ -109,15 +113,21 @@ Video uploads are analyzed through the same worker pipeline and can produce:
 
 The current workspace model is primarily configuration-oriented, not a full collaboration suite.
 
-Shipped admin surfaces include:
+Shipped settings surfaces include:
 
 - workspace auth toggle
 - public registration toggle
 - docs visibility toggle
 - vision-aware toggle
 - user administration
-- provider administration
+- provider management
 - model availability control
+
+Access model:
+
+- `Users` is admin-only
+- `Providers` and `Models` are user-scoped
+- `Workspace` includes account actions for everyone and admin controls for admins
 
 ## Features That Are Not Shipped As Earlier Docs Implied
 

@@ -30,7 +30,9 @@ Auth routes:
 - `PATCH /api/v1/users/{user_id}`
 - `DELETE /api/v1/users/{user_id}`
 
-Admin-only routes are enforced in the backend.
+Only `GET /api/v1/users/me` and `PATCH /api/v1/users/me` are regular user routes.
+
+The list/create/update/delete user routes are admin-only.
 
 ## Providers And Models
 
@@ -40,6 +42,7 @@ Providers:
 - `POST /api/v1/providers`
 - `PATCH /api/v1/providers/{provider_id}`
 - `DELETE /api/v1/providers/{provider_id}`
+- `POST /api/v1/providers/{provider_id}/resync`
 
 Models:
 
@@ -49,6 +52,13 @@ Workspace model visibility:
 
 - `GET /api/v1/settings/models`
 - `PATCH /api/v1/settings/models`
+
+Access model:
+
+- `providers`, `models`, and `settings/models` are user-scoped.
+- Signed-in users manage only their own providers and model availability.
+- When workspace authentication is disabled, those routes operate against the shared public workspace actor.
+- `settings/workspace` remains the workspace-admin configuration surface.
 
 ## Chat
 
@@ -141,6 +151,11 @@ These endpoints back:
 - docs visibility
 - vision-aware behavior
 - model availability
+
+Access note:
+
+- `GET/PATCH /api/v1/settings/workspace` are admin-only workspace configuration routes.
+- The frontend workspace page also includes non-admin account actions, but those are backed by chat/document/audio/video routes rather than `settings/workspace`.
 
 ## Docs And OpenAPI
 

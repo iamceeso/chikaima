@@ -32,6 +32,8 @@ Then confirm models are available at:
 
 - `/settings/models`
 
+These pages are user-scoped, so each signed-in user can manage their own provider credentials and enabled models.
+
 ## 3. Upload An Asset
 
 Use one of:
@@ -85,6 +87,7 @@ The current chat experience supports:
 - `/dashboard` redirects to `/library`
 - `/providers` redirects to `/settings/providers`
 - the current workspace area is operational/configuration-focused, not a full collaboration suite
+- `/settings/users` is admin-only
 
 ## Good Smoke Test Prompts
 

@@ -52,7 +52,18 @@ Redirect routes:
 - `/workspace`
   Batch video intake workflow.
 - `/settings/*`
-  Workspace and admin control surfaces.
+  Mixed account, provider/model, and admin control surfaces.
+
+More specifically:
+
+- `/settings/workspace`
+  Personal account actions for all signed-in users, plus admin-only workspace controls.
+- `/settings/providers`
+  User-scoped provider setup.
+- `/settings/models`
+  User-scoped model availability and default selection.
+- `/settings/users`
+  Admin-only user management.
 
 ## Component Organization
 
@@ -86,7 +97,7 @@ Important frontend service file:
 
 - domain-oriented component structure
 - good use of React Query for server state
-- strong admin/provider/model settings surfaces
+- strong settings surfaces split between account, provider/model, and admin controls
 - library and processing pages map well to backend workflows
 
 ## Current Gaps

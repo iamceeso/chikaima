@@ -53,13 +53,13 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 
 ## Provider Configuration
 
-The app does not currently rely on global provider env vars like `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for its main admin flow.
+The app does not currently rely on global provider env vars like `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for its main product flow.
 
 Instead:
 
 - providers are created in the UI
 - credentials are stored through backend provider management
-- model lists are synced per provider
+- model lists are synced per provider and scoped per user/public workspace actor
 
 This is an intentional part of the current product shape.
 
@@ -74,6 +74,12 @@ The backend currently exposes workspace settings for:
 - workspace model visibility/defaults
 
 These are managed through the API and settings UI, not through dozens of feature-flag env vars.
+
+Current access split:
+
+- workspace auth/docs/registration/vision settings are admin-controlled
+- provider setup and model availability/default selection are user-scoped
+- when authentication is disabled, provider/model state is attached to the shared public workspace actor
 
 ## Production Notes
 

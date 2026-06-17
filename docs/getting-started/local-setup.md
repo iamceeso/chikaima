@@ -98,6 +98,12 @@ Frontend routes to check:
 - `/processing`
 - `/settings/providers`
 
+Access note:
+
+- `Providers` and `Models` are regular signed-in user surfaces.
+- `Users` remains admin-only.
+- `Workspace` includes personal account controls for all users and extra workspace controls for admins.
+
 Notes:
 
 - `/dashboard` redirects to `/library`.

@@ -112,11 +112,17 @@ Notes:
 ## First Functional Steps
 
 1. Register the first user.
-2. Add at least one provider in the provider settings page.
-3. Confirm that models appear in model settings.
+2. Add at least one provider for your account in the provider settings page.
+3. Confirm that models appear in your model settings page.
 4. Upload a document, audio file, or video.
 5. Wait for the processing job to finish.
 6. Open chat and ask a question with RAG enabled.
+
+Access note:
+
+- `Providers` and `Models` are available to regular signed-in users.
+- `Users` is reserved for admins.
+- `Workspace` always includes account actions such as sign-out and clearing your own analysis history.
 
 ## Quick Verification Commands
 

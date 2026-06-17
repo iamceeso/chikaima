@@ -49,10 +49,16 @@ Important files:
 
 ## Provider Flow
 
-1. An admin configures a provider in the settings UI.
+1. A signed-in user configures a provider in the settings UI.
 2. The backend stores encrypted provider configuration.
 3. Supported models are synced and stored in `ai_models`.
 4. Chat, embeddings, and transcription services select the provider path at runtime.
+
+Current ownership behavior:
+
+- providers and synced models belong to the current user when workspace auth is enabled
+- when workspace auth is disabled, they belong to the shared public workspace actor
+- workspace-level auth/docs/registration toggles are still admin-owned
 
 This keeps the core app lightweight while allowing multiple inference backends.
 

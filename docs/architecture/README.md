@@ -38,8 +38,8 @@ The frontend is a Next.js App Router application with route groups for:
 - chat
 - media library
 - processing queue
-- provider and model administration
-- workspace settings
+- user-scoped provider and model settings
+- workspace/account settings
 
 ### Backend
 
