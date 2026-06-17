@@ -60,6 +60,19 @@ def update_provider(
     )
 
 
+@router.post("/{provider_id}/resync", response_model=ProviderResponse)
+def resync_provider_models(
+    provider_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+) -> ProviderResponse:
+    provider = ProviderService(db).resync_models(current_user.id, provider_id)
+    return ProviderResponse(
+        **provider.__dict__,
+        masked_secret=_mask(provider.encrypted_config.get("api_key")),
+    )
+
+
 @router.delete("/{provider_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_provider(
     provider_id: str,

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Search, Sparkles, Star } from "lucide-react";
+import { ChevronDown, RefreshCw, Search, Sparkles, Star } from "lucide-react";
 
 import { useAdminAccess } from "@/hooks/use-admin-access";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ export function ModelAccessPanel() {
   const queryClient = useQueryClient();
   const [providerSearch, setProviderSearch] = useState<Record<string, string>>({});
   const [collapsedProviders, setCollapsedProviders] = useState<Record<string, boolean>>({});
+  const [resyncingProviderId, setResyncingProviderId] = useState<string | null>(null);
 
   const workspaceModelsQuery = useQuery({
     queryKey: ["workspace-models"],
@@ -49,6 +50,23 @@ export function ModelAccessPanel() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workspace-models"] });
       await queryClient.invalidateQueries({ queryKey: ["models"] });
+    },
+  });
+
+  const resyncProviderModels = useMutation({
+    mutationFn: async (providerId: string) => {
+      if (!access) {
+        throw new Error("Administrator access is required.");
+      }
+      return api.resyncProviderModels(access, providerId);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["providers"] });
+      await queryClient.invalidateQueries({ queryKey: ["workspace-models"] });
+      await queryClient.invalidateQueries({ queryKey: ["models"] });
+    },
+    onSettled: () => {
+      setResyncingProviderId(null);
     },
   });
 
@@ -233,13 +251,32 @@ export function ModelAccessPanel() {
                           className="h-7 rounded-lg bg-background pl-9 pr-3 text-xs"
                         />
                       </div>
-                      <div className="flex gap-2">
+                    <div className="flex gap-2">
                         <Button
                           type="button"
                           size="xs"
                           variant="ghost"
                           className="h-7 border border-border px-2.5 text-[11px]"
-                          disabled={updateModelVisibility.isPending || visibleCount === 0}
+                          disabled={resyncProviderModels.isPending || updateModelVisibility.isPending}
+                          onClick={() => {
+                            setResyncingProviderId(group.providerId);
+                            resyncProviderModels.mutate(group.providerId);
+                          }}
+                        >
+                          <RefreshCw
+                            className={cn(
+                              "mr-1 h-3.5 w-3.5",
+                              resyncProviderModels.isPending && resyncingProviderId === group.providerId ? "animate-spin" : "",
+                            )}
+                          />
+                          {resyncProviderModels.isPending && resyncingProviderId === group.providerId ? "Resyncing..." : "Resync"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="ghost"
+                          className="h-7 border border-border px-2.5 text-[11px]"
+                          disabled={updateModelVisibility.isPending || resyncProviderModels.isPending || visibleCount === 0}
                           onClick={() => updateProviderModels(group.providerId, true)}
                         >
                           Select all
@@ -249,7 +286,7 @@ export function ModelAccessPanel() {
                           size="xs"
                           variant="ghost"
                           className="h-7 border border-border px-2.5 text-[11px]"
-                          disabled={updateModelVisibility.isPending || visibleCount === 0}
+                          disabled={updateModelVisibility.isPending || resyncProviderModels.isPending || visibleCount === 0}
                           onClick={() => updateProviderModels(group.providerId, false)}
                         >
                           Clear
@@ -325,6 +362,9 @@ export function ModelAccessPanel() {
 
       {updateModelVisibility.error ? (
         <p className="mt-3 text-sm text-primary">{updateModelVisibility.error.message}</p>
+      ) : null}
+      {resyncProviderModels.error ? (
+        <p className="mt-3 text-sm text-primary">{resyncProviderModels.error.message}</p>
       ) : null}
     </Card>
   );

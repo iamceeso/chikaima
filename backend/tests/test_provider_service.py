@@ -443,20 +443,39 @@ class ProviderServiceTests(unittest.TestCase):
     ) -> None:
         provider = SimpleNamespace(id="provider-1", provider_type="openai")
         added: list[object] = []
+        deleted: list[object] = []
+        existing_default = SimpleNamespace(
+            id="existing-default",
+            provider_id="provider-1",
+            model_key="gpt-4o",
+            display_name="GPT-4o",
+            capabilities={"chat": True},
+            is_default=True,
+            is_available=True,
+        )
+        removed_model = SimpleNamespace(
+            id="removed-model",
+            provider_id="provider-1",
+            model_key="legacy-model",
+            display_name="Legacy model",
+            capabilities={"chat": True},
+            is_default=False,
+            is_available=True,
+        )
         query_results = iter(
             [
                 SimpleNamespace(
                     filter=lambda *_args, **_kwargs: SimpleNamespace(
-                        first=lambda: SimpleNamespace(model_key="gpt-4o")
+                        all=lambda: [existing_default, removed_model]
+                    )
+                ),
+                SimpleNamespace(
+                    filter=lambda *_args, **_kwargs: SimpleNamespace(
+                        first=lambda: None
                     )
                 ),
                 SimpleNamespace(
                     filter=lambda *_args, **_kwargs: SimpleNamespace(first=lambda: None)
-                ),
-                SimpleNamespace(
-                    filter=lambda *_args, **_kwargs: SimpleNamespace(
-                        delete=lambda: None
-                    )
                 ),
             ]
         )
@@ -464,6 +483,7 @@ class ProviderServiceTests(unittest.TestCase):
         service.db = SimpleNamespace(
             query=lambda _model: next(query_results),
             add=lambda item: added.append(item),
+            delete=lambda item: deleted.append(item),
         )
 
         service._replace_provider_models(
@@ -481,8 +501,9 @@ class ProviderServiceTests(unittest.TestCase):
 
         self.assertEqual(len(added), 2)
         self.assertEqual([item.model_key for item in added], ["gpt-5", "gpt-4o"])
-        self.assertTrue(added[0].is_default)
+        self.assertFalse(added[0].is_default)
         self.assertTrue(added[1].is_default)
+        self.assertEqual(deleted, [removed_model])
 
     def test_replace_provider_models_falls_back_to_curated_models(self) -> None:
         provider = SimpleNamespace(id="provider-1", provider_type="local")
@@ -490,15 +511,10 @@ class ProviderServiceTests(unittest.TestCase):
         query_results = iter(
             [
                 SimpleNamespace(
-                    filter=lambda *_args, **_kwargs: SimpleNamespace(first=lambda: None)
+                    filter=lambda *_args, **_kwargs: SimpleNamespace(all=lambda: [])
                 ),
                 SimpleNamespace(
                     filter=lambda *_args, **_kwargs: SimpleNamespace(first=lambda: None)
-                ),
-                SimpleNamespace(
-                    filter=lambda *_args, **_kwargs: SimpleNamespace(
-                        delete=lambda: None
-                    )
                 ),
             ]
         )
@@ -506,12 +522,55 @@ class ProviderServiceTests(unittest.TestCase):
         service.db = SimpleNamespace(
             query=lambda _model: next(query_results),
             add=lambda item: added.append(item),
+            delete=lambda _item: None,
         )
 
         service._replace_provider_models(provider, [])
 
         self.assertEqual(added[0].model_key, CURATED_PROVIDER_MODELS["local"][0]["key"])
         self.assertTrue(added[0].is_default)
+
+    def test_replace_provider_models_preserves_referenced_removed_models(self) -> None:
+        provider = SimpleNamespace(id="provider-1", provider_type="openrouter")
+        added: list[object] = []
+        deleted: list[object] = []
+        referenced_model = SimpleNamespace(
+            id="referenced-model",
+            provider_id="provider-1",
+            model_key="~anthropic/claude-old-latest",
+            display_name="Old Claude alias",
+            capabilities={"chat": True},
+            is_default=False,
+            is_available=True,
+        )
+        query_results = iter(
+            [
+                SimpleNamespace(
+                    filter=lambda *_args, **_kwargs: SimpleNamespace(all=lambda: [referenced_model])
+                ),
+                SimpleNamespace(
+                    filter=lambda *_args, **_kwargs: SimpleNamespace(first=lambda: None)
+                ),
+                SimpleNamespace(
+                    filter=lambda *_args, **_kwargs: SimpleNamespace(first=lambda: SimpleNamespace(id="conv-1"))
+                ),
+            ]
+        )
+        service = object.__new__(ProviderService)
+        service.db = SimpleNamespace(
+            query=lambda _model: next(query_results),
+            add=lambda item: added.append(item),
+            delete=lambda item: deleted.append(item),
+        )
+
+        service._replace_provider_models(
+            provider,
+            [{"key": "openai/gpt-4o-mini", "name": "GPT-4o mini", "capabilities": {"chat": True}}],
+        )
+
+        self.assertIn(referenced_model, added)
+        self.assertFalse(referenced_model.is_available)
+        self.assertEqual(deleted, [])
 
     def test_load_provider_models_dispatches_by_provider_type(self) -> None:
         service = object.__new__(ProviderService)

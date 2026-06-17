@@ -186,6 +186,8 @@ export const api = {
       config?: Record<string, unknown>;
     },
   ) => request<Provider>(`/providers/${providerId}`, { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+  resyncProviderModels: (access: ApiAccess, providerId: string) =>
+    request<Provider>(`/providers/${providerId}/resync`, { method: "POST", ...access }),
   deleteProvider: (access: ApiAccess, providerId: string) =>
     request<void>(`/providers/${providerId}`, { method: "DELETE", ...access }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),

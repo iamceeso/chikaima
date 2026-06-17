@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.crypto import secret_manager
 from app.models.ai_model import AIModel
+from app.models.conversation import Conversation
 from app.models.provider import Provider
 from app.repositories.providers import ProviderRepository
 from app.schemas.provider import AIModelResponse, ProviderCreate, ProviderUpdate
@@ -443,6 +444,18 @@ class ProviderService:
         self.db.refresh(provider)
         return provider
 
+    def resync_models(self, user_id: str, provider_id: str) -> Provider:
+        provider = self.providers.get(provider_id)
+        if not provider or provider.user_id != user_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Provider not found")
+
+        synced_models = self._load_provider_models(provider)
+        self._replace_provider_models(provider, synced_models)
+
+        self.db.commit()
+        self.db.refresh(provider)
+        return provider
+
     def delete(self, user_id: str, provider_id: str) -> None:
         provider = self.providers.get(provider_id)
         if not provider or provider.user_id != user_id:
@@ -454,23 +467,52 @@ class ProviderService:
             provider.provider_type,
             _dedupe_models(models) or CURATED_PROVIDER_MODELS.get(provider.provider_type, []),
         )
-        existing_default = self.db.query(AIModel).filter(AIModel.provider_id == provider.id, AIModel.is_default.is_(True)).first()
-        has_global_default = self.db.query(AIModel).filter(AIModel.is_default.is_(True)).first() is not None
+        existing_models = list(self.db.query(AIModel).filter(AIModel.provider_id == provider.id).all())
+        existing_by_key = {model.model_key: model for model in existing_models}
+        existing_default = next((model for model in existing_models if model.is_default), None)
+        has_global_default_elsewhere = (
+            self.db.query(AIModel)
+            .filter(AIModel.is_default.is_(True), AIModel.provider_id != provider.id)
+            .first()
+            is not None
+        )
 
-        self.db.query(AIModel).filter(AIModel.provider_id == provider.id).delete()
         for idx, model in enumerate(synced_models):
-            preserved_default = existing_default is not None and existing_default.model_key == model["key"]
-            should_be_default = preserved_default or (idx == 0 and not has_global_default)
-            self.db.add(
-                AIModel(
-                    provider_id=provider.id,
-                    model_key=model["key"],
-                    display_name=model["name"],
-                    capabilities=model["capabilities"],
-                    is_default=should_be_default,
-                    is_available=True,
-                )
+            existing = existing_by_key.get(model["key"])
+            if existing is not None:
+                existing.display_name = model["name"]
+                existing.capabilities = model["capabilities"]
+                self.db.add(existing)
+                continue
+
+            should_be_default = idx == 0 and existing_default is None and not has_global_default_elsewhere
+            new_model = AIModel(
+                provider_id=provider.id,
+                model_key=model["key"],
+                display_name=model["name"],
+                capabilities=model["capabilities"],
+                is_default=should_be_default,
+                is_available=True,
             )
+            self.db.add(new_model)
+            existing_by_key[model["key"]] = new_model
+            if should_be_default:
+                existing_default = new_model
+
+        synced_keys = {model["key"] for model in synced_models}
+        for existing in existing_models:
+            if existing.model_key in synced_keys:
+                continue
+
+            is_referenced = (
+                self.db.query(Conversation.id).filter(Conversation.model_id == existing.id).first() is not None
+            )
+            if is_referenced or existing.is_default:
+                existing.is_available = False
+                self.db.add(existing)
+                continue
+
+            self.db.delete(existing)
 
     def _load_provider_models(self, provider: Provider, api_key: str | None = None) -> list[dict[str, Any]]:
         resolved_api_key = api_key

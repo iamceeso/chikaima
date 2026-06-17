@@ -70,7 +70,6 @@ export function ProviderList() {
       await queryClient.invalidateQueries({ queryKey: ["workspace-settings"] });
     },
   });
-
   return (
     <Card className="min-w-0 overflow-hidden bg-surface-raised p-5 sm:p-6">
       <div className="mb-4">
