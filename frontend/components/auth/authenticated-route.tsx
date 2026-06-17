@@ -45,7 +45,7 @@ export function AuthenticatedRoute({ children }: { children: React.ReactNode }) 
 
     if (profileQuery.isError) {
       clearSession();
-      router.replace("/login");
+      router.replace("/");
     }
   }, [authRequired, clearSession, firstUserRequired, hydrated, pathname, profileQuery.isError, router, tokens?.access_token]);
 

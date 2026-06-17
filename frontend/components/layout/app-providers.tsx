@@ -5,10 +5,9 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+import { SESSIONLESS_ACCESS_TOKEN } from "@/lib/auth";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
-
-const SESSIONLESS_ACCESS_TOKEN = "__olanma_no_auth__";
 
 function WorkspaceAccessBootstrap() {
   const tokens = useAuthStore((state) => state.tokens);
@@ -23,14 +22,14 @@ function WorkspaceAccessBootstrap() {
   useQuery({
     queryKey: ["profile", tokens?.access_token],
     queryFn: async () => {
-      if (!tokens?.access_token) {
+      if (!tokens?.access_token || tokens.access_token === SESSIONLESS_ACCESS_TOKEN) {
         return null;
       }
       const profile = await api.getProfile(tokens.access_token);
       setUser(profile);
       return profile;
     },
-    enabled: Boolean(tokens?.access_token),
+    enabled: Boolean(tokens?.access_token) && tokens.access_token !== SESSIONLESS_ACCESS_TOKEN,
     retry: false,
     staleTime: 5 * 60_000,
   });
@@ -43,12 +42,13 @@ function WorkspaceAccessBootstrap() {
     const usingSessionlessToken = tokens?.access_token === SESSIONLESS_ACCESS_TOKEN;
 
     if (workspaceQuery.data.authentication_enabled === false) {
-      if (!tokens?.access_token) {
+      if (!usingSessionlessToken) {
         setSession({
           access_token: SESSIONLESS_ACCESS_TOKEN,
           refresh_token: "",
           token_type: "bearer",
-        });
+        }, null);
+        setUser(null);
       }
       return;
     }
