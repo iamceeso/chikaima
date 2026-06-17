@@ -45,6 +45,14 @@ ignore = ["B008", "UP046"]
 [tool.coverage.run]
 branch = true
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
+    "ignore:'crypt' is deprecated and slated for removal in Python 3.13:DeprecationWarning",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

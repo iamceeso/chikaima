@@ -108,6 +108,7 @@ exports.api = {
     getProviders: (access) => request("/providers", access),
     createProvider: (access, payload) => request("/providers", { method: "POST", ...access, body: JSON.stringify(payload) }),
     updateProvider: (access, providerId, payload) => request(`/providers/${providerId}`, { method: "PATCH", ...access, body: JSON.stringify(payload) }),
+    resyncProviderModels: (access, providerId) => request(`/providers/${providerId}/resync`, { method: "POST", ...access }),
     deleteProvider: (access, providerId) => request(`/providers/${providerId}`, { method: "DELETE", ...access }),
     getModels: (token) => request("/models", { token }),
     getLibraryBundle: (token) => request("/library", { token }),

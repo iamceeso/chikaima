@@ -1,6 +1,7 @@
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
+
 from fastapi import HTTPException
 
 from app.services.asset_search_service import ChunkSearchHit, RetrievalSource

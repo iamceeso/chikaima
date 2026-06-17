@@ -29,7 +29,7 @@ function WorkspaceAccessBootstrap() {
       setUser(profile);
       return profile;
     },
-    enabled: Boolean(tokens?.access_token) && tokens.access_token !== SESSIONLESS_ACCESS_TOKEN,
+    enabled: Boolean(tokens?.access_token) && tokens?.access_token !== SESSIONLESS_ACCESS_TOKEN,
     retry: false,
     staleTime: 5 * 60_000,
   });
@@ -56,7 +56,7 @@ function WorkspaceAccessBootstrap() {
     if (usingSessionlessToken) {
       clearSession();
     }
-  }, [clearSession, setSession, tokens?.access_token, workspaceQuery.data]);
+  }, [clearSession, setSession, setUser, tokens?.access_token, workspaceQuery.data]);
 
   return null;
 }

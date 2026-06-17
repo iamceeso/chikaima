@@ -11,6 +11,7 @@ from app.models.ai_model import AIModel
 from app.models.provider import Provider
 from app.services.asset_search_service import AssetSearchService
 from app.services.providers.factory import AdapterFactory
+
 RAG_SEARCH_LIMIT = 3
 RAG_CHUNKS_PER_SOURCE = 1
 

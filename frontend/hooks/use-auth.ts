@@ -20,7 +20,7 @@ export function useAuthProfile() {
       setUser(user);
       return user;
     },
-    enabled: Boolean(tokens?.access_token) && tokens.access_token !== SESSIONLESS_ACCESS_TOKEN,
+    enabled: Boolean(tokens?.access_token) && tokens?.access_token !== SESSIONLESS_ACCESS_TOKEN,
     retry: false,
     staleTime: 5 * 60_000,
   });
