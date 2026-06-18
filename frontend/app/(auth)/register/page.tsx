@@ -1,4 +1,5 @@
 import { RegisterForm } from "@/components/auth/auth-form";
+import Image from "next/image";
 
 export default function RegisterPage() {
   return (
@@ -10,6 +11,14 @@ export default function RegisterPage() {
             Build your private content intelligence stack.
           </h1>
         </div>
+        <Image
+          src="/chikaima-logo.png"
+          alt="Chikaima logo"
+          width={300}
+          height={300}
+          draggable={false}
+          className="mx-auto select-none pointer-events-none"
+        />
         <p className="text-base leading-relaxed text-foreground-muted max-w-md">
           Start with uploads, transcription, summaries, and provider flexibility while keeping the stack self-hosted.
         </p>
