@@ -16,6 +16,7 @@ export default function RegisterPage() {
           alt="Chikaima logo"
           width={300}
           height={300}
+          loading="eager"
           draggable={false}
           className="mx-auto select-none pointer-events-none"
         />
