@@ -10,7 +10,7 @@ export default function LoginPage() {
             Chikaima
           </p>
           <h1 className="text-5xl font-semibold leading-tight text-foreground max-w-lg">
-            Your self-hosted intelligence workspace.
+            Self-hosted intelligence workspace.
           </h1>
         </div>
         <Image
