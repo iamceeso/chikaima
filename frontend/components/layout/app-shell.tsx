@@ -14,8 +14,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="h-screen overflow-hidden bg-background text-foreground">
-      <div className="mx-auto flex h-full max-w-420 flex-col gap-0 overflow-hidden xl:flex-row">
+    <div className="h-screen w-full overflow-hidden bg-background text-foreground">
+      <div className="flex h-full w-full flex-col gap-0 overflow-hidden xl:flex-row">
         <div className="hidden h-full xl:block xl:shrink-0">
           <Sidebar
             pathname={pathname}
