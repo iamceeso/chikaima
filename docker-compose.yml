@@ -30,7 +30,7 @@ services:
       APP_NAME: Chikaima API
       APP_ENV: development
       APP_DEBUG: "true"
-      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5433/chikaima
+      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: http://localhost:3000
     ports:
@@ -56,7 +56,7 @@ services:
       APP_NAME: Chikaima API
       APP_ENV: development
       APP_DEBUG: "true"
-      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5433/chikaima
+      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: http://localhost:3000
     restart: unless-stopped

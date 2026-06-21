@@ -18,10 +18,17 @@ The product focuses on chat, uploaded media, summaries, retrieval, and provider 
 
 ## Docs Map
 
+Start here:
+
 - [Getting Started](./getting-started/README.md)
-  Covers local setup, Docker Compose, required environment variables, and first-run commands.
+  Covers local setup, Docker Compose, required environment variables, and first-run product checks.
+- [Features](./features/README.md)
+  Explains what is currently shipped, including provider capability boundaries.
+
+Understand the system:
+
 - [Architecture](./architecture/README.md)
-  Describes the current system shape, data flow, and major runtime components.
+  Describes the current system shape, runtime components, data flow, and provider boundaries.
 - [Frontend](./frontend/README.md)
   Documents the app routes, UI organization, state usage, and feature surfaces.
 - [Backend](./backend/README.md)
@@ -30,12 +37,13 @@ The product focuses on chat, uploaded media, summaries, retrieval, and provider 
   Summarizes the live REST and streaming endpoints exposed by the backend today.
 - [Database](./database/README.md)
   Lists the active tables/models and the data they are responsible for.
-- [Features](./features/README.md)
-  Explains what is currently shipped, including provider capability boundaries.
-- [Deployment](./deployment/README.md)
-  Covers Docker Compose, CI, tag-based image publishing, and operational notes.
+
+Build, ship, and maintain:
+
 - [Development](./development/README.md)
   Covers local workflows, test commands, release/version scripts, and repo conventions.
+- [Deployment](./deployment/README.md)
+  Covers Docker Compose, CI, tag-based image publishing, and operational notes.
 - [Guides](./guides/README.md)
   Practical implementation notes for extending providers, endpoints, and processing flows.
 - [Troubleshooting](./troubleshooting/README.md)
