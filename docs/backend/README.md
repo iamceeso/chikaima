@@ -38,7 +38,7 @@ backend/
 
 ## API Layer
 
-The API surface is assembled in [api.py](../../backend/app/api/v1/api.py).
+The API surface is assembled in [api.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/api/v1/api.py).
 
 Current endpoint groups:
 
@@ -84,9 +84,9 @@ Patterns used here:
 
 Provider runtime behavior is split across:
 
-- provider catalog and model syncing in [provider_service.py](../../backend/app/services/provider_service.py)
-- adapter selection in [factory.py](../../backend/app/services/providers/factory.py)
-- provider-specific request formatting in [base.py](../../backend/app/services/providers/base.py)
+- provider catalog and model syncing in [provider_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/provider_service.py)
+- adapter selection in [factory.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/providers/factory.py)
+- provider-specific request formatting in [base.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/providers/base.py)
 
 This is one of the stronger parts of the codebase. It keeps chat, embeddings, and transcription flows relatively decoupled from individual vendors.
 
@@ -102,9 +102,9 @@ Current job types:
 
 Entry points:
 
-- job creation: [job_service.py](../../backend/app/services/job_service.py)
-- worker app: [celery_app.py](../../backend/app/workers/celery_app.py)
-- task execution: [tasks.py](../../backend/app/workers/tasks.py)
+- job creation: [job_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/job_service.py)
+- worker app: [celery_app.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/workers/celery_app.py)
+- task execution: [tasks.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/workers/tasks.py)
 
 ## Retrieval And Media Intelligence
 
@@ -118,9 +118,9 @@ The current RAG flow is built around:
 
 This is reflected in:
 
-- [embeddings_service.py](../../backend/app/services/embeddings_service.py)
-- [asset_search_service.py](../../backend/app/services/asset_search_service.py)
-- [transcript_service.py](../../backend/app/services/transcript_service.py)
+- [embeddings_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/embeddings_service.py)
+- [asset_search_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/asset_search_service.py)
+- [transcript_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/transcript_service.py)
 
 ## Current Strengths
 

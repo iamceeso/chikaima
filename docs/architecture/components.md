@@ -49,7 +49,7 @@ Core route groups:
 - transcripts
 - settings
 
-The router entry point is [backend/app/api/v1/api.py](../../backend/app/api/v1/api.py).
+The router entry point is [backend/app/api/v1/api.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/api/v1/api.py).
 
 ## Service Components
 

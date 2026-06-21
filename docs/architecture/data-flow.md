@@ -14,8 +14,8 @@ This page focuses on the three flows that define the current product: chat, inge
 
 Important files:
 
-- [backend/app/services/chat_service.py](../../backend/app/services/chat_service.py)
-- [backend/app/services/llm_service.py](../../backend/app/services/llm_service.py)
+- [backend/app/services/chat_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/chat_service.py)
+- [backend/app/services/llm_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/llm_service.py)
 
 ## Asset Ingestion Flow
 
@@ -30,9 +30,9 @@ Important files:
 
 Important files:
 
-- [backend/app/services/job_service.py](../../backend/app/services/job_service.py)
-- [backend/app/workers/tasks.py](../../backend/app/workers/tasks.py)
-- [backend/app/services/asset_processors.py](../../backend/app/services/asset_processors.py)
+- [backend/app/services/job_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/job_service.py)
+- [backend/app/workers/tasks.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/workers/tasks.py)
+- [backend/app/services/asset_processors.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/asset_processors.py)
 
 ## Retrieval Flow
 
@@ -44,8 +44,8 @@ Important files:
 
 Important files:
 
-- [backend/app/services/embeddings_service.py](../../backend/app/services/embeddings_service.py)
-- [backend/app/services/asset_search_service.py](../../backend/app/services/asset_search_service.py)
+- [backend/app/services/embeddings_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/embeddings_service.py)
+- [backend/app/services/asset_search_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/asset_search_service.py)
 
 ## Provider Flow
 

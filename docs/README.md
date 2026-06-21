@@ -70,9 +70,9 @@ The docs do not assume:
 
 ## Related Files
 
-- Root project overview: [README.md](../README.md)
-- Backend config example: [backend/.env.example](../backend/.env.example)
-- Local verification script: [pre-push.sh](../pre-push.sh)
-- Version/tag helper: [version-patch.sh](../version-patch.sh)
+- Root project overview: [README.md](https://github.com/iamceeso/chikaima/blob/main/README.md)
+- Backend config example: [backend/.env.example](https://github.com/iamceeso/chikaima/blob/main/backend/.env.example)
+- Local verification script: [pre-push.sh](https://github.com/iamceeso/chikaima/blob/main/pre-push.sh)
+- Version/tag helper: [version-patch.sh](https://github.com/iamceeso/chikaima/blob/main/version-patch.sh)
 
 Last reviewed against the codebase: June 17, 2026.

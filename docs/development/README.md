@@ -86,8 +86,8 @@ Current workflows:
 
 The workflow files are:
 
-- [ci.yml](../../.github/workflows/ci.yml)
-- [docker-release.yml](../../.github/workflows/docker-release.yml)
+- [ci.yml](https://github.com/iamceeso/chikaima/blob/main/.github/workflows/ci.yml)
+- [docker-release.yml](https://github.com/iamceeso/chikaima/blob/main/.github/workflows/docker-release.yml)
 
 ## Current Repo Conventions
 

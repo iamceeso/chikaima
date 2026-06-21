@@ -138,12 +138,12 @@ Current support in code:
 
 ## Key Source Files
 
-- App entry: [backend/app/main.py](../../backend/app/main.py)
-- API router: [backend/app/api/v1/api.py](../../backend/app/api/v1/api.py)
-- Worker tasks: [backend/app/workers/tasks.py](../../backend/app/workers/tasks.py)
-- Chat orchestration: [backend/app/services/chat_service.py](../../backend/app/services/chat_service.py)
-- LLM orchestration: [backend/app/services/llm_service.py](../../backend/app/services/llm_service.py)
-- Provider catalog: [backend/app/services/provider_service.py](../../backend/app/services/provider_service.py)
+- App entry: [backend/app/main.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/main.py)
+- API router: [backend/app/api/v1/api.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/api/v1/api.py)
+- Worker tasks: [backend/app/workers/tasks.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/workers/tasks.py)
+- Chat orchestration: [backend/app/services/chat_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/chat_service.py)
+- LLM orchestration: [backend/app/services/llm_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/llm_service.py)
+- Provider catalog: [backend/app/services/provider_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/provider_service.py)
 
 Related:
 

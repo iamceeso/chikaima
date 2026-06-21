@@ -26,7 +26,7 @@ For Docker:
 
 ## Environment Variables
 
-The backend example file is [backend/.env.example](../../backend/.env.example).
+The backend example file is [backend/.env.example](https://github.com/iamceeso/chikaima/blob/main/backend/.env.example).
 
 Minimum backend settings for local work:
 
@@ -88,7 +88,7 @@ This starts:
 - PostgreSQL
 - Redis
 
-The Compose file is [docker-compose.yml](../../docker-compose.yml).
+The Compose file is [docker-compose.yml](https://github.com/iamceeso/chikaima/blob/main/docker-compose.yml).
 
 ## First Product Surfaces To Check
 

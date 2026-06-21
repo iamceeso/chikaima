@@ -92,8 +92,8 @@ Common differences:
 
 Check the relevant workflow:
 
-- [ci.yml](../../.github/workflows/ci.yml)
-- [docker-release.yml](../../.github/workflows/docker-release.yml)
+- [ci.yml](https://github.com/iamceeso/chikaima/blob/main/.github/workflows/ci.yml)
+- [docker-release.yml](https://github.com/iamceeso/chikaima/blob/main/.github/workflows/docker-release.yml)
 
 ## `pgvector` Problems
 

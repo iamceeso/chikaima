@@ -6,7 +6,7 @@ This page describes the deployment paths that are actually present in the repo n
 
 ### 1. Docker Compose
 
-The repo ships a working local Compose stack in [docker-compose.yml](../../docker-compose.yml).
+The repo ships a working local Compose stack in [docker-compose.yml](https://github.com/iamceeso/chikaima/blob/main/docker-compose.yml).
 
 Services:
 
@@ -26,8 +26,8 @@ docker compose up --build
 
 The repo also ships GitHub Actions workflows for CI and image publishing:
 
-- [ci.yml](../../.github/workflows/ci.yml)
-- [docker-release.yml](../../.github/workflows/docker-release.yml)
+- [ci.yml](https://github.com/iamceeso/chikaima/blob/main/.github/workflows/ci.yml)
+- [docker-release.yml](https://github.com/iamceeso/chikaima/blob/main/.github/workflows/docker-release.yml)
 
 Current release behavior:
 
@@ -83,7 +83,7 @@ The script updates:
 
 ## Current Environment Shape
 
-The backend example variables live in [backend/.env.example](../../backend/.env.example).
+The backend example variables live in [backend/.env.example](https://github.com/iamceeso/chikaima/blob/main/backend/.env.example).
 
 Important production categories:
 

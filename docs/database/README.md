@@ -8,7 +8,7 @@ Chikaima uses PostgreSQL as the primary store and `pgvector` for retrieval over 
 - migrations: Alembic
 - vector support: `pgvector`
 
-The backend attempts to enable the `vector` extension on startup in [backend/app/main.py](../../backend/app/main.py).
+The backend attempts to enable the `vector` extension on startup in [backend/app/main.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/main.py).
 
 ## Active Tables / Models
 

@@ -91,7 +91,7 @@ The frontend generally follows this pattern:
 
 Important frontend service file:
 
-- [frontend/services/api.ts](../../frontend/services/api.ts)
+- [frontend/services/api.ts](https://github.com/iamceeso/chikaima/blob/main/frontend/services/api.ts)
 
 ## Current Strengths
 

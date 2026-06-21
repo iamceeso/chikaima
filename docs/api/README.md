@@ -2,7 +2,7 @@
 
 This page summarizes the current API surface exposed under `/api/v1`.
 
-It is a map of the live route groups in [backend/app/api/v1/api.py](../../backend/app/api/v1/api.py), not a complete OpenAPI dump.
+It is a map of the live route groups in [backend/app/api/v1/api.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/api/v1/api.py), not a complete OpenAPI dump.
 
 ## Authentication
 
@@ -165,7 +165,7 @@ The FastAPI docs routes are present but gated by workspace settings:
 - `/redoc`
 - `/api/v1/openapi.json`
 
-See [backend/app/main.py](../../backend/app/main.py) for the current behavior.
+See [backend/app/main.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/main.py) for the current behavior.
 
 Related:
 

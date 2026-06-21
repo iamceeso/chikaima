@@ -4,7 +4,7 @@ This page documents the configuration surfaces that actually exist in the repo t
 
 ## Backend Environment
 
-The source of truth is [backend/.env.example](../../backend/.env.example).
+The source of truth is [backend/.env.example](https://github.com/iamceeso/chikaima/blob/main/backend/.env.example).
 
 Current variables:
 
@@ -42,7 +42,7 @@ What these control:
 
 ## Frontend Environment
 
-The source of truth is [frontend/.env.example](../../frontend/.env.example).
+The source of truth is [frontend/.env.example](https://github.com/iamceeso/chikaima/blob/main/frontend/.env.example).
 
 Current variables:
 

@@ -6,9 +6,9 @@ This page contains practical extension notes based on the current codebase.
 
 The current provider path is:
 
-1. add or update provider metadata in [provider_service.py](../../backend/app/services/provider_service.py)
-2. add adapter behavior in [base.py](../../backend/app/services/providers/base.py)
-3. wire provider selection in [factory.py](../../backend/app/services/providers/factory.py)
+1. add or update provider metadata in [provider_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/provider_service.py)
+2. add adapter behavior in [base.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/providers/base.py)
+3. wire provider selection in [factory.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/providers/factory.py)
 4. update tests:
    - `backend/tests/test_provider_service.py`
    - `backend/tests/test_provider_factory.py`
@@ -20,7 +20,7 @@ If the provider is OpenAI-compatible, prefer extending the OpenAI-compatible pat
 
 ## Add Provider-Based Embeddings Support
 
-Embedding support lives in [embeddings_service.py](../../backend/app/services/embeddings_service.py).
+Embedding support lives in [embeddings_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/embeddings_service.py).
 
 You will usually need to:
 
@@ -31,7 +31,7 @@ You will usually need to:
 
 ## Add Provider-Based Transcription Support
 
-Transcription support lives in [transcription_provider_service.py](../../backend/app/services/transcription_provider_service.py).
+Transcription support lives in [transcription_provider_service.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/transcription_provider_service.py).
 
 The current implementation is intentionally narrower than chat support. Additions here should be explicit because transcription endpoint formats vary more than chat formats.
 
@@ -42,12 +42,12 @@ The current backend pattern is:
 1. create or update a schema in `backend/app/schemas`
 2. add service logic in `backend/app/services`
 3. add the endpoint in `backend/app/api/v1/endpoints`
-4. register it in [api.py](../../backend/app/api/v1/api.py) if needed
+4. register it in [api.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/api/v1/api.py) if needed
 5. add endpoint and service tests
 
 ## Add A New Asset Processing Path
 
-Asset extraction starts in [asset_processors.py](../../backend/app/services/asset_processors.py), while background orchestration happens in [tasks.py](../../backend/app/workers/tasks.py).
+Asset extraction starts in [asset_processors.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/services/asset_processors.py), while background orchestration happens in [tasks.py](https://github.com/iamceeso/chikaima/blob/main/backend/app/workers/tasks.py).
 
 The normal pattern is:
 
