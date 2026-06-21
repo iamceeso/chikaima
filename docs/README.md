@@ -2,9 +2,7 @@
 
 This docs tree is the current high-level reference for the Chikaima monorepo.
 
-It is intentionally centered on the README pages that actually exist in this repository today. Older references to dozens of sub-pages and future-planned guides have been removed so the docs stay aligned with the codebase.
-
-## What Chikaima Is
+## What is Chikaima
 
 Chikaima is a self-hosted AI workspace built around:
 
@@ -83,4 +81,4 @@ The docs do not assume:
 - Local verification script: [pre-push.sh](https://github.com/iamceeso/chikaima/blob/main/pre-push.sh)
 - Version/tag helper: [version-patch.sh](https://github.com/iamceeso/chikaima/blob/main/version-patch.sh)
 
-Last reviewed against the codebase: June 17, 2026.
+Last reviewed against the codebase: June 21, 2026.

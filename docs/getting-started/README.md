@@ -4,10 +4,8 @@ This guide covers the setup paths that are real in the repository today.
 
 ## Recommended Paths
 
-- Local development
-  Best if you are changing code.
-- Docker Compose
-  Best if you want the whole stack up quickly with PostgreSQL, Redis, backend, frontend, and a Celery worker.
+- Local development best if you are changing code.
+- Docker Compose best if you want the whole stack up quickly with PostgreSQL, Redis, backend, frontend, and a Celery worker.
 
 ## Current Prerequisites
 
@@ -77,6 +75,7 @@ The backend Docker image already installs `tesseract-ocr`. For local backend run
 ### 1. Start PostgreSQL And Redis
 
 Start the local PostgreSQL + `pgvector` container before installing dependencies, running migrations, or starting the backend:
+Notice the postgres port values `5433:5432`.
 
 ```bash
 docker run -d \
@@ -200,7 +199,6 @@ Notes:
 
 - `/dashboard` currently redirects to `/library`.
 - `/providers` currently redirects to `/settings/providers`.
-- `/workspace` is a video intake workflow, not the main chat surface.
 
 ## First Functional Steps
 

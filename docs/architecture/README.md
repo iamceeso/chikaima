@@ -5,30 +5,48 @@ This page describes the current architecture that exists in the repo today.
 ## High-Level Shape
 
 ```text
-Browser
-        |
-        v
-Next.js frontend
-        |
-        | HTTP + SSE
-        v
-FastAPI backend
-        |
-        | SQLAlchemy
-        v
-PostgreSQL + pgvector
-
-FastAPI backend
-        |
-        | jobs
-        v
-Redis + Celery worker
-
-FastAPI / worker
-        |
-        | provider APIs
-        v
-OpenAI / Anthropic / Gemini / Ollama / OpenRouter / LiteLLM / local gateway
+┌───────────────────────────────────────────┐
+│                 Client                    │
+│                 Browser                   │
+└───────────────────┬───────────────────────┘
+                    │ HTTPS
+                    ▼
+┌───────────────────────────────────────────┐
+│              Next.js Frontend             │
+│      React • App Router • SSE Client      │
+└───────────────────┬───────────────────────┘
+                    │ HTTP / SSE
+                    ▼
+┌───────────────────────────────────────────┐
+│              FastAPI Backend              │
+│     Auth • API • Processing Orchestration │
+└───────────────┬───────────────┬───────────┘
+                │               │
+                │ SQLAlchemy    │ Queue Jobs
+                ▼               ▼
+┌──────────────────────┐   ┌────────────────┐
+│ PostgreSQL + pgvector│   │     Redis      │
+│ Metadata • Vectors   │   │ Broker / Cache │
+└──────────────────────┘   └───────┬────────┘
+                                   │
+                                   ▼
+                         ┌────────────────┐
+                         │ Celery Workers │
+                         │ Background Jobs│
+                         └───────┬────────┘
+                                 │
+                                 ▼
+              ┌─────────────────────────────────┐
+              │        AI Provider Layer        │
+              ├─────────────────────────────────┤
+              │ OpenAI                          │
+              │ Anthropic                       │
+              │ Gemini                          │
+              │ OpenRouter                      │
+              │ LiteLLM                         │
+              │ Ollama                          │
+              │ Local Model Gateway             │
+              └─────────────────────────────────┘
 ```
 
 Chikaima is intentionally provider-based: it stores conversations, assets, transcripts, summaries, and vectors while orchestrating provider calls. It does not bundle local Whisper, sentence-transformers, or PyTorch-serving stacks as core architecture.
