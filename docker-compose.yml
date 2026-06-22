@@ -18,8 +18,8 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     environment:
@@ -35,6 +35,24 @@ services:
     volumes:
       - media_storage:/app/storage
 
+  migrate:
+    image: ghcr.io/iamceeso/chikaima-backend:latest
+    container_name: chikaima-migrate
+    command: alembic upgrade head
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_NAME: Chikaima API
+      APP_ENV: development
+      APP_DEBUG: "true"
+      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: http://localhost:3000
+    restart: "no"
+
   celery-worker:
     image: ghcr.io/iamceeso/chikaima-backend:latest
     container_name: chikaima-celery-worker
@@ -42,8 +60,8 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     environment:

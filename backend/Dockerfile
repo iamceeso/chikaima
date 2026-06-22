@@ -31,6 +31,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/venv /opt/venv
+COPY alembic.ini .
+COPY alembic ./alembic
 
 EXPOSE 8000
 
