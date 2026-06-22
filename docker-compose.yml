@@ -1,8 +1,6 @@
 services:
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/iamceeso/chikaima-frontend:latest
     container_name: chikaima-frontend
     depends_on:
       backend:
@@ -15,12 +13,10 @@ services:
     restart: unless-stopped
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/iamceeso/chikaima-backend:latest
     container_name: chikaima-backend
     env_file:
-      - ./backend/.env
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,13 +36,11 @@ services:
       - media_storage:/app/storage
 
   celery-worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/iamceeso/chikaima-backend:latest
     container_name: chikaima-celery-worker
     command: celery -A app.workers.celery_app.celery_app worker --loglevel=info
     env_file:
-      - ./backend/.env
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
