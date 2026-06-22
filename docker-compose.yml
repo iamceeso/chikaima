@@ -6,7 +6,8 @@ services:
       backend:
         condition: service_started
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
+      INTERNAL_API_ORIGIN: http://backend:8000
       NEXT_PUBLIC_APP_NAME: Chikaima
     ports:
       - "3000:3000"
