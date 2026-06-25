@@ -1,11 +1,14 @@
 import { NextRequest } from "next/server";
 
-const DEFAULT_INTERNAL_API_ORIGIN = "http://localhost:8000";
-
 function buildBackendUrl(path: string[], search: string): string {
-  const origin = (process.env.INTERNAL_API_ORIGIN || DEFAULT_INTERNAL_API_ORIGIN).replace(/\/$/, "");
-  const pathname = path.map((segment) => encodeURIComponent(segment)).join("/");
-  return `${origin}/api/v1/${pathname}${search}`;
+  const origin = process.env.INTERNAL_API_ORIGIN;
+
+  if (!origin) {
+    throw new Error("INTERNAL_API_ORIGIN is not set. Configure it in your environment.");
+  }
+
+  const pathname = path.map(encodeURIComponent).join("/");
+  return `${origin.replace(/\/$/, "")}/api/v1/${pathname}${search}`;
 }
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {

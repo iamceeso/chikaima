@@ -5,7 +5,7 @@ This guide covers the setup paths that are real in the repository today.
 ## Recommended Paths
 
 - Local development best if you are changing code.
-- Docker Compose best if you want the whole stack up quickly with PostgreSQL, Redis, backend, frontend, and a Celery worker.
+- Docker Compose best if you want the whole stack up quickly with PostgreSQL, Redis, backend, frontend, and a Celery worker. See [docker-compose.yml](https://github.com/iamceeso/chikaima/blob/main/docker-compose.yml).
 
 ## Current Prerequisites
 
