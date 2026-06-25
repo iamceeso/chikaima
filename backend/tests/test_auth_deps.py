@@ -60,6 +60,7 @@ class AuthDependencyTests(unittest.TestCase):
 
         self.assertEqual(context.exception.status_code, 401)
         self.assertEqual(context.exception.detail, "Administrator credentials required")
+        self.assertIsNone(context.exception.headers)
 
     def test_get_current_admin_user_accepts_basic_auth_for_active_superuser(self) -> None:
         db = SimpleNamespace()

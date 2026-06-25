@@ -23,7 +23,6 @@ def _admin_auth_required_error() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Administrator credentials required",
-        headers={"WWW-Authenticate": 'Basic realm="workspace-admin"'},
     )
 
 
