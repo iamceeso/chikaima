@@ -81,4 +81,4 @@ The docs do not assume:
 - Local verification script: [pre-push.sh](https://github.com/iamceeso/chikaima/blob/main/pre-push.sh)
 - Version/tag helper: [version-patch.sh](https://github.com/iamceeso/chikaima/blob/main/version-patch.sh)
 
-Last reviewed against the codebase: June 21, 2026.
+Last reviewed against the codebase: June 25, 2026.

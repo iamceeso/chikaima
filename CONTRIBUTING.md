@@ -82,9 +82,10 @@ The frontend serves on `http://localhost:3000`.
 From the repository root:
 
 ```bash
-cp backend/.env.example backend/.env
 docker compose up --build
 ```
+
+The Compose file keeps its runtime environment inline and runs Alembic migrations before the backend and worker start.
 
 See `docs/getting-started/README.md` for full environment details and first-run checks.
 

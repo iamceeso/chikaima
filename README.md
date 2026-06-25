@@ -38,11 +38,10 @@ For the current local setup, Docker Compose workflow, and first-run product chec
 The shortest full-stack path is:
 
 ```bash
-cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
-Then open the frontend at `http://localhost:3000`.
+Compose uses the inline environment values in `docker-compose.yml`, runs database migrations after PostgreSQL is healthy, and then starts the backend, worker, and frontend. Then open the frontend at `http://localhost:3000`.
 
 ## Contributing
 

@@ -11,6 +11,7 @@ The repo ships a working local Compose stack in [docker-compose.yml](https://git
 Services:
 
 - frontend
+- migration job
 - backend
 - celery worker
 - PostgreSQL with `pgvector`
@@ -21,6 +22,8 @@ Start it with:
 ```bash
 docker compose up --build
 ```
+
+The Compose stack keeps its runtime environment inline in `docker-compose.yml`. It waits for PostgreSQL to become healthy, runs `alembic upgrade head` in the one-shot migration service, and only then starts the backend and worker.
 
 ### 2. Tag-Based Container Publishing
 
@@ -83,7 +86,7 @@ The script updates:
 
 ## Current Environment Shape
 
-The backend example variables live in [backend/.env.example](https://github.com/iamceeso/chikaima/blob/main/backend/.env.example).
+The local backend example variables live in [backend/.env.example](https://github.com/iamceeso/chikaima/blob/main/backend/.env.example). The Compose stack uses inline values in `docker-compose.yml`.
 
 Important production categories:
 

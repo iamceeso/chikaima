@@ -24,7 +24,9 @@ For Docker:
 
 ## Configuration
 
-The backend example file is [backend/.env.example](https://github.com/iamceeso/chikaima/blob/main/backend/.env.example).
+Docker Compose uses the inline environment values in [docker-compose.yml](https://github.com/iamceeso/chikaima/blob/main/docker-compose.yml). Generated secret values in that file are annotated with `openssl rand -hex 32` comments.
+
+For local backend development outside Compose, use [backend/.env.example](https://github.com/iamceeso/chikaima/blob/main/backend/.env.example).
 
 Minimum backend settings for local work:
 
@@ -145,19 +147,19 @@ The frontend serves on `http://localhost:3000`.
 From the repo root:
 
 ```bash
-cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
 This starts:
 
 - frontend
+- migration job
 - backend
 - celery worker
 - PostgreSQL
 - Redis
 
-The Compose file is [docker-compose.yml](https://github.com/iamceeso/chikaima/blob/main/docker-compose.yml).
+The migration job waits for healthy PostgreSQL, runs `alembic upgrade head`, and the backend and worker wait for it to complete successfully. The Compose file is [docker-compose.yml](https://github.com/iamceeso/chikaima/blob/main/docker-compose.yml).
 
 Ports:
 
@@ -171,6 +173,7 @@ Common Compose commands:
 ```bash
 docker compose up -d --build
 docker compose logs -f backend
+docker compose logs migrate
 docker compose logs -f frontend
 docker compose logs -f celery-worker
 docker compose down

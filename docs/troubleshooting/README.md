@@ -14,10 +14,18 @@ uv run uvicorn app.main:app --reload
 
 Common causes:
 
-- missing `.env`
+- missing `.env` when running the backend directly outside Compose
 - invalid JWT or provider secret settings
 - PostgreSQL not reachable
 - Redis not reachable
+
+For Docker Compose, check the one-shot migration job first:
+
+```bash
+docker compose logs migrate
+```
+
+The backend waits for that job to complete successfully.
 
 ## Uploads Stay Pending
 
