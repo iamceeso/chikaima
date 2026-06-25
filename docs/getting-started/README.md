@@ -66,6 +66,7 @@ Frontend defaults:
 ```env
 NEXT_PUBLIC_APP_NAME=Chikaima
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+INTERNAL_API_ORIGIN=http://localhost:8000
 ```
 
 Provider credentials are configured in the app UI, not through global `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` style environment variables for the main product flow.
