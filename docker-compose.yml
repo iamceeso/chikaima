@@ -6,9 +6,9 @@ services:
       backend:
         condition: service_started
     environment:
-      NEXT_PUBLIC_API_BASE_URL: /api/v1
-      INTERNAL_API_ORIGIN: http://backend:8000
       NEXT_PUBLIC_APP_NAME: Chikaima
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+      INTERNAL_API_ORIGIN: http://backend:8000
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -16,8 +16,6 @@ services:
   backend:
     image: ghcr.io/iamceeso/chikaima-backend:latest
     container_name: chikaima-backend
-    env_file:
-      - .env
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -29,19 +27,29 @@ services:
       APP_DEBUG: "true"
       DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
       REDIS_URL: redis://redis:6379/0
+      API_V1_PREFIX: /api/v1
+      JWT_SECRET_KEY: change-me-development-secret
+      JWT_REFRESH_SECRET_KEY: change-me-too-development-secret
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      PROVIDER_SECRET_KEY: replace-with-32-char-secret-key
       CORS_ORIGINS: http://localhost:3000
+      MEDIA_ROOT: storage
+      DOCUMENT_UPLOAD_MAX_MEGABYTES: "100"
+      AUDIO_UPLOAD_MAX_MEGABYTES: "512"
+      VIDEO_UPLOAD_MAX_MEGABYTES: "2048"
+      OLLAMA_BASE_URL: http://localhost:11434
     ports:
       - "8000:8000"
     restart: unless-stopped
     volumes:
       - media_storage:/app/storage
 
-  migrate:
+  celery-worker:
     image: ghcr.io/iamceeso/chikaima-backend:latest
-    container_name: chikaima-migrate
-    command: alembic upgrade head
-    env_file:
-      - .env
+    container_name: chikaima-celery-worker
+    command: celery -A app.workers.celery_app.celery_app worker --loglevel=info
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,7 +79,19 @@ services:
       APP_DEBUG: "true"
       DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
       REDIS_URL: redis://redis:6379/0
+      API_V1_PREFIX: /api/v1
+      JWT_SECRET_KEY: change-me-development-secret
+      JWT_REFRESH_SECRET_KEY: change-me-too-development-secret
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      PROVIDER_SECRET_KEY: replace-with-32-char-secret-key
       CORS_ORIGINS: http://localhost:3000
+      MEDIA_ROOT: storage
+      DOCUMENT_UPLOAD_MAX_MEGABYTES: "100"
+      AUDIO_UPLOAD_MAX_MEGABYTES: "512"
+      VIDEO_UPLOAD_MAX_MEGABYTES: "2048"
+      OLLAMA_BASE_URL: http://localhost:11434
     restart: unless-stopped
     volumes:
       - media_storage:/app/storage
