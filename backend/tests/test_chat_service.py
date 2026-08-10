@@ -75,6 +75,32 @@ class ChatServiceTests(unittest.TestCase):
 
         self.assertEqual(content, "Hello")
 
+    def test_delete_conversation_removes_only_the_conversation(self) -> None:
+        service = object.__new__(ChatService)
+        conversation = SimpleNamespace(
+            id="conversation-1",
+            user_id="user-1",
+            messages=[
+                SimpleNamespace(
+                    meta={"attachments": [{"id": "doc-1", "kind": "document"}]}
+                )
+            ],
+        )
+        deleted: list[str] = []
+        commits: list[str] = []
+        service.conversations = SimpleNamespace(get=lambda conversation_id: conversation)
+        service.db = SimpleNamespace(
+            delete=lambda item: deleted.append(item.id),
+            commit=lambda: commits.append("commit"),
+        )
+
+        with patch("app.services.chat_service.LibraryService.invalidate_user_cache") as invalidate_cache:
+            service.delete_conversation("user-1", "conversation-1")
+
+        self.assertEqual(deleted, ["conversation-1"])
+        self.assertEqual(commits, ["commit"])
+        invalidate_cache.assert_called_once_with("user-1")
+
     def test_build_message_content_adds_vision_notice_when_only_images_exist(
         self,
     ) -> None:

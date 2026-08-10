@@ -20,7 +20,6 @@ from app.repositories.chat import ConversationRepository, MessageRepository
 from app.schemas.chat import ConversationCreate, MessageCreate
 from app.services.library_service import LibraryService
 from app.services.llm_service import LLMService
-from app.services.transcript_service import TranscriptService
 from app.services.workspace_service import WorkspaceService
 
 MAX_ATTACHMENT_CONTEXT_CHARS = 8_000
@@ -41,17 +40,6 @@ class ChatService:
         conversation = self.conversations.get(conversation_id)
         if not conversation or conversation.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
-        attachments = self._collect_rag_source_filters(list(conversation.messages))
-        transcript_service = TranscriptService(self.db)
-
-        if attachments:
-            for resource_type, resource_ids in attachments.items():
-                for resource_id in resource_ids:
-                    try:
-                        transcript_service.delete_resource(user_id, resource_type, resource_id)
-                    except HTTPException as exc:
-                        if exc.status_code != status.HTTP_404_NOT_FOUND:
-                            raise
 
         refreshed_conversation = self.conversations.get(conversation_id)
         if refreshed_conversation and refreshed_conversation.user_id == user_id:
