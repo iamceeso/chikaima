@@ -60,6 +60,17 @@ function chatCompletionFetch(reply: string): typeof fetch {
   return (async () => new Response(JSON.stringify({ choices: [{ message: { content: reply } }] }), { status: 200 })) as typeof fetch;
 }
 
+function sseChunkFetch(chunks: string[]): typeof fetch {
+  const body = chunks.map((chunk) => `data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n\n`).join("") + "data: [DONE]\n\n";
+  return (async () => new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } })) as typeof fetch;
+}
+
+async function collectStreamEvents(generator: AsyncGenerator<import("../../core/chat/chatService.js").ChatStreamEvent>) {
+  const events: Array<import("../../core/chat/chatService.js").ChatStreamEvent> = [];
+  for await (const event of generator) events.push(event);
+  return events;
+}
+
 test("createConversation with an initial message produces a user + assistant message pair", async () => {
   await withTempDb(async () => {
     const db = getDb();
@@ -223,13 +234,67 @@ test("addMessage with RAG enabled includes citations from indexed chunks in the 
       return new Response(JSON.stringify({ choices: [{ message: { content: "20 days per year, per [handbook.pdf p.3]." } }] }), { status: 200 });
     }) as typeof fetch;
 
-    const reply = await withMockedFetch(mockFetch, () =>
-      service.addMessage(user.id, conversation.id, { role: "user", content: "how much vacation do I get?" }, true),
-    );
+    // addMessage returns the newly-created *user* message (matching the Python
+    // original), not the assistant reply — so citations must be read off the
+    // assistant message that respondTo() appends after it.
+    await withMockedFetch(mockFetch, () => service.addMessage(user.id, conversation.id, { role: "user", content: "how much vacation do I get?" }, true));
 
-    const citations = (reply.meta as { rag_citations?: Array<{ filename: string }> }).rag_citations ?? [];
+    const conversationMessages = service.messagesFor(conversation.id);
+    const assistantReply = conversationMessages[conversationMessages.length - 1]!;
+    assert.equal(assistantReply.role, "assistant");
+
+    const citations = (assistantReply.meta as { rag_citations?: Array<{ filename: string }> }).rag_citations ?? [];
     assert.equal(citations.length, 1);
     assert.equal(citations[0]?.filename, "handbook.pdf");
+  });
+});
+
+test("streamChat with no conversation_id creates a conversation, streams tokens, and persists both messages", async () => {
+  await withTempDb(async () => {
+    const db = getDb();
+    const user = new AuthService(db).register({ email: "user@example.com", fullName: "User", password: "password123" });
+    await createOpenAiProvider(user.id);
+    const service = new ChatService(db);
+
+    const events = await withMockedFetch(sseChunkFetch(["Hello", " there"]), () =>
+      collectStreamEvents(service.streamChat(user.id, { content: "Hi" })),
+    );
+
+    const metadataEvent = events[0]!;
+    assert.equal(metadataEvent.type, "metadata");
+    assert.equal(events.filter((e) => e.type === "token").map((e) => (e as { text: string }).text).join(""), "Hello there");
+    assert.equal(events[events.length - 1]!.type, "done");
+
+    assert.equal(metadataEvent.type, "metadata");
+    const conversationId = (metadataEvent as { conversationId: string }).conversationId;
+    const messages = service.messagesFor(conversationId);
+    assert.equal(messages.length, 2);
+    assert.equal(messages[0]?.role, "user");
+    assert.equal(messages[0]?.content, "Hi");
+    assert.equal(messages[1]?.role, "assistant");
+    assert.equal(messages[1]?.content, "Hello there");
+  });
+});
+
+test("streamChat with a conversation_id appends to the existing conversation and rejects other users", async () => {
+  await withTempDb(async () => {
+    const db = getDb();
+    const owner = new AuthService(db).register({ email: "owner@example.com", fullName: "Owner", password: "password123" });
+    const other = new AuthService(db).register({ email: "other@example.com", fullName: "Other", password: "password123" });
+    await createOpenAiProvider(owner.id);
+    const service = new ChatService(db);
+    const conversation = await withMockedFetch(chatCompletionFetch("first"), () => service.createConversation(owner.id, { title: "Chat", initialMessage: "first question" }, false));
+
+    const events = await withMockedFetch(sseChunkFetch(["second reply"]), () =>
+      collectStreamEvents(service.streamChat(owner.id, { content: "second question", conversationId: conversation.id })),
+    );
+    assert.equal(events[events.length - 1]!.type, "done");
+    assert.equal(service.messagesFor(conversation.id).length, 4);
+
+    await assert.rejects(
+      () => collectStreamEvents(service.streamChat(other.id, { content: "hijack", conversationId: conversation.id })),
+      (e: unknown) => e instanceof HttpError && e.statusCode === 404,
+    );
   });
 });
 

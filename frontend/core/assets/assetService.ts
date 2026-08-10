@@ -12,7 +12,13 @@ import { storageService } from "../storage/storageService.js";
 import { generateSummaryBundle } from "./summaryBundle.js";
 
 export type ResourceType = "document" | "audio" | "video";
-type ResourceRow = typeof documents.$inferSelect | typeof audioAssets.$inferSelect | typeof videos.$inferSelect;
+export type ResourceRow = typeof documents.$inferSelect | typeof audioAssets.$inferSelect | typeof videos.$inferSelect;
+
+export interface CreateResourceInput {
+  name: string;
+  filePath: string;
+  mimeType?: string;
+}
 
 const RESOURCE_TABLES = { document: documents, audio: audioAssets, video: videos } as const;
 
@@ -58,9 +64,74 @@ export class AssetService {
     return resource;
   }
 
-  deleteResource(userId: string, resourceType: ResourceType, resourceId: string): void {
+  listForUser(userId: string, resourceType: "document"): (typeof documents.$inferSelect)[];
+  listForUser(userId: string, resourceType: "audio"): (typeof audioAssets.$inferSelect)[];
+  listForUser(userId: string, resourceType: "video"): (typeof videos.$inferSelect)[];
+  listForUser(userId: string, resourceType: ResourceType): ResourceRow[] {
+    const table = RESOURCE_TABLES[resourceType];
+    if (!table) throw badRequest("Unsupported resource type");
+    return this.db.select().from(table).where(eq(table.userId, userId)).all();
+  }
+
+  /** Inserts a `pending` resource row for a just-saved upload, ready for a job to pick up. */
+  createResource(userId: string, resourceType: "document", input: CreateResourceInput): typeof documents.$inferSelect;
+  createResource(userId: string, resourceType: "audio", input: CreateResourceInput): typeof audioAssets.$inferSelect;
+  createResource(userId: string, resourceType: "video", input: CreateResourceInput): typeof videos.$inferSelect;
+  createResource(userId: string, resourceType: ResourceType, input: CreateResourceInput): ResourceRow {
+    const now = new Date().toISOString();
+    const id = randomUUID();
+
+    if (resourceType === "document") {
+      const row: typeof documents.$inferSelect = {
+        id,
+        userId,
+        name: input.name,
+        filePath: input.filePath,
+        mimeType: input.mimeType ?? "application/octet-stream",
+        summary: null,
+        status: "pending",
+        createdAt: now,
+        updatedAt: now,
+      };
+      this.db.insert(documents).values(row).run();
+      return row;
+    }
+
+    if (resourceType === "audio") {
+      const row: typeof audioAssets.$inferSelect = {
+        id,
+        userId,
+        name: input.name,
+        filePath: input.filePath,
+        transcript: null,
+        status: "pending",
+        createdAt: now,
+        updatedAt: now,
+      };
+      this.db.insert(audioAssets).values(row).run();
+      return row;
+    }
+
+    const row: typeof videos.$inferSelect = {
+      id,
+      userId,
+      name: input.name,
+      filePath: input.filePath,
+      transcript: null,
+      summary: null,
+      chapters: [],
+      actionItems: [],
+      status: "pending",
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.db.insert(videos).values(row).run();
+    return row;
+  }
+
+  async deleteResource(userId: string, resourceType: ResourceType, resourceId: string): Promise<void> {
     const resource = this.getResource(userId, resourceType, resourceId);
-    void storageService.deleteFile("filePath" in resource ? resource.filePath : null);
+    await storageService.deleteFile("filePath" in resource ? resource.filePath : null);
 
     this.vectorStore.deleteBySource(userId, resourceType, resourceId);
     this.db.delete(jobs).where(and(eq(jobs.userId, userId), eq(jobs.resourceType, resourceType), eq(jobs.resourceId, resourceId))).run();
@@ -77,12 +148,12 @@ export class AssetService {
     this.db.delete(table).where(eq(table.id, resourceId)).run();
   }
 
-  deleteAllResources(userId: string, resourceType: ResourceType): number {
+  async deleteAllResources(userId: string, resourceType: ResourceType): Promise<number> {
     const table = RESOURCE_TABLES[resourceType];
     if (!table) throw badRequest("Unsupported resource type");
     const resources = this.db.select({ id: table.id }).from(table).where(eq(table.userId, userId)).all();
     for (const resource of resources) {
-      this.deleteResource(userId, resourceType, resource.id);
+      await this.deleteResource(userId, resourceType, resource.id);
     }
     return resources.length;
   }

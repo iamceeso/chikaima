@@ -63,6 +63,29 @@ export interface ConversationResponse {
   updated_at: string;
 }
 
+export interface StreamChatInput {
+  content: string;
+  conversationId?: string | null;
+  title?: string | null;
+  modelId?: string | null;
+  metadata?: Record<string, unknown>;
+  useRag?: boolean;
+}
+
+export type ChatStreamEvent =
+  | {
+      type: "metadata";
+      conversationId: string;
+      userMessageId: string;
+      provider: string;
+      model: string;
+      ragCitations: RagCitation[];
+      processingBlocked: boolean;
+    }
+  | { type: "token"; text: string }
+  | { type: "done" }
+  | { type: "error"; detail: string };
+
 export function toMessageResponse(row: MessageRow): MessageResponse {
   return {
     id: row.id,
@@ -221,6 +244,109 @@ export class ChatService {
     }
 
     return this.insertMessage(message.conversationId, "assistant", assistantContent, meta);
+  }
+
+  /**
+   * Streams the assistant reply token-by-token, yielding a structured event
+   * sequence: one `metadata` event, then `token` events, then `done` (or
+   * `error` if generation fails after the user message was already
+   * persisted). The route handler is responsible for SSE wire formatting —
+   * this only carries the business logic, mirroring the Python endpoint's
+   * `event_stream()` generator without the `text/event-stream` framing.
+   */
+  async *streamChat(userId: string, input: StreamChatInput): AsyncGenerator<ChatStreamEvent> {
+    const useRag = input.useRag ?? true;
+    let conversation: ConversationRow;
+    let history: MessageRow[];
+    let model: AIModelRow;
+    let provider: ProviderRow;
+
+    if (input.conversationId) {
+      const existing = this.getConversation(input.conversationId);
+      if (!existing || existing.userId !== userId) {
+        throw notFound("Conversation not found");
+      }
+      conversation = existing;
+      const selectedModelId = input.modelId ?? conversation.modelId;
+      const { model: selectedModel } = this.llm.resolveModelAndProvider(userId, selectedModelId);
+      if (conversation.modelId !== selectedModel.id) {
+        this.db.update(conversations).set({ modelId: selectedModel.id }).where(eq(conversations.id, conversation.id)).run();
+        conversation = { ...conversation, modelId: selectedModel.id };
+      }
+      ({ model, provider } = await this.resolveChatModelAndProvider(userId, selectedModelId, input.metadata ?? {}));
+      history = this.messagesFor(conversation.id);
+    } else {
+      const { model: selectedModel } = this.llm.resolveModelAndProvider(userId, input.modelId ?? null);
+      ({ model, provider } = await this.resolveChatModelAndProvider(userId, input.modelId ?? null, input.metadata ?? {}));
+      const now = new Date().toISOString();
+      conversation = {
+        id: randomUUID(),
+        userId,
+        title: (input.title || input.content).trim().slice(0, 48) || "New analysis",
+        folder: null,
+        modelId: selectedModel.id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      this.db.insert(conversations).values(conversation).run();
+      history = [];
+    }
+
+    const userMessage = this.insertMessage(conversation.id, "user", input.content, input.metadata ?? {});
+    this.db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, conversation.id)).run();
+
+    const messageHistory = [...history, userMessage];
+    const pendingNotice = this.buildPendingAttachmentNotice(userId, messageHistory);
+    let citations: RagCitation[] = [];
+    let stream: AsyncIterable<string>;
+
+    if (pendingNotice) {
+      stream = (async function* () {
+        yield pendingNotice;
+      })();
+    } else {
+      const result = await this.llm.streamReplyWithRag({
+        userId,
+        provider,
+        model,
+        messages: await this.serializeMessages(userId, messageHistory, model),
+        includeContext: useRag,
+        sourceFilters: this.collectRagSourceFilters(messageHistory),
+      });
+      stream = result.stream;
+      citations = result.citations;
+    }
+
+    yield {
+      type: "metadata",
+      conversationId: conversation.id,
+      userMessageId: userMessage.id,
+      provider: provider.providerType,
+      model: model.modelKey,
+      ragCitations: citations,
+      processingBlocked: Boolean(pendingNotice),
+    };
+
+    const assistantParts: string[] = [];
+    try {
+      for await (const chunk of stream) {
+        assistantParts.push(chunk);
+        yield { type: "token", text: chunk };
+      }
+      const assistantContent = assistantParts.join("").trim();
+      if (assistantContent) {
+        this.insertMessage(conversation.id, "assistant", assistantContent, {
+          provider: provider.providerType,
+          model: model.modelKey,
+          rag_citations: citations,
+          processing_blocked: Boolean(pendingNotice),
+        });
+        this.db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, conversation.id)).run();
+      }
+      yield { type: "done" };
+    } catch (error) {
+      yield { type: "error", detail: error instanceof Error ? error.message : String(error) };
+    }
   }
 
   /** Generates and persists the assistant reply for `history`, appended to `conversation`. Shared by create/add/update. */

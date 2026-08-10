@@ -88,6 +88,26 @@ test("getResource enforces ownership: another user's resource looks not-found", 
   });
 });
 
+test("createResource inserts a pending row visible only via listForUser for its owner", async () => {
+  await withTempDb(async (workDir) => {
+    const db = getDb();
+    const owner = new AuthService(db).register({ email: "owner@example.com", fullName: "Owner", password: "password123" });
+    const other = new AuthService(db).register({ email: "other@example.com", fullName: "Other", password: "password123" });
+    const service = new AssetService(db);
+
+    const doc = service.createResource(owner.id, "document", { name: "report.pdf", filePath: join(workDir, "report.pdf"), mimeType: "application/pdf" });
+    assert.equal(doc.status, "pending");
+    assert.equal("mimeType" in doc && doc.mimeType, "application/pdf");
+
+    const audio = service.createResource(owner.id, "audio", { name: "clip.mp3", filePath: join(workDir, "clip.mp3") });
+    assert.equal(audio.status, "pending");
+
+    assert.equal(service.listForUser(owner.id, "document").length, 1);
+    assert.equal(service.listForUser(owner.id, "audio").length, 1);
+    assert.equal(service.listForUser(other.id, "document").length, 0);
+  });
+});
+
 test("deleteResource removes the file, vector chunks, jobs, transcript, summaries, and the resource row", async () => {
   await withTempDb(async (workDir) => {
     const db = getDb();
@@ -105,7 +125,7 @@ test("deleteResource removes the file, vector chunks, jobs, transcript, summarie
       () => new EmbeddingsService(db).replaceChunksForSource({ userId: user.id, sourceType: "document", sourceId: docId, assetType: "document", filename: "notes.txt", chunks: [{ content: "chunk", metadata: {} }] }),
     );
 
-    new AssetService(db).deleteResource(user.id, "document", docId);
+    await new AssetService(db).deleteResource(user.id, "document", docId);
 
     assert.equal(existsSync(filePath), false);
     assert.equal(db.select().from(documents).where(eq(documents.id, docId)).get(), undefined);
@@ -127,7 +147,7 @@ test("deleteAllResources deletes every document owned by the user and returns th
     seedDocument(user.id, join(workDir, "a.txt"), "doc-a");
     seedDocument(user.id, join(workDir, "b.txt"), "doc-b");
 
-    const removed = new AssetService(db).deleteAllResources(user.id, "document");
+    const removed = await new AssetService(db).deleteAllResources(user.id, "document");
     assert.equal(removed, 2);
     assert.equal(db.select().from(documents).all().length, 0);
   });
