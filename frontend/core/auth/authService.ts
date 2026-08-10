@@ -4,15 +4,7 @@ import type { ChikaimaDatabase } from "../db/client.js";
 import { settingsTable } from "../db/schema.js";
 import { badRequest, forbidden, unauthorized, notFound, serviceUnavailable } from "../errors.js";
 import { getConfig } from "../config/index.js";
-import {
-  InvalidTokenError,
-  createAccessToken,
-  createPasswordResetToken,
-  createRefreshToken,
-  decodeToken,
-  hashPassword,
-  verifyPassword,
-} from "../security/index.js";
+import { createAccessToken, createPasswordResetToken, createRefreshToken, decodeToken, hashPassword, verifyPassword } from "../security/index.js";
 import { UserRepository, type UserRow } from "./repository.js";
 import { WorkspaceService } from "./workspaceService.js";
 
@@ -149,7 +141,6 @@ export class AuthService {
     if (!user) return response;
 
     const token = await createPasswordResetToken(user.id);
-    // eslint-disable-next-line no-console
     console.info(`Password reset token for ${user.email}: ${token}`);
 
     return response;
