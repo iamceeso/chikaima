@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from app.api.v1.endpoints.providers import _mask, create_provider, delete_provider, list_providers, update_provider
+from app.api.v1.endpoints.providers import _mask, create_provider, delete_provider, list_providers, router, update_provider
 
 
 def make_provider(provider_id: str, *, api_key: str | None) -> SimpleNamespace:
@@ -54,3 +54,13 @@ class ProvidersEndpointTests(unittest.TestCase):
         provider_service.return_value.update.assert_called_once_with("workspace-public", "provider-2", SimpleNamespace(name="Renamed"))
         provider_service.return_value.delete.assert_called_once_with("workspace-public", "provider-2")
         self.assertEqual(deleted.status_code, 204)
+
+    def test_provider_routes_depend_on_admin_access(self) -> None:
+        route_dependencies = {
+            route.path: {dependency.call.__name__ for dependency in route.dependant.dependencies}
+            for route in router.routes
+        }
+
+        self.assertIn("get_current_admin_user", route_dependencies["/providers"])
+        self.assertIn("get_current_admin_user", route_dependencies["/providers/{provider_id}"])
+        self.assertIn("get_current_admin_user", route_dependencies["/providers/{provider_id}/resync"])
