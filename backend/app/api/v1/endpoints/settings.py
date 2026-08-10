@@ -57,7 +57,7 @@ def get_workspace_models(
 def update_workspace_models(
     payload: WorkspaceModelVisibilityUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin_user),
 ) -> list[AIModelResponse]:
     owner = get_settings_owner_user(db, current_user)
     return WorkspaceService(db).update_model_visibility(current_user, payload, owner)

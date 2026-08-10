@@ -139,7 +139,7 @@ class WorkspaceServiceTests(unittest.TestCase):
         builder.assert_called_once_with(model, provider)
 
     def test_update_model_visibility_updates_default_and_availability(self) -> None:
-        actor = SimpleNamespace(id="user-1", is_superuser=False)
+        actor = SimpleNamespace(id="user-1", is_superuser=True)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=False)
         added: list[object] = []
@@ -168,8 +168,19 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertTrue(model_b.is_default)
         self.assertTrue(model_b.is_available)
 
+    def test_update_model_visibility_rejects_non_superusers(self) -> None:
+        service = WorkspaceService(SimpleNamespace())
+
+        with self.assertRaises(HTTPException) as context:
+            service.update_model_visibility(
+                SimpleNamespace(is_superuser=False),
+                SimpleNamespace(enabled_model_ids=[], default_model_id=None, model_fields_set=set()),
+            )
+
+        self.assertEqual(context.exception.status_code, 403)
+
     def test_update_model_visibility_clears_default_when_existing_default_is_disabled(self) -> None:
-        actor = SimpleNamespace(id="user-1", is_superuser=False)
+        actor = SimpleNamespace(id="user-1", is_superuser=True)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=True)
         db = SimpleNamespace(
@@ -195,7 +206,7 @@ class WorkspaceServiceTests(unittest.TestCase):
         self.assertTrue(model_b.is_available)
 
     def test_update_model_visibility_keeps_default_when_it_remains_enabled(self) -> None:
-        actor = SimpleNamespace(id="user-1", is_superuser=False)
+        actor = SimpleNamespace(id="user-1", is_superuser=True)
         model_a = SimpleNamespace(id="model-a", is_default=True, is_available=True)
         model_b = SimpleNamespace(id="model-b", is_default=False, is_available=True)
         db = SimpleNamespace(

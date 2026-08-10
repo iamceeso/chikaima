@@ -100,6 +100,9 @@ class WorkspaceService:
         payload: WorkspaceModelVisibilityUpdate,
         scope_user: User | None = None,
     ) -> list[AIModelResponse]:
+        if not actor.is_superuser:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
         owner = scope_user or actor
         enabled_ids = {model_id for model_id in payload.enabled_model_ids}
         default_model_id_supplied = "default_model_id" in payload.model_fields_set
