@@ -5,10 +5,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { eq } from "drizzle-orm";
+
 import { __resetConfigForTests } from "../../core/config/index.js";
 import { __resetSecretManagerForTests } from "../../core/crypto/index.js";
 import { getDb, __resetDbForTests } from "../../core/db/client.js";
-import { aiModels, users } from "../../core/db/schema.js";
+import { aiModels, providers, users } from "../../core/db/schema.js";
 import { HttpError } from "../../core/errors.js";
 import { ProviderService, toProviderResponse } from "../../core/providers/providerService.js";
 
@@ -112,5 +114,24 @@ test("delete() removes the provider row", async () => {
     service.delete(userId, provider.id);
 
     assert.equal(service.listForUser(userId).length, 0);
+  });
+});
+
+test("listAvailableModelsForUser excludes models from disabled providers and unavailable models", async () => {
+  await withTempDb(async () => {
+    const userId = seedUser();
+    const service = new ProviderService(getDb());
+    const enabledProvider = await service.create(userId, { name: "Enabled", providerType: "openai" });
+    const disabledProvider = await service.create(userId, { name: "Disabled", providerType: "anthropic" });
+
+    getDb().update(providers).set({ isEnabled: false }).where(eq(providers.id, disabledProvider.id)).run();
+    const enabledModels = getDb().select().from(aiModels).where(eq(aiModels.providerId, enabledProvider.id)).all();
+    assert.ok(enabledModels.length > 1, "fixture assumption: openai curated list has more than one model");
+    getDb().update(aiModels).set({ isAvailable: false }).where(eq(aiModels.id, enabledModels[0]!.id)).run();
+
+    const available = service.listAvailableModelsForUser(userId);
+
+    assert.ok(available.every((model) => model.provider_id === enabledProvider.id));
+    assert.equal(available.some((model) => model.id === enabledModels[0]!.id), false);
   });
 });

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getSecretManager } from "../crypto/index.js";
 import type { ChikaimaDatabase } from "../db/client.js";
@@ -112,6 +112,23 @@ export class ProviderService {
 
   listForUser(userId: string): ProviderRow[] {
     return this.providerRepo.listForUser(userId);
+  }
+
+  /** Models usable for chat right now: enabled provider, available model. Distinct from the admin-facing `WorkspaceService.listModels`, which lists everything for visibility management. */
+  listAvailableModelsForUser(userId: string): AIModelResponse[] {
+    const rows = this.db
+      .select({ model: aiModels, provider: providers })
+      .from(aiModels)
+      .innerJoin(providers, eq(providers.id, aiModels.providerId))
+      .where(and(eq(providers.userId, userId), eq(providers.isEnabled, true), eq(aiModels.isAvailable, true)))
+      .all();
+
+    return rows
+      .sort((a, b) => {
+        if (a.model.isDefault !== b.model.isDefault) return a.model.isDefault ? -1 : 1;
+        return a.model.displayName.localeCompare(b.model.displayName);
+      })
+      .map((row) => buildModelResponse(row.model, row.provider));
   }
 
   async create(userId: string, payload: ProviderCreateInput): Promise<ProviderRow> {
