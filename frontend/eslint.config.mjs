@@ -13,6 +13,25 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // Chikaima Core must stay framework-independent: callable from Route
+    // Handlers today, and from a future desktop runtime/CLI/tests without
+    // modification. Importing Next.js APIs here would silently couple it.
+    files: ["core/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["next", "next/*"],
+              message: "Chikaima Core must not depend on Next.js. Keep framework glue in app/**/route.ts.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
