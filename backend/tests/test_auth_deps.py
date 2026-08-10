@@ -2,6 +2,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from fastapi import HTTPException
+
 from app.api.deps.auth import (
     PUBLIC_WORKSPACE_EMAIL,
     PUBLIC_WORKSPACE_NAME,
@@ -83,6 +85,24 @@ class AuthDependencyTests(unittest.TestCase):
             resolved_user = get_current_admin_user(db, "Basic YWRtaW5AZXhhbXBsZS5jb206c2VjcmV0LXBhc3M=")
 
         self.assertIs(resolved_user, admin_user)
+
+    def test_get_current_user_rejects_inactive_user_when_auth_is_enabled(self) -> None:
+        db = SimpleNamespace()
+        inactive_user = SimpleNamespace(id="user-1", is_active=False)
+
+        with (
+            patch("app.api.deps.auth.WorkspaceService") as workspace_service,
+            patch("app.api.deps.auth.UserRepository") as user_repository,
+            patch("app.api.deps.auth.decode_token", return_value={"sub": "user-1"}),
+        ):
+            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(authentication_enabled=True)
+            user_repository.return_value.get.return_value = inactive_user
+
+            with self.assertRaises(HTTPException) as context:
+                get_current_user(db, "Bearer token-value")
+
+        self.assertEqual(context.exception.status_code, 403)
+        self.assertEqual(context.exception.detail, "Inactive user")
 
 
 if __name__ == "__main__":

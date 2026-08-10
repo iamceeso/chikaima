@@ -132,6 +132,8 @@ class AuthService:
                 detail="Authentication is disabled for this workspace.",
             )
         user = self.users.get_by_email(payload.email)
+        if user and not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your account is inactive")
         if not user or not verify_password(payload.password, user.hashed_password):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
         return user, create_access_token(user.id), create_refresh_token(user.id)

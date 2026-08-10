@@ -258,6 +258,30 @@ class AuthServiceTests(unittest.TestCase):
 
         self.assertEqual(inactive_context.exception.status_code, 400)
 
+    def test_login_rejects_inactive_user(self) -> None:
+        user = SimpleNamespace(
+            id="user-1",
+            email="inactive@example.com",
+            hashed_password="hashed-password",
+            is_active=False,
+        )
+        service = make_auth_service(user)
+
+        with patch("app.services.auth_service.WorkspaceService") as workspace_service:
+            workspace_service.return_value.get_or_create.return_value = SimpleNamespace(
+                authentication_enabled=True
+            )
+            with self.assertRaises(HTTPException) as context:
+                service.login(
+                    SimpleNamespace(
+                        email="inactive@example.com",
+                        password="password123",
+                    )
+                )
+
+        self.assertEqual(context.exception.status_code, 403)
+        self.assertEqual(context.exception.detail, "Your account is inactive")
+
         user = SimpleNamespace(
             id="user-2",
             email="user@example.com",
