@@ -10,6 +10,7 @@
   },
   "include": [
     "tests/**/*.ts",
+    "core/**/*.ts",
     "lib/utils.ts",
     "lib/form-resolver.ts",
     "lib/admin-auth.ts",
