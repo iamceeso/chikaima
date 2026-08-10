@@ -61,3 +61,4 @@ tmp/
 
 sample_design/frontend/.test-dist/
 frontend/.test-dist/
+*.traineddata
