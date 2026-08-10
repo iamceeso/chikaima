@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 
+import "../pdfPolyfill.js";
 import { PDFParse } from "pdf-parse";
 
 import { chunkText, type ChunkPayload } from "../../chunking/index.js";
