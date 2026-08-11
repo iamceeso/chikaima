@@ -8,7 +8,7 @@ ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV npm_config_python=/usr/bin/python3
 
 RUN apk update && \
-    apk add --no-cache python3 make gcc
+    apk add --no-cache python3 build-base
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
