@@ -60,7 +60,7 @@ Compose keeps its runtime environment inline in `docker-compose.yml` and starts 
 
 - `app/`, `components/`, `core/`, `hooks/`, `lib/`, `services/`, `store/`, `tests/`, and related root config files - the Next.js application, API route handlers, framework-independent business logic, and tests
 - `docker-compose.yml` - local/production orchestration
-- `pre-push.sh` - local verification script
+- `pnpm verify` - local verification command
 
 `core/**` must stay framework-independent — it cannot import from `next` (enforced by an ESLint rule). Route handlers under `app/api/v1/**` should stay thin: parse the request, call into `core/**`, shape the response.
 
@@ -135,7 +135,7 @@ pnpm version patch
 Full local verification from the repository root:
 
 ```bash
-./pre-push.sh
+pnpm verify
 ```
 
 ### When to add tests

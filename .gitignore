@@ -64,3 +64,10 @@ sample_design/frontend/.test-dist/
 *.traineddata
 CLAUDE.md
 AGENTS.md
+
+# Local database files
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*.sqlite
+data/*.sqlite3
