@@ -60,3 +60,28 @@ storage/
 tmp/
 
 sample_design/
+
+.next
+# Dependencies
+node_modules/
+
+# Generated test output
+.test-dist/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Local database
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Tesseract language data
+*.traineddata
+
+# Local AI agent instructions
+AGENTS.md
+CLAUDE.md
