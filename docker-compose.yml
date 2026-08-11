@@ -2,144 +2,26 @@ services:
   frontend:
     image: ghcr.io/iamceeso/chikaima-frontend:latest
     container_name: chikaima-frontend
-    depends_on:
-      backend:
-        condition: service_started
     environment:
       NEXT_PUBLIC_APP_NAME: Chikaima
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
-      INTERNAL_API_ORIGIN: http://backend:8000
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
+      CHIKAIMA_APP_ENV: development
+      CHIKAIMA_DB_PATH: /app/data/chikaima.db
+      CHIKAIMA_MEDIA_ROOT: /app/storage
+      CHIKAIMA_JWT_SECRET_KEY: change-me-development-secret # Generate with: openssl rand -hex 32
+      CHIKAIMA_JWT_REFRESH_SECRET_KEY: change-me-too-development-secret # Generate with: openssl rand -hex 32
+      CHIKAIMA_PROVIDER_SECRET_KEY: replace-with-32-char-secret-key # Generate with: openssl rand -hex 32
+      CHIKAIMA_DOCUMENT_UPLOAD_MAX_MEGABYTES: "100"
+      CHIKAIMA_AUDIO_UPLOAD_MAX_MEGABYTES: "512"
+      CHIKAIMA_VIDEO_UPLOAD_MAX_MEGABYTES: "2048"
+      CHIKAIMA_OLLAMA_BASE_URL: http://host.docker.internal:11434
     ports:
       - "3000:3000"
     restart: unless-stopped
-
-  migrate:
-    image: ghcr.io/iamceeso/chikaima-backend:latest
-    container_name: chikaima-migrate
-    command: alembic upgrade head
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      APP_NAME: Chikaima API
-      APP_ENV: development
-      APP_DEBUG: "true"
-      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
-      REDIS_URL: redis://redis:6379/0
-      API_V1_PREFIX: /api/v1
-      JWT_SECRET_KEY: change-me-development-secret # Generate with: openssl rand -hex 32
-      JWT_REFRESH_SECRET_KEY: change-me-too-development-secret # Generate with: openssl rand -hex 32
-      JWT_ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
-      REFRESH_TOKEN_EXPIRE_DAYS: "7"
-      PROVIDER_SECRET_KEY: replace-with-32-char-secret-key # Generate with: openssl rand -hex 32
-      CORS_ORIGINS: http://localhost:3000
-      MEDIA_ROOT: storage
-      DOCUMENT_UPLOAD_MAX_MEGABYTES: "100"
-      AUDIO_UPLOAD_MAX_MEGABYTES: "512"
-      VIDEO_UPLOAD_MAX_MEGABYTES: "2048"
-      OLLAMA_BASE_URL: http://localhost:11434
-    restart: "no"
-
-  backend:
-    image: ghcr.io/iamceeso/chikaima-backend:latest
-    container_name: chikaima-backend
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    environment:
-      APP_NAME: Chikaima API
-      APP_ENV: development
-      APP_DEBUG: "true"
-      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
-      REDIS_URL: redis://redis:6379/0
-      API_V1_PREFIX: /api/v1
-      JWT_SECRET_KEY: change-me-development-secret # Generate with: openssl rand -hex 32
-      JWT_REFRESH_SECRET_KEY: change-me-too-development-secret # Generate with: openssl rand -hex 32
-      JWT_ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
-      REFRESH_TOKEN_EXPIRE_DAYS: "7"
-      PROVIDER_SECRET_KEY: replace-with-32-char-secret-key # Generate with: openssl rand -hex 32
-      CORS_ORIGINS: http://localhost:3000
-      MEDIA_ROOT: storage
-      DOCUMENT_UPLOAD_MAX_MEGABYTES: "100"
-      AUDIO_UPLOAD_MAX_MEGABYTES: "512"
-      VIDEO_UPLOAD_MAX_MEGABYTES: "2048"
-      OLLAMA_BASE_URL: http://localhost:11434
-    ports:
-      - "8000:8000"
-    restart: unless-stopped
     volumes:
-      - media_storage:/app/storage
-
-  celery-worker:
-    image: ghcr.io/iamceeso/chikaima-backend:latest
-    container_name: chikaima-celery-worker
-    command: celery -A app.workers.celery_app.celery_app worker --loglevel=info
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    environment:
-      APP_NAME: Chikaima API
-      APP_ENV: development
-      APP_DEBUG: "true"
-      DATABASE_URL: postgresql+psycopg://chikaima:chikaima@postgres:5432/chikaima
-      REDIS_URL: redis://redis:6379/0
-      API_V1_PREFIX: /api/v1
-      JWT_SECRET_KEY: change-me-development-secret # Generate with: openssl rand -hex 32
-      JWT_REFRESH_SECRET_KEY: change-me-too-development-secret # Generate with: openssl rand -hex 32
-      JWT_ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
-      REFRESH_TOKEN_EXPIRE_DAYS: "7"
-      PROVIDER_SECRET_KEY: replace-with-32-char-secret-key # Generate with: openssl rand -hex 32
-      CORS_ORIGINS: http://localhost:3000
-      MEDIA_ROOT: storage
-      DOCUMENT_UPLOAD_MAX_MEGABYTES: "100"
-      AUDIO_UPLOAD_MAX_MEGABYTES: "512"
-      VIDEO_UPLOAD_MAX_MEGABYTES: "2048"
-      OLLAMA_BASE_URL: http://localhost:11434
-    restart: unless-stopped
-    volumes:
-      - media_storage:/app/storage
-
-  postgres:
-    image: pgvector/pgvector:pg17
-    container_name: chikaima-postgres
-    environment:
-      POSTGRES_DB: chikaima
-      POSTGRES_USER: chikaima
-      POSTGRES_PASSWORD: chikaima
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chikaima -d chikaima"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      - "5433:5432"
-    restart: unless-stopped
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    container_name: chikaima-redis
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
+      - chikaima_data:/app/data
+      - chikaima_storage:/app/storage
 
 volumes:
-  postgres_data:
-  redis_data:
-  media_storage:
+  chikaima_data:
+  chikaima_storage:
