@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./.test-dist",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "incremental": false,
+    "ignoreDeprecations": "5.0"
+  },
+  "include": [
+    "tests/**/*.ts",
+    "core/**/*.ts",
+    "lib/utils.ts",
+    "lib/form-resolver.ts",
+    "lib/admin-auth.ts",
+    "lib/env.ts",
+    "services/api.ts",
+    "store/auth-store.ts",
+    "store/chat-store.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".test-dist"
+  ]
+}

@@ -1,26 +1,26 @@
 <p align="center">
-  <img src="frontend/public/chikaima-logo.png" alt="Chikaima logo" width="120" />
+  <img src="public/chikaima-logo.png" alt="Chikaima logo" width="120" />
 </p>
 
 # Chikaima
 
-Chikaima is a self-hosted AI media intelligence workspace for understanding audio, video, and documents with multiple AI providers. This monorepo contains a Next.js frontend and a FastAPI backend, plus Docker orchestration for PostgreSQL, Redis, and Celery workers.
+Chikaima is a self-hosted, local-first AI media intelligence workspace for understanding audio, video, and documents with multiple AI providers. It's a single Next.js application with an embedded SQLite database, vector store, and background job worker — no separate backend service to run.
 
 ## What is included
 
-- Next.js frontend for chat, library, processing, provider, model, and workspace settings
-- FastAPI backend for authentication, assets, chat, providers, models, and background task orchestration
-- PostgreSQL with `pgvector` for relational data and vector search
-- Redis and Celery for asynchronous media processing
-- Docker Compose for local full-stack development
+- Next.js app for chat, library, processing, provider, model, and workspace settings, plus its own `/api/v1/*` API routes
+- Embedded SQLite (via `better-sqlite3` and `sqlite-vec`) for relational data and vector search — no external database to provision
+- An in-process job worker for asynchronous media processing — no Redis or Celery required
+- Docker Compose for containerized local/production runs
 - Documentation for setup, architecture, APIs, development, deployment, and troubleshooting
 
-## Monorepo Structure
+## Repository Structure
 
 ```text
 chikaima/
-├── frontend/
-├── backend/
+├── app/
+├── components/
+├── core/
 ├── docs/
 ├── docker-compose.yml
 ├── CONTRIBUTING.md
@@ -41,7 +41,7 @@ The shortest full-stack path is:
 docker compose up --build
 ```
 
-Compose uses the inline environment values in `docker-compose.yml`, runs database migrations after PostgreSQL is healthy, and then starts the backend, worker, and frontend. Then open the frontend at `http://localhost:3000`.
+Compose uses the inline environment values in `docker-compose.yml` and starts the frontend, which serves both the UI and its API routes. Then open it at `http://localhost:3000`.
 
 ## Contributing
 

@@ -11,11 +11,11 @@
 .vscode/
 .idea/
 
-# Frontend (Next.js)
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/coverage/
+# App (Next.js)
+node_modules/
+.next/
+out/
+coverage/
 .pnpm-store/
 
 # Package manager logs
@@ -25,7 +25,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # TypeScript
-frontend/*.tsbuildinfo
+*.tsbuildinfo
 
 # Backend (FastAPI + uv)
 backend/.venv/
@@ -60,5 +60,7 @@ storage/
 tmp/
 
 sample_design/frontend/.test-dist/
-frontend/.test-dist/
+.test-dist/
 *.traineddata
+CLAUDE.md
+AGENTS.md

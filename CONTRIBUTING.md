@@ -1,6 +1,6 @@
 # Contributing to Chikaima
 
-Thanks for helping improve Chikaima. Chikaima is a self-hosted AI media intelligence workspace for understanding audio, video, and documents with multiple AI providers. The repository is a monorepo with a Next.js frontend, a FastAPI backend, PostgreSQL with `pgvector`, Redis, and Celery workers.
+Thanks for helping improve Chikaima. Chikaima is a self-hosted, local-first AI media intelligence workspace for understanding audio, video, and documents with multiple AI providers. It's a single Next.js application (App Router, TypeScript) with an embedded SQLite database, vector store, and background job worker.
 
 This guide explains how to contribute code, tests, docs, and fixes in a way that matches the current repository.
 
@@ -23,8 +23,6 @@ If you are planning a larger change, open an issue or discussion first so the ap
 Please review:
 
 - `README.md` for the project overview
-- `docs/README.md` for the full documentation map
-- `docs/getting-started/README.md` for local and Docker setup
 - `CODE_OF_CONDUCT.md` for community expectations
 
 Do not commit secrets, provider API keys, local database data, uploaded media, or generated credentials.
@@ -33,49 +31,20 @@ Do not commit secrets, provider API keys, local database data, uploaded media, o
 
 ### Prerequisites
 
-Backend:
-
-- Python 3.12
-- `uv`
-- PostgreSQL with `pgvector`
-- Redis
-
-Frontend:
-
 - Node.js 22
 - `pnpm`
 
-Docker Compose can run the full stack, including PostgreSQL, Redis, the backend, the frontend, and a Celery worker.
+Docker Compose can run the full app, including the persisted SQLite/media volumes.
 
-### Backend setup
-
-```bash
-cd backend
-uv sync --group dev
-cp .env.example .env
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
-```
-
-The backend serves on `http://localhost:8000`.
-
-### Worker setup
+### App setup
 
 ```bash
-cd backend
-uv run celery -A app.workers.celery_app.celery_app worker --loglevel=info
-```
-
-### Frontend setup
-
-```bash
-cd frontend
 corepack enable
 pnpm install
 pnpm dev
 ```
 
-The frontend serves on `http://localhost:3000`.
+The app serves on `http://localhost:3000` and hosts both the UI and its `/api/v1/*` API routes — there is no separate backend process to run.
 
 ### Docker Compose setup
 
@@ -85,18 +54,16 @@ From the repository root:
 docker compose up --build
 ```
 
-The Compose file keeps its runtime environment inline and runs Alembic migrations before the backend and worker start.
-
-See `docs/getting-started/README.md` for full environment details and first-run checks.
+Compose keeps its runtime environment inline in `docker-compose.yml` and starts the single `frontend` service, with named volumes for the SQLite database and media storage.
 
 ## Repository layout
 
-- `frontend/` - Next.js app, React components, frontend services, stores, and UI tests
-- `backend/` - FastAPI app, SQLAlchemy models, Alembic migrations, provider integrations, Celery workers, and backend tests
-- `docs/` - current product, architecture, API, development, deployment, and troubleshooting documentation
-- `docker-compose.yml` - local full-stack orchestration
+- `app/`, `components/`, `core/`, `hooks/`, `lib/`, `services/`, `store/`, `tests/`, and related root config files - the Next.js application, API route handlers, framework-independent business logic, and tests
+- `docker-compose.yml` - local/production orchestration
 - `pre-push.sh` - local verification script
 - `version-patch.sh` - release version helper
+
+`core/**` must stay framework-independent — it cannot import from `next` (enforced by an ESLint rule). Route handlers under `app/api/v1/**` should stay thin: parse the request, call into `core/**`, shape the response.
 
 When adding code, place it near the feature it supports and reuse existing helpers before introducing new abstractions.
 
@@ -117,53 +84,43 @@ Favor narrow pull requests over mixed, unrelated changes.
 
 Chikaima currently uses:
 
-- FastAPI, SQLAlchemy, Alembic, Celery, Redis, PostgreSQL, and `pgvector` in the backend
-- `uv`, `pytest`, and `ruff` for Python development
-- Next.js, React, TypeScript, Tailwind CSS, and React Query in the frontend
-- `pnpm`, ESLint, TypeScript checks, and Node's built-in test runner for frontend development
+- Next.js (App Router), React, TypeScript, Tailwind CSS, and React Query for the UI
+- Drizzle ORM over `better-sqlite3` and `sqlite-vec` for relational data and vector search
+- `pnpm`, ESLint, TypeScript checks, and Node's built-in test runner for development
 
 Extend the current patterns instead of introducing a parallel framework or tooling path.
 
 ### Keep boundaries clear
 
-- Keep API and request validation close to backend route handlers or schemas.
-- Keep reusable backend behaviour in the appropriate service layer.
-- Keep provider-specific logic behind the existing provider abstractions.
-- Keep shared frontend API calls, stores, and UI components in their established locations.
+- Keep request parsing, auth extraction, and response shaping in `app/api/v1/**` route handlers.
+- Keep reusable business logic in the appropriate `core/**` service.
+- Keep provider-specific logic behind the existing provider adapter abstractions.
+- Keep shared frontend API calls, stores, and UI components in their established locations (`services/api.ts`, `store/`, `components/`).
 - Avoid coupling frontend behaviour to implementation details that already have API boundaries.
 
 ### Handle errors explicitly
 
-Chikaima handles user accounts, provider credentials, uploaded media, background jobs, retrieval, and generated AI responses. Silent failures are hard to diagnose in those flows. Prefer explicit validation, actionable errors, and tests for edge cases.
+Chikaima handles user accounts, provider credentials, uploaded media, background jobs, retrieval, and generated AI responses. Silent failures are hard to diagnose in those flows. Prefer explicit validation, actionable errors (via `core/errors.ts`'s `HttpError` helpers), and tests for edge cases.
 
 ### Protect sensitive data
 
 Be careful with contributions that affect:
 
 - authentication and workspace admin behaviour
-- provider credential storage
+- provider credential storage (encrypted via `core/crypto`)
 - media upload and processing
 - document extraction and transcription
 - retrieval and embeddings
 - background job retries
-- database migrations
+- database schema/migrations (`core/db/migrations`)
 
 Changes in these areas should include tests and a clear explanation of security or operational impact.
 
 ## Tests and validation
 
-Backend checks:
-
-```bash
-cd backend
-uv run ruff check .
-uv run pytest
-```
-
 Frontend checks:
 
 ```bash
-cd frontend
 pnpm lint
 pnpm typecheck
 pnpm test:unit
@@ -184,24 +141,14 @@ Add or update tests when your contribution changes:
 - API request or response behaviour
 - provider, model, transcription, embedding, or chat logic
 - asset upload, extraction, storage, search, or processing behaviour
-- background jobs or cache behaviour
+- background jobs
 - reusable frontend stores, services, or utilities
 
 For UI-only copy or documentation changes, tests are usually not necessary unless behaviour also changed.
 
 ## Documentation expectations
 
-Update docs in the same pull request when behaviour changes.
-
-Examples:
-
-- update `README.md` for project-level overview changes
-- update `docs/getting-started/README.md` when setup or first-run behaviour changes
-- update `docs/api/README.md` when endpoints change
-- update `docs/backend/README.md` or `docs/frontend/README.md` when implementation structure changes
-- update `docs/deployment/README.md` when deployment behaviour changes
-
-Good documentation changes are specific, current, and example-driven.
+Update docs in the same pull request when behaviour changes. Good documentation changes are specific, current, and example-driven.
 
 ## Pull request guidance
 
@@ -213,14 +160,14 @@ When opening a pull request:
 - note tradeoffs or follow-up work
 - include screenshots or recordings for meaningful UI changes
 - mention manual verification steps reviewers can use
-- call out changes to auth, provider credentials, uploads, processing jobs, database migrations, or generated AI behaviour
+- call out changes to auth, provider credentials, uploads, processing jobs, database schema, or generated AI behaviour
 
 ## Suggested PR checklist
 
 Before requesting review, confirm that:
 
 - the branch contains only the intended changes
-- relevant backend and frontend checks pass locally
+- relevant frontend checks pass locally
 - new behaviour is covered by tests when appropriate
 - docs were updated when behaviour changed
 - no secrets, tokens, local databases, uploaded media, or generated artifacts were committed
