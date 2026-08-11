@@ -11,31 +11,31 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Running frontend lint..."
+echo "Running app lint..."
 (
   cd "$ROOT_DIR"
   pnpm lint
 )
 
-echo "Running frontend type checks..."
+echo "Running app type checks..."
 (
   cd "$ROOT_DIR"
   pnpm typecheck
 )
 
-echo "Running frontend unit tests..."
+echo "Running app unit tests..."
 (
   cd "$ROOT_DIR"
   pnpm test:unit
 )
 
-echo "Running frontend build..."
+echo "Running app build..."
 (
   cd "$ROOT_DIR"
   env NEXT_PUBLIC_API_BASE_URL="$NEXT_PUBLIC_API_BASE_URL" pnpm build
 )
 
-echo "Building frontend Docker image..."
+echo "Building app Docker image..."
 (
   cd "$ROOT_DIR"
   docker build \
@@ -45,4 +45,4 @@ echo "Building frontend Docker image..."
     .
 )
 
-echo "Pre-push checks passed for frontend."
+echo "Pre-push checks passed."

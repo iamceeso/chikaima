@@ -61,7 +61,6 @@ Compose keeps its runtime environment inline in `docker-compose.yml` and starts 
 - `app/`, `components/`, `core/`, `hooks/`, `lib/`, `services/`, `store/`, `tests/`, and related root config files - the Next.js application, API route handlers, framework-independent business logic, and tests
 - `docker-compose.yml` - local/production orchestration
 - `pre-push.sh` - local verification script
-- `version-patch.sh` - release version helper
 
 `core/**` must stay framework-independent — it cannot import from `next` (enforced by an ESLint rule). Route handlers under `app/api/v1/**` should stay thin: parse the request, call into `core/**`, shape the response.
 
@@ -118,13 +117,19 @@ Changes in these areas should include tests and a clear explanation of security 
 
 ## Tests and validation
 
-Frontend checks:
+App checks:
 
 ```bash
 pnpm lint
 pnpm typecheck
 pnpm test:unit
 pnpm build
+```
+
+Version bump when needed:
+
+```bash
+pnpm version patch
 ```
 
 Full local verification from the repository root:
@@ -167,7 +172,7 @@ When opening a pull request:
 Before requesting review, confirm that:
 
 - the branch contains only the intended changes
-- relevant frontend checks pass locally
+- relevant app checks pass locally
 - new behaviour is covered by tests when appropriate
 - docs were updated when behaviour changed
 - no secrets, tokens, local databases, uploaded media, or generated artifacts were committed
