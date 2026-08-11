@@ -17,9 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - component: backend
-            context: ./backend
-            dockerfile: ./backend/Dockerfile
           - component: frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
