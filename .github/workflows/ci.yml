@@ -15,9 +15,6 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
-    defaults:
-      run:
-        working-directory: frontend
 
     steps:
       - name: Check out repository
@@ -33,16 +30,16 @@ jobs:
         with:
           node-version: "22"
           cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install frontend dependencies
+      - name: Install app dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint frontend
+      - name: Lint app
         run: pnpm lint
 
-      - name: Type-check frontend
+      - name: Type-check app
         run: pnpm typecheck
 
-      - name: Test frontend
+      - name: Test app
         run: pnpm test:unit

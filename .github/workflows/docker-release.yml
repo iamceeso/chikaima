@@ -17,9 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - component: frontend
-            context: ./frontend
-            dockerfile: ./frontend/Dockerfile
+          - component: app
+            context: .
+            dockerfile: ./Dockerfile
 
     steps:
       - name: Check out repository
