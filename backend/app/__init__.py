@@ -1,1 +1,0 @@
-"""Chikaima backend package."""
