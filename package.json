@@ -1,5 +1,5 @@
 {
-  "name": "chikaima-frontend",
+  "name": "chikaima",
   "version": "2.0.1",
   "private": true,
   "scripts": {
@@ -11,7 +11,7 @@
     "test:unit": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js",
     "test:coverage": "rm -rf .test-dist coverage && tsc -p tsconfig.test.json && node --test --experimental-test-coverage --test-coverage-exclude='.test-dist/tests/**' .test-dist/tests/*.test.js",
     "test": "npm run test:unit && npm run lint && npm run typecheck",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test:unit && env NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-/api/v1} pnpm build && docker build -f Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-/api/v1} -t ${FRONTEND_DOCKER_IMAGE_TAG:-chikaima-frontend-prepush} ."
+    "verify": "pnpm lint && pnpm typecheck && pnpm test:unit && env NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-/api/v1} pnpm build && docker build -f Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-/api/v1} -t ${CHIKAIMA_DOCKER_IMAGE_TAG:-chikaima-prepush} ."
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

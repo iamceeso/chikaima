@@ -10,16 +10,9 @@ permissions:
   packages: write
 
 jobs:
-  publish-images:
-    name: Publish ${{ matrix.component }} image
+  publish-image:
+    name: Publish chikaima image
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - component: app
-            context: .
-            dockerfile: ./Dockerfile
 
     steps:
       - name: Check out repository
@@ -40,7 +33,7 @@ jobs:
 
       - name: Prepare image name
         id: prep
-        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.component }}" >> "$GITHUB_OUTPUT"
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Generate Docker metadata
         id: meta
@@ -54,8 +47,8 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
+          context: .
+          file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
