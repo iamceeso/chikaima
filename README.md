@@ -2,11 +2,12 @@
   <img src="frontend/public/chikaima-logo.png" alt="Chikaima logo" width="120" />
 </p>
 
-# Chikaima
+# Chikaima (Deprecated)
 
 > [!WARNING]
-> This version of Chikaima is deprecated and will not be maintained going forward.
-> New development and support have moved to the current actively maintained version.
+> This repository contains a deprecated version of Chikaima.
+> It is no longer maintained and will not receive future fixes, updates, or support.
+> Do not use this version for new work.
 
 Chikaima is a self-hosted AI media intelligence workspace for understanding audio, video, and documents with multiple AI providers. This monorepo contains a Next.js frontend and a FastAPI backend, plus Docker orchestration for PostgreSQL, Redis, and Celery workers.
 
