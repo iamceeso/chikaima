@@ -53,6 +53,7 @@ export interface Provider {
   provider_type: ProviderType;
   base_url: string | null;
   is_enabled: boolean;
+  support_tier?: "verified" | "partial" | "unverified";
   masked_secret: string | null;
   created_at: string;
   updated_at: string;
@@ -69,6 +70,7 @@ export interface AIModel {
   is_default: boolean;
   is_available: boolean;
   is_deprecated?: boolean;
+  is_economy?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -117,9 +119,28 @@ export interface Job {
   resource_id: string | null;
   payload: Record<string, unknown>;
   result: Record<string, unknown>;
+  progress: number;
+  attempts: number;
+  max_attempts: number;
+  depends_on: string[];
   error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface JobEvent {
+  id: number;
+  job_id: string;
+  event_type: "queued" | "started" | "stage" | "completed" | "retry_scheduled" | "failed" | "cancelled" | "recovered";
+  message: string | null;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface JobDetail extends Job {
+  events: JobEvent[];
 }
 
 export interface DocumentAsset {

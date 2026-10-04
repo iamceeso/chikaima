@@ -8,6 +8,8 @@ import type {
   DashboardSummary,
   DocumentAsset,
   Job,
+  JobDetail,
+  JobEvent,
   LibraryBundle,
   Message,
   Provider,
@@ -350,4 +352,53 @@ export const api = {
     }
   },
   getJobs: (token: string) => request<Job[]>("/jobs", { token }),
+  getJob: (token: string, jobId: string) => request<JobDetail>(`/jobs/${jobId}`, { token }),
+  /**
+   * Holds open the job event stream until `signal` aborts or the server
+   * closes it. Pass the last event id seen as `after` to replay missed events.
+   */
+  streamJobEvents: async (token: string, handlers: { onEvent: (event: JobEvent) => void; onReady?: () => void }, options: { after?: number | null; signal?: AbortSignal } = {}) => {
+    const query = options.after != null ? `?after=${options.after}` : "";
+    const response = await fetch(`${env.apiBaseUrl}/jobs/stream${query}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: options.signal,
+    });
+    if (!response.ok || !response.body) {
+      throw new Error((await response.text()) || "Job event stream failed");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+
+      let boundaryIndex = buffer.indexOf("\n\n");
+      while (boundaryIndex !== -1) {
+        const rawEvent = buffer.slice(0, boundaryIndex);
+        buffer = buffer.slice(boundaryIndex + 2);
+        boundaryIndex = buffer.indexOf("\n\n");
+
+        let eventName = "message";
+        const dataLines: string[] = [];
+        for (const line of rawEvent.split("\n")) {
+          if (line.startsWith("event:")) eventName = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+        }
+        if (eventName === "ready") {
+          handlers.onReady?.();
+        } else if (eventName === "job_event" && dataLines.length > 0) {
+          try {
+            handlers.onEvent(JSON.parse(dataLines.join("\n")) as JobEvent);
+          } catch {
+            // skip a malformed frame rather than dropping the whole stream
+          }
+        }
+      }
+
+      if (done) break;
+    }
+  },
 };
