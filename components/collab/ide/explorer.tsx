@@ -34,12 +34,26 @@ function buildTree(entries: CollabFileEntry[]): TreeNode[] {
  * The project's file tree. Files agents touched in the current run carry
  * their marker (the agent's rank), so you can see who is working where.
  */
+export interface AgentFileMark {
+  name: string;
+  /** The agent is working on this file right now (vs. changed it earlier in the run). */
+  editing: boolean;
+}
+
+const GIT_MARK: Record<string, { letter: string; className: string; title: string }> = {
+  M: { letter: "M", className: "text-amber-600 dark:text-amber-400", title: "Modified" },
+  A: { letter: "A", className: "text-emerald-600 dark:text-emerald-400", title: "Added" },
+  "?": { letter: "U", className: "text-emerald-600 dark:text-emerald-400", title: "New file (untracked)" },
+  R: { letter: "R", className: "text-sky-600 dark:text-sky-400", title: "Renamed" },
+};
+
 export function Explorer({
   folder,
   entries,
   truncated,
   activePath,
-  touchedBy,
+  agentFiles,
+  gitStatus,
   onOpen,
   onRefresh,
 }: {
@@ -47,7 +61,8 @@ export function Explorer({
   entries: CollabFileEntry[];
   truncated: boolean;
   activePath: string | null;
-  touchedBy: Map<string, { rank: number; name: string }>;
+  agentFiles: Map<string, AgentFileMark>;
+  gitStatus: Map<string, string>;
   onOpen: (path: string) => void;
   onRefresh: () => void;
 }) {
@@ -78,22 +93,30 @@ export function Explorer({
           </div>
         );
       }
-      const agent = touchedBy.get(node.path);
+      const agent = agentFiles.get(node.path);
+      const code = gitStatus.get(node.path)?.trim()[0];
+      const git = code ? GIT_MARK[code] : undefined;
       return (
         <button
           key={node.path}
           type="button"
           onClick={() => onOpen(node.path)}
-          title={agent ? `Edited by ${agent.name} in this run` : node.path}
+          title={[node.path, git?.title, agent ? `${agent.name} · ${agent.editing ? "editing now" : "modified this task"}` : null].filter(Boolean).join(" — ")}
           className={cn(
             "flex w-full items-center gap-1.5 py-[3px] pr-2 text-left text-[12.5px] hover:bg-surface-strong/60",
-            node.path === activePath ? "bg-primary/12 text-foreground" : agent ? "text-amber-600 dark:text-amber-400" : "text-foreground-muted hover:text-foreground",
+            node.path === activePath ? "bg-primary/12 text-foreground" : git ? git.className : "text-foreground-muted hover:text-foreground",
           )}
           style={{ paddingLeft: depth * 12 + 26 }}
         >
           <FileCode2 className="h-3.5 w-3.5 shrink-0 opacity-70" />
-          <span className="truncate">{node.name}</span>
-          {agent ? <span className="ml-auto shrink-0 rounded bg-amber-500/15 px-1 text-[10px] font-semibold">#{agent.rank}</span> : null}
+          <span className="min-w-12 shrink-0 truncate">{node.name}</span>
+          {agent ? (
+            <span className={cn("ml-auto flex min-w-0 items-center gap-1 truncate text-[10.5px]", agent.editing ? "text-emerald-600 dark:text-emerald-400" : "text-muted")}>
+              {agent.editing ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> : null}
+              {agent.name} · {agent.editing ? "editing" : "modified"}
+            </span>
+          ) : null}
+          {git ? <span className={cn("shrink-0 font-mono text-[10.5px] font-semibold", !agent && "ml-auto", git.className)}>{git.letter}</span> : null}
         </button>
       );
     });

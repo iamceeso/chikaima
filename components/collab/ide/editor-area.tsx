@@ -2,20 +2,18 @@
 
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, FileCode2, GitCommitHorizontal, GitCompareArrows, Settings2, X } from "lucide-react";
+import { Bot, FileCode2, GitCommitHorizontal, GitCompareArrows, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { api, type ApiAccess } from "@/services/api";
-import type { AIModel, CollabFileChange, CollabTeam } from "@/types";
+import type { CollabFileChange, CollabTeam } from "@/types";
 
 import { CodeEditor, DiffView } from "../code-editor";
-import { TeamEditor } from "../team-editor";
 
 export type EditorTab =
-  | { id: string; kind: "file"; path: string }
+  | { id: string; kind: "file"; path: string; line?: { number: number; key: number } }
   | { id: string; kind: "diff"; title: string; files: CollabFileChange[] }
-  | { id: string; kind: "commit"; hash: string; title: string }
-  | { id: "settings"; kind: "settings" };
+  | { id: string; kind: "commit"; hash: string; title: string };
 
 export function tabTitle(tab: EditorTab): string {
   switch (tab.kind) {
@@ -24,25 +22,27 @@ export function tabTitle(tab: EditorTab): string {
     case "diff":
     case "commit":
       return tab.title;
-    case "settings":
-      return "Team settings";
   }
 }
 
-const TAB_ICON = { file: FileCode2, diff: GitCompareArrows, commit: GitCommitHorizontal, settings: Settings2 } as const;
+const TAB_ICON = { file: FileCode2, diff: GitCompareArrows, commit: GitCommitHorizontal } as const;
 
 function FileTab({
   access,
   teamId,
   path,
+  line,
   draft,
   agentsWorking,
+  agentEditing,
   onDraft,
   onSaved,
 }: {
   access: ApiAccess;
   teamId: string;
   path: string;
+  line?: { number: number; key: number };
+  agentEditing: string | null;
   draft: string | undefined;
   agentsWorking: boolean;
   onDraft: (value: string) => void;
@@ -65,12 +65,19 @@ function FileTab({
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-7 shrink-0 items-center gap-2 border-b border-border px-3 font-mono text-[11px] text-foreground-muted">
         <span className="truncate">{path.split("/").join(" › ")}</span>
-        {agentsWorking ? <span className="ml-auto text-amber-600">Agents are working — saving is paused</span> : null}
+        {agentEditing ? (
+          <span className="ml-auto flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> {agentEditing} is editing this file
+          </span>
+        ) : agentsWorking ? (
+          <span className="ml-auto text-amber-600">Agents are working — saving is paused</span>
+        ) : null}
         {save.error ? <span className="ml-auto text-destructive">{save.error.message}</span> : null}
       </div>
       <div className="min-h-0 flex-1">
         <CodeEditor
           path={path}
+          line={line}
           value={draft ?? fileQuery.data.content}
           onChange={onDraft}
           onSave={() => {
@@ -101,11 +108,11 @@ function Welcome({ team }: { team: CollabTeam }) {
   return (
     <div className="flex h-full items-center justify-center p-8">
       <div className="max-w-md text-center">
-        <Bot className="mx-auto h-10 w-10 text-primary" />
-        <h2 className="mt-4 text-lg font-semibold text-foreground">{team.name}</h2>
-        <p className="mt-2 text-sm text-foreground-muted">
-          Describe a task in the team panel. The lead plans it, agents write the code, reviewers and testers check it, and you approve what matters. Open files from the
-          Explorer to read or edit them yourself.
+        <Bot className="mx-auto h-8 w-8 text-muted" />
+        <h2 className="mt-3 text-base font-semibold text-foreground">{team.name}</h2>
+        <p className="mt-2 text-[13px] text-foreground-muted">
+          Open a file from the Explorer, or assign a task to your team in the panel on the right. The lead plans it, engineers write the code, reviewers and testers check
+          it, and you approve what matters.
         </p>
         <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-1.5 text-left text-xs text-foreground-muted">
           <dt>Save file</dt>
@@ -126,29 +133,31 @@ function Welcome({ team }: { team: CollabTeam }) {
 export function EditorArea({
   access,
   team,
-  models,
   tabs,
   activeId,
   drafts,
   agentsWorking,
+  agentEditing,
+  agentTouched,
   refreshKey,
   onActivate,
   onClose,
   onDraft,
-  onTeamSaved,
 }: {
   access: ApiAccess;
   team: CollabTeam;
-  models: AIModel[];
   tabs: EditorTab[];
   activeId: string | null;
   drafts: Record<string, string>;
   agentsWorking: boolean;
+  /** Which agent (by name) is editing each file right now. */
+  agentEditing: Map<string, string>;
+  /** Files agents changed in the current task. */
+  agentTouched: Set<string>;
   refreshKey: number;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
   onDraft: (path: string, value: string | undefined) => void;
-  onTeamSaved: () => void;
 }) {
   const queryClient = useQueryClient();
 
@@ -170,6 +179,7 @@ export function EditorArea({
           {tabs.map((tab) => {
             const Icon = TAB_ICON[tab.kind];
             const dirty = tab.kind === "file" && drafts[tab.path] !== undefined;
+            const touched = tab.kind === "file" && agentTouched.has(tab.path);
             return (
               <div
                 key={tab.id}
@@ -182,7 +192,9 @@ export function EditorArea({
               >
                 <button type="button" onClick={() => onActivate(tab.id)} onAuxClick={() => onClose(tab.id)} className="flex items-center gap-1.5" title={tab.kind === "file" ? tab.path : tabTitle(tab)}>
                   <Icon className="h-3.5 w-3.5 opacity-70" />
-                  <span className="max-w-48 truncate">{tabTitle(tab)}</span>
+                  <span className={cn("max-w-48 truncate", touched && "text-amber-600 dark:text-amber-400")} title={touched ? "Changed by an agent in this task" : undefined}>
+                    {tabTitle(tab)}
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -207,23 +219,17 @@ export function EditorArea({
             access={access}
             teamId={team.id}
             path={active.path}
+            line={active.line}
             draft={drafts[active.path]}
             agentsWorking={agentsWorking}
+            agentEditing={agentEditing.get(active.path) ?? null}
             onDraft={(value) => onDraft(active.path, value)}
             onSaved={() => onDraft(active.path, undefined)}
           />
         ) : null}
         {active?.kind === "diff" ? <FillDiff files={active.files} /> : null}
         {active?.kind === "commit" ? <CommitTab access={access} teamId={team.id} hash={active.hash} /> : null}
-        {active?.kind === "settings" ? (
-          <div className="h-full overflow-y-auto p-4">
-            {models.length === 0 ? (
-              <p className="text-sm text-foreground-muted">Enable at least one model under Settings → Models first.</p>
-            ) : (
-              <TeamEditor access={access} models={models} team={team} onDone={() => onTeamSaved()} />
-            )}
-          </div>
-        ) : null}
+
       </div>
     </div>
   );

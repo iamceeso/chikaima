@@ -108,8 +108,30 @@ const EDITOR_OPTIONS = {
   tabSize: 2,
 } as const;
 
-export function CodeEditor({ path, value, onChange, onSave, readOnly = false }: { path: string; value: string; onChange?: (value: string) => void; onSave?: () => void; readOnly?: boolean }) {
+export function CodeEditor({
+  path,
+  value,
+  onChange,
+  onSave,
+  readOnly = false,
+  line,
+}: {
+  path: string;
+  value: string;
+  onChange?: (value: string) => void;
+  onSave?: () => void;
+  readOnly?: boolean;
+  /** Reveal and place the cursor on this line (e.g. from a search result). */
+  line?: { number: number; key: number };
+}) {
   const dark = useDarkMode();
+  const editorRef = useRef<{ revealLineInCenter: (line: number) => void; setPosition: (position: { lineNumber: number; column: number }) => void; focus: () => void } | null>(null);
+  useEffect(() => {
+    if (!line || !editorRef.current) return;
+    editorRef.current.revealLineInCenter(line.number);
+    editorRef.current.setPosition({ lineNumber: line.number, column: 1 });
+    editorRef.current.focus();
+  }, [line]);
   // Monaco binds the save shortcut once, at mount; read the latest handler through a ref.
   const saveRef = useRef(onSave);
   useEffect(() => {
@@ -124,6 +146,11 @@ export function CodeEditor({ path, value, onChange, onSave, readOnly = false }: 
       beforeMount={defineThemes}
       onChange={(next) => onChange?.(next ?? "")}
       onMount={(editor, monaco) => {
+        editorRef.current = editor;
+        if (line) {
+          editor.revealLineInCenter(line.number);
+          editor.setPosition({ lineNumber: line.number, column: 1 });
+        }
         // Cmd/Ctrl+S saves, as in a desktop editor.
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveRef.current?.());
       }}

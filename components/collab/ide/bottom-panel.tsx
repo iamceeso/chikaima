@@ -1,19 +1,22 @@
 "use client";
 
-import { Activity, ChevronDown, ChevronUp, Eye, FlaskConical, Rocket, SquareTerminal } from "lucide-react";
+import { Activity, ChevronDown, ChevronUp, CircleAlert, Eye, FlaskConical, GitBranch, Rocket, SquareTerminal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { ApiAccess } from "@/services/api";
 import type { CollabFileChange, CollabMessage, CollabTeam } from "@/types";
 
 import { ActivityFeed } from "../activity-feed";
+import { GitChangesView, ProblemsView, problemsFrom } from "./insights";
 import { DeployPanel, PreviewPanel, TerminalPanel } from "../tool-panels";
 
 export const BOTTOM_TABS = [
-  { id: "activity", label: "Agent activity", icon: Activity },
   { id: "terminal", label: "Terminal", icon: SquareTerminal },
   { id: "preview", label: "Preview", icon: Eye },
+  { id: "problems", label: "Problems", icon: CircleAlert },
   { id: "tests", label: "Tests", icon: FlaskConical },
+  { id: "git", label: "Git", icon: GitBranch },
+  { id: "activity", label: "Activity", icon: Activity },
   { id: "deploy", label: "Deploy", icon: Rocket },
 ] as const;
 export type BottomTab = (typeof BOTTOM_TABS)[number]["id"];
@@ -59,6 +62,7 @@ export function BottomPanel({
   onTab,
   onToggle,
   onOpenDiff,
+  onOpenCommit,
 }: {
   access: ApiAccess;
   team: CollabTeam;
@@ -70,10 +74,14 @@ export function BottomPanel({
   onTab: (tab: BottomTab) => void;
   onToggle: () => void;
   onOpenDiff: (title: string, files: CollabFileChange[]) => void;
+  onOpenCommit: (hash: string, title: string) => void;
 }) {
+  const problemCount = problemsFrom(messages, team).length;
+  const testRuns = messages.filter((message) => message.kind === "command" && message.data.stage === "test");
+  const testsFailed = testRuns.some((message) => message.data.exit_code !== 0);
   return (
     <div className="flex h-full min-h-0 flex-col bg-surface">
-      <div className="flex h-8 shrink-0 items-center gap-0.5 px-2" role="tablist">
+      <div className="flex h-8 shrink-0 items-center gap-0.5 overflow-x-auto px-2" role="tablist">
         {BOTTOM_TABS.map((entry) => (
           <button
             key={entry.id}
@@ -82,11 +90,13 @@ export function BottomPanel({
             aria-selected={open && tab === entry.id}
             onClick={() => (open && tab === entry.id ? onToggle() : (onTab(entry.id), !open && onToggle()))}
             className={cn(
-              "flex h-full items-center gap-1.5 border-b-2 px-2.5 text-[11px] font-medium uppercase tracking-[0.08em]",
+              "flex h-full shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 text-[11px] font-medium uppercase tracking-[0.08em]",
               open && tab === entry.id ? "border-primary text-foreground" : "border-transparent text-foreground-muted hover:text-foreground",
             )}
           >
             <entry.icon className="h-3.5 w-3.5" /> {entry.label}
+            {entry.id === "problems" && problemCount ? <span className="rounded-full bg-red-500/15 px-1.5 text-[10px] text-red-600">{problemCount}</span> : null}
+            {entry.id === "tests" && testRuns.length ? <span className={cn("h-1.5 w-1.5 rounded-full", testsFailed ? "bg-red-500" : "bg-emerald-500")} /> : null}
           </button>
         ))}
         <button type="button" aria-label={open ? "Hide panel" : "Show panel"} onClick={onToggle} className="ml-auto rounded p-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
@@ -110,6 +120,8 @@ export function BottomPanel({
             <PreviewPanel access={access} team={team} />
           </div>
         ) : null}
+        {tab === "problems" ? <ProblemsView messages={messages} team={team} /> : null}
+        {tab === "git" ? <GitChangesView access={access} team={team} onOpenCommit={onOpenCommit} /> : null}
         {tab === "tests" ? (
           <div className="pt-1">
             <TestsView team={team} messages={messages} />

@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, Files, GitBranch, History, Moon, PanelRight, Settings2, ShieldAlert, SunMedium, Undo2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Code2, Eye, Files, FolderGit2, GitBranch, KanbanSquare, Moon, PanelRight, Play, Search, Settings2, ShieldAlert, SunMedium, Users } from "lucide-react";
 
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
@@ -13,12 +14,16 @@ import type { AIModel, CollabFileChange, CollabMessage, CollabRunStatus, CollabT
 
 import { languageFor } from "../code-editor";
 import { ACTIVE_STATUSES, AUTONOMY_LABELS } from "../constants";
+import { TeamEditor } from "../team-editor";
 import { AgentPanel } from "./agent-panel";
 import { BottomPanel, type BottomTab } from "./bottom-panel";
 import { EditorArea, type EditorTab } from "./editor-area";
-import { Explorer } from "./explorer";
+import { Explorer, type AgentFileMark } from "./explorer";
 import { ResizeHandle, usePanelSize } from "./panel-size";
-import { RunsPanel, SourceControl } from "./side-panels";
+import { RunsPanel, SearchPanel, SourceControl } from "./side-panels";
+import { TaskBoard } from "./task-board";
+
+export type WorkspaceView = "code" | "tasks" | "team" | "settings";
 
 interface RunStreamState {
   runId: string | null;
@@ -69,45 +74,30 @@ function withoutKey(record: Record<string, string>, key: string): Record<string,
   return copy;
 }
 
-type SideView = "explorer" | "git" | "runs";
-
-const ACTIVITY_BAR: Array<{ id: SideView; label: string; icon: typeof Files }> = [
-  { id: "explorer", label: "Explorer", icon: Files },
-  { id: "git", label: "Source control", icon: GitBranch },
-  { id: "runs", label: "Runs", icon: History },
-];
+type SidePanel = "explorer" | "search" | "git" | "runs";
 
 /**
- * The AI team's coding workspace, laid out like an IDE: activity bar and
- * side panel (files, git, runs), editor tabs, a bottom panel (agent
- * activity, terminal, preview, tests, deploy), the team on the right, and a
- * status bar.
+ * A project's development environment: activity bar, side panel (files,
+ * search, source control, task runs), the editor (or the task board, AI
+ * team and project settings), the bottom tool panel, the AI team on the
+ * right, and a status bar. Mounted from the project layout, so open tabs,
+ * the live run and panel state survive switching views.
  */
-export function IdeShell({
-  access,
-  team,
-  teams,
-  models,
-  onSelectTeam,
-  onNewTeam,
-}: {
-  access: ApiAccess;
-  team: CollabTeam;
-  teams: CollabTeam[];
-  models: AIModel[];
-  onSelectTeam: (id: string) => void;
-  onNewTeam: () => void;
-}) {
+export function IdeShell({ access, team, projects, models, view }: { access: ApiAccess; team: CollabTeam; projects: CollabTeam[]; models: AIModel[]; view: WorkspaceView }) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { theme, setTheme } = useTheme();
+  const base = `/projects/${team.id}`;
+
   // On small screens the side and team panels are drawers over the editor, so start them closed there.
-  const [side, setSide] = useState<SideView | null>(() => (typeof window !== "undefined" && window.innerWidth < 768 ? null : "explorer"));
+  const [side, setSide] = useState<SidePanel | null>(() => (typeof window !== "undefined" && window.innerWidth < 768 ? null : "explorer"));
   const [rightOpen, setRightOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 1024);
   const [bottomOpen, setBottomOpen] = useState(true);
   const [bottomTab, setBottomTab] = useState<BottomTab>("activity");
   const [sideWidth, dragSide] = usePanelSize("side", 260, 180, 480, "x", 1);
-  const [rightWidth, dragRight] = usePanelSize("right", 320, 260, 520, "x", -1);
-  const [bottomHeight, dragBottom] = usePanelSize("bottom", 280, 120, 700, "y", -1);
+  const [rightWidth, dragRight] = usePanelSize("right", 330, 260, 520, "x", -1);
+  const [bottomHeight, dragBottom] = usePanelSize("bottom", 260, 120, 700, "y", -1);
+  const [composerSeed, setComposerSeed] = useState<{ text: string; key: number } | null>(null);
 
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -118,15 +108,30 @@ export function IdeShell({
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const currentRunId = selectedRunId ?? runs[0]?.id ?? null;
   const onFinished = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["collab-runs", team.id] });
-    void queryClient.invalidateQueries({ queryKey: ["collab-git", team.id] });
-    void queryClient.invalidateQueries({ queryKey: ["collab-files", team.id] });
+    for (const key of ["collab-runs", "collab-git", "collab-files", "collab-tasks"]) void queryClient.invalidateQueries({ queryKey: [key, team.id] });
+    void queryClient.invalidateQueries({ queryKey: ["collab-projects"] });
   }, [queryClient, team.id]);
   const { messages, status, error } = useRunStream(access, currentRunId, onFinished);
   const runActive = status !== null && ACTIVE_STATUSES.includes(status);
+  const waiting = status === "awaiting_approval";
 
   const filesQuery = useQuery({ queryKey: ["collab-files", team.id], queryFn: () => api.getCollabFiles(access, team.id) });
   const gitQuery = useQuery({ queryKey: ["collab-git", team.id], queryFn: () => api.getCollabGit(access, team.id) });
+  const previewQuery = useQuery({
+    queryKey: ["collab-preview", team.id],
+    queryFn: () => api.getCollabPreview(access, team.id),
+    refetchInterval: (query) => (query.state.data && ["starting", "running"].includes(query.state.data.status) ? 5_000 : false),
+  });
+  const runPreview = useMutation({
+    mutationFn: () => api.startCollabPreview(access, team.id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["collab-preview", team.id] });
+      setBottomTab("preview");
+      setBottomOpen(true);
+    },
+  });
+
+  // Agents edit the folder during a run: keep the tree, git status and tasks current.
   const folderChanges = messages.filter((message) => message.kind === "action" || message.kind === "decision").length;
   const { refetch: refetchFiles } = filesQuery;
   const { refetch: refetchGit } = gitQuery;
@@ -134,30 +139,49 @@ export function IdeShell({
     if (folderChanges === 0) return;
     void refetchFiles();
     void refetchGit();
-  }, [folderChanges, refetchFiles, refetchGit]);
+    void queryClient.invalidateQueries({ queryKey: ["collab-tasks", team.id] });
+  }, [folderChanges, refetchFiles, refetchGit, queryClient, team.id]);
 
-  // Which agent touched which file in this run, for the explorer's markers.
-  const touchedBy = useMemo(() => {
-    const map = new Map<string, { rank: number; name: string }>();
+  // Which agent touched which file in this task, and which file each active agent is on now.
+  const { agentFiles, agentEditing, agentTouched, activeAgents } = useMemo(() => {
+    const files = new Map<string, AgentFileMark>();
+    const editing = new Map<string, string>();
+    const latestActivity = new Map<string, string>();
+    const latestPath = new Map<string, string>();
     for (const message of messages) {
-      const member = team.members.find((candidate) => candidate.id === message.member_id);
-      if (message.kind === "action" && member && typeof message.data.path === "string" && !message.data.worktree) map.set(message.data.path, { rank: member.precedence, name: member.name });
+      if (!message.member_id) continue;
+      if (typeof message.data.activity === "string") latestActivity.set(message.member_id, message.data.activity);
+      if (message.kind === "action" && typeof message.data.path === "string" && !message.data.worktree && message.data.action !== "browse" && message.data.action !== "screenshot") {
+        latestPath.set(message.member_id, message.data.path);
+        const member = team.members.find((candidate) => candidate.id === message.member_id);
+        if (member) files.set(message.data.path, { name: member.title || member.name, editing: false });
+      }
     }
-    return map;
-  }, [messages, team.members]);
-  const activeAgents = useMemo(() => {
-    const latest = new Map<string, string>();
-    for (const message of messages) if (message.member_id && typeof message.data.activity === "string") latest.set(message.member_id, message.data.activity);
-    return runActive ? [...latest.values()].filter((activity) => activity !== "idle").length : 0;
-  }, [messages, runActive]);
-  const waiting = status === "awaiting_approval";
+    let active = 0;
+    if (runActive) {
+      for (const [memberId, activity] of latestActivity) {
+        if (activity === "idle") continue;
+        active++;
+        const path = latestPath.get(memberId);
+        const member = team.members.find((candidate) => candidate.id === memberId);
+        if (activity === "coding" && path && member) {
+          files.set(path, { name: member.title || member.name, editing: true });
+          editing.set(path, member.title || member.name);
+        }
+      }
+    }
+    return { agentFiles: files, agentEditing: editing, agentTouched: new Set(files.keys()), activeAgents: active };
+  }, [messages, runActive, team.members]);
+  const gitStatus = useMemo(() => new Map((gitQuery.data?.changes ?? []).map((change) => [change.path, change.code])), [gitQuery.data]);
 
   const openTab = (tab: EditorTab) => {
-    setTabs((current) => (current.some((existing) => existing.id === tab.id) ? current : [...current, tab]));
+    setTabs((current) => (current.some((existing) => existing.id === tab.id) ? current.map((existing) => (existing.id === tab.id ? tab : existing)) : [...current, tab]));
     setActiveTab(tab.id);
+    if (view !== "code") router.push(base);
   };
-  const openFile = (path: string) => openTab({ id: `file:${path}`, kind: "file", path });
-  const openDiff = (title: string, files: CollabFileChange[]) => openTab({ id: `diff:${title}:${files.map((file) => file.path).join(",")}`, kind: "diff", title, files });
+  const openFile = (path: string, line?: number) => openTab({ id: `file:${path}`, kind: "file", path, line: line ? { number: line, key: Date.now() } : undefined });
+  const openDiff = (title: string, files: CollabFileChange[]) => openTab({ id: `diff:${title}`, kind: "diff", title, files });
+  const openCommit = (hash: string, title: string) => openTab({ id: `commit:${hash}`, kind: "commit", hash, title });
   const closeTab = (id: string) => {
     const tab = tabs.find((candidate) => candidate.id === id);
     if (tab?.kind === "file" && drafts[tab.path] !== undefined && !window.confirm(`Discard unsaved changes to ${tab.path}?`)) return;
@@ -166,55 +190,107 @@ export function IdeShell({
     setTabs(remaining);
     if (activeTab === id) setActiveTab(remaining.at(-1)?.id ?? null);
   };
+  const openRun = (runId: string) => {
+    setSelectedRunId(runId);
+    setBottomTab("activity");
+    setBottomOpen(true);
+    setRightOpen(true);
+    if (view !== "code") router.push(base);
+  };
   const active = tabs.find((tab) => tab.id === activeTab);
+  const preview = previewQuery.data;
+  const runtimeUp = preview?.status === "running" || preview?.status === "starting";
+
+  const viewLinks: Array<{ id: WorkspaceView; label: string; icon: typeof Code2; href: string }> = [
+    { id: "tasks", label: "Tasks", icon: KanbanSquare, href: `${base}/tasks` },
+    { id: "team", label: "AI Team", icon: Users, href: `${base}/team` },
+    { id: "settings", label: "Project settings", icon: Settings2, href: `${base}/settings` },
+  ];
+  const panels: Array<{ id: SidePanel; label: string; icon: typeof Files }> = [
+    { id: "explorer", label: "Explorer", icon: Files },
+    { id: "search", label: "Search", icon: Search },
+    { id: "git", label: "Source control", icon: GitBranch },
+  ];
 
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
-      {/* Title bar */}
-      <header className="flex h-10 shrink-0 items-center gap-3 border-b border-border bg-surface px-3">
-        <Link href="/chat" className="flex items-center gap-2" title="Back to Chikaima">
-          <Image src="/chikaima-logo.png" alt="Chikaima" width={20} height={20} className="h-5 w-5 object-contain" />
-          <span className="hidden text-[11px] font-semibold uppercase tracking-[0.22em] sm:inline">Chikaima</span>
+      {/* Project header */}
+      <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-surface px-3 text-xs">
+        <Link href="/projects" className="flex items-center gap-1.5" title="All projects">
+          <Image src="/chikaima-logo.png" alt="Chikaima" width={18} height={18} className="h-4.5 w-4.5 object-contain" />
+          <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] sm:inline">Chikaima</span>
         </Link>
-        <span className="text-border">/</span>
+        <span className="text-muted">/</span>
         <select
-          aria-label="Team"
+          aria-label="Project"
           value={team.id}
-          onChange={(event) => (event.target.value === "__new" ? onNewTeam() : onSelectTeam(event.target.value))}
-          className="h-7 max-w-52 rounded-md border border-transparent bg-transparent px-1 text-[13px] font-medium hover:border-border focus:outline-none"
+          onChange={(event) => router.push(event.target.value === "__new" ? "/projects/new" : `/projects/${event.target.value}`)}
+          className="h-7 max-w-48 rounded-md border border-transparent bg-transparent px-1 text-[13px] font-semibold hover:border-border focus:outline-none"
         >
-          {teams.map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>
-              {candidate.name}
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
             </option>
           ))}
-          <option value="__new">+ New team…</option>
+          <option value="__new">+ New project…</option>
         </select>
-        <span className="hidden font-mono text-[11px] text-foreground-muted md:inline">{team.folder}</span>
 
-        <div className="mx-auto flex items-center gap-2 text-xs">
-          {waiting ? (
-            <button type="button" onClick={() => setRightOpen(true)} className="flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 font-medium text-amber-700 dark:text-amber-400">
-              <ShieldAlert className="h-3.5 w-3.5" /> Waiting for your approval
-            </button>
-          ) : runActive ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 font-medium text-emerald-700 dark:text-emerald-400">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> {activeAgents || "Agents"} {activeAgents === 1 ? "agent" : "agents"} working
-            </span>
-          ) : null}
-        </div>
+        {gitQuery.data?.branch ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSide("git");
+              if (view !== "code") router.push(base);
+            }}
+            className="hidden items-center gap-1 rounded-md px-1.5 py-1 font-mono text-[11.5px] text-foreground-muted hover:bg-surface-strong hover:text-foreground sm:flex"
+            title="Source control"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            {gitQuery.data.branch}
+            {gitQuery.data.changes.length ? <span className="text-amber-600">*</span> : null}
+          </button>
+        ) : null}
+        <span className="hidden items-center gap-1.5 text-foreground-muted md:flex">
+          <span className={cn("h-1.5 w-1.5 rounded-full", preview?.status === "running" ? "bg-emerald-500" : preview?.status === "starting" ? "animate-pulse bg-amber-500" : "bg-border")} />
+          {preview?.status === "running" ? "Runtime running" : preview?.status === "starting" ? "Runtime starting" : "Runtime stopped"}
+        </span>
+        {waiting ? (
+          <button type="button" onClick={() => setRightOpen(true)} className="flex items-center gap-1.5 rounded-md bg-amber-500/15 px-2 py-1 font-medium text-amber-700 dark:text-amber-400">
+            <ShieldAlert className="h-3.5 w-3.5" /> Waiting for approval
+          </button>
+        ) : runActive ? (
+          <span className="flex items-center gap-1.5 rounded-md bg-emerald-500/12 px-2 py-1 font-medium text-emerald-700 dark:text-emerald-400">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> {activeAgents || 1} {activeAgents === 1 || !activeAgents ? "agent" : "agents"} active
+          </span>
+        ) : null}
 
-        <div className="flex items-center gap-1">
-          <button type="button" title="Team settings" aria-label="Team settings" onClick={() => openTab({ id: "settings", kind: "settings" })} className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
-            <Settings2 className="h-4 w-4" />
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => (team.preview_command ? runPreview.mutate() : router.push(`${base}/settings`))}
+            disabled={runPreview.isPending}
+            title={team.preview_command ? (runtimeUp ? "Restart the dev server" : "Start the dev server") : "Set a preview command in project settings"}
+            className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 font-medium text-primary-foreground disabled:opacity-50"
+          >
+            <Play className="h-3.5 w-3.5" /> {runtimeUp ? "Restart" : "Run"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setBottomTab("preview");
+              setBottomOpen(true);
+            }}
+            className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-foreground-muted hover:text-foreground"
+          >
+            <Eye className="h-3.5 w-3.5" /> Preview
           </button>
           <button type="button" title="Toggle theme" aria-label="Toggle theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
             {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
           <button
             type="button"
-            title="Toggle team panel"
-            aria-label="Toggle team panel"
+            title="Toggle AI team panel"
+            aria-label="Toggle AI team panel"
             onClick={() => setRightOpen((value) => !value)}
             className={cn("rounded p-1.5 hover:bg-surface-strong", rightOpen ? "text-foreground" : "text-foreground-muted")}
           >
@@ -222,46 +298,62 @@ export function IdeShell({
           </button>
         </div>
       </header>
+      {runPreview.error ? <p className="shrink-0 bg-red-500/10 px-3 py-1 text-xs text-destructive">{runPreview.error.message}</p> : null}
 
       <div className="flex min-h-0 flex-1">
         {/* Activity bar */}
-        <nav className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-surface py-2" aria-label="Workspace views">
-          {ACTIVITY_BAR.map((item) => (
-            <button
+        <nav className="flex w-12 shrink-0 flex-col items-center gap-0.5 border-r border-border bg-surface py-2" aria-label="Workspace">
+          {panels.map((item) => {
+            const on = view === "code" && side === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                title={item.label}
+                aria-label={item.label}
+                aria-pressed={on}
+                onClick={() => {
+                  if (view !== "code") {
+                    setSide(item.id);
+                    router.push(base);
+                  } else setSide((current) => (current === item.id ? null : item.id));
+                }}
+                className={cn(
+                  "relative flex h-10 w-10 items-center justify-center rounded-md",
+                  on ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary" : "text-foreground-muted hover:text-foreground",
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.id === "git" && gitQuery.data?.changes.length ? (
+                  <span className="absolute right-1 top-1 rounded-full bg-primary px-1 text-[9px] font-semibold text-primary-foreground">{gitQuery.data.changes.length}</span>
+                ) : null}
+              </button>
+            );
+          })}
+          <div className="my-1 h-px w-6 bg-border" />
+          {viewLinks.map((item) => (
+            <Link
               key={item.id}
-              type="button"
+              href={view === item.id ? base : item.href}
               title={item.label}
               aria-label={item.label}
-              aria-pressed={side === item.id}
-              onClick={() => setSide((current) => (current === item.id ? null : item.id))}
+              aria-current={view === item.id ? "page" : undefined}
               className={cn(
                 "relative flex h-10 w-10 items-center justify-center rounded-md",
-                side === item.id ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary" : "text-foreground-muted hover:text-foreground",
+                view === item.id ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary" : "text-foreground-muted hover:text-foreground",
               )}
             >
               <item.icon className="h-5 w-5" />
-              {item.id === "git" && gitQuery.data?.changes.length ? (
-                <span className="absolute right-1 top-1 rounded-full bg-primary px-1 text-[9px] font-semibold text-primary-foreground">{gitQuery.data.changes.length}</span>
-              ) : null}
-            </button>
+              {item.id === "team" && waiting ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-500" /> : null}
+            </Link>
           ))}
-          <button
-            type="button"
-            title="Team"
-            aria-label="Team"
-            onClick={() => setRightOpen((value) => !value)}
-            className={cn("relative flex h-10 w-10 items-center justify-center rounded-md", rightOpen ? "text-foreground" : "text-foreground-muted hover:text-foreground")}
-          >
-            <Bot className="h-5 w-5" />
-            {waiting ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-500" /> : null}
-          </button>
-          <Link href="/chat" title="Back to Chikaima" aria-label="Back to Chikaima" className="mt-auto flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
-            <Undo2 className="h-5 w-5" />
+          <Link href="/projects" title="All projects" aria-label="All projects" className="mt-auto flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+            <FolderGit2 className="h-5 w-5" />
           </Link>
         </nav>
 
-        {/* Side panel */}
-        {side ? (
+        {/* Side panel (code view) */}
+        {view === "code" && side ? (
           <>
             <aside
               className="fixed bottom-6 left-12 top-10 z-30 min-h-0 w-[min(300px,80vw)] border-r border-border bg-surface shadow-2xl md:static md:z-auto md:w-[var(--side-width)] md:shrink-0 md:border-r-0 md:shadow-none"
@@ -273,23 +365,15 @@ export function IdeShell({
                   entries={filesQuery.data?.entries ?? []}
                   truncated={filesQuery.data?.truncated ?? false}
                   activePath={active?.kind === "file" ? active.path : null}
-                  touchedBy={touchedBy}
-                  onOpen={openFile}
+                  agentFiles={agentFiles}
+                  gitStatus={gitStatus}
+                  onOpen={(path) => openFile(path)}
                   onRefresh={() => void filesQuery.refetch()}
                 />
               ) : null}
-              {side === "git" ? <SourceControl access={access} team={team} disabled={runActive} onOpenFile={openFile} onOpenCommit={(hash, title) => openTab({ id: `commit:${hash}`, kind: "commit", hash, title })} /> : null}
-              {side === "runs" ? (
-                <RunsPanel
-                  runs={runs}
-                  selectedId={currentRunId}
-                  onSelect={(id) => {
-                    setSelectedRunId(id);
-                    setBottomTab("activity");
-                    setBottomOpen(true);
-                  }}
-                />
-              ) : null}
+              {side === "search" ? <SearchPanel access={access} team={team} onOpen={openFile} /> : null}
+              {side === "git" ? <SourceControl access={access} team={team} disabled={runActive} onOpenFile={(path) => openFile(path)} onOpenCommit={openCommit} /> : null}
+              {side === "runs" ? <RunsPanel runs={runs} selectedId={currentRunId} onSelect={openRun} /> : null}
             </aside>
             <div className="hidden md:flex">
               <ResizeHandle axis="x" onPointerDown={dragSide} />
@@ -297,25 +381,34 @@ export function IdeShell({
           </>
         ) : null}
 
-        {/* Editor + bottom panel */}
+        {/* Centre: editor or the selected view, with the bottom tool panel */}
         <main className="flex min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1">
-            <EditorArea
-              access={access}
-              team={team}
-              models={models}
-              tabs={tabs}
-              activeId={activeTab}
-              drafts={drafts}
-              agentsWorking={runActive}
-              refreshKey={folderChanges}
-              onActivate={setActiveTab}
-              onClose={closeTab}
-              onDraft={(path, value) =>
-                setDrafts((current) => (value === undefined ? withoutKey(current, path) : { ...current, [path]: value }))
-              }
-              onTeamSaved={() => closeTab("settings")}
-            />
+            {view === "code" ? (
+              <EditorArea
+                access={access}
+                team={team}
+                tabs={tabs}
+                activeId={activeTab}
+                drafts={drafts}
+                agentsWorking={runActive}
+                agentEditing={agentEditing}
+                agentTouched={agentTouched}
+                refreshKey={folderChanges}
+                onActivate={setActiveTab}
+                onClose={closeTab}
+                onDraft={(path, value) => setDrafts((current) => (value === undefined ? withoutKey(current, path) : { ...current, [path]: value }))}
+              />
+            ) : null}
+            {view === "tasks" ? <TaskBoard access={access} team={team} busy={runActive} onOpenRun={openRun} /> : null}
+            {view === "team" || view === "settings" ? (
+              <div className="h-full overflow-y-auto">
+                <div className="mx-auto max-w-4xl p-6">
+                  {runActive ? <p className="mb-4 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">Changes can be saved once the current task finishes.</p> : null}
+                  <TeamEditor key={`${view}-${team.updated_at}`} access={access} models={models} team={team} section={view === "team" ? "team" : "project"} embedded onDone={() => undefined} />
+                </div>
+              </div>
+            ) : null}
           </div>
           {bottomOpen ? <ResizeHandle axis="y" onPointerDown={dragBottom} /> : <div className="h-px bg-border" />}
           <div className="shrink-0" style={{ height: bottomOpen ? bottomHeight : 32 }}>
@@ -330,11 +423,12 @@ export function IdeShell({
               onTab={setBottomTab}
               onToggle={() => setBottomOpen((value) => !value)}
               onOpenDiff={openDiff}
+              onOpenCommit={openCommit}
             />
           </div>
         </main>
 
-        {/* Team panel */}
+        {/* AI team */}
         {rightOpen ? (
           <>
             <div className="hidden lg:flex">
@@ -347,15 +441,18 @@ export function IdeShell({
               <AgentPanel
                 access={access}
                 team={team}
+                models={models}
                 messages={messages}
                 status={status}
                 runActive={runActive}
                 currentRunId={currentRunId}
+                composerSeed={composerSeed}
+                onOpenDiff={openDiff}
                 onStarted={(runId) => {
-                  setSelectedRunId(runId);
-                  setBottomTab("activity");
-                  setBottomOpen(true);
+                  setComposerSeed(null);
+                  openRun(runId);
                   void queryClient.invalidateQueries({ queryKey: ["collab-runs", team.id] });
+                  void queryClient.invalidateQueries({ queryKey: ["collab-tasks", team.id] });
                 }}
               />
             </aside>
@@ -368,18 +465,27 @@ export function IdeShell({
         {gitQuery.data?.is_repo ? (
           <span className="flex items-center gap-1">
             <GitBranch className="h-3 w-3" /> {gitQuery.data.branch}
-            {gitQuery.data.changes.length ? `*` : ""}
+            {gitQuery.data.changes.length ? "*" : ""}
           </span>
         ) : (
           <span>no git</span>
         )}
-        <span>{status ? status.replace("_", " ") : "idle"}</span>
+        <button
+          type="button"
+          onClick={() => {
+            setSide("runs");
+            if (view !== "code") router.push(base);
+          }}
+          className="hover:underline"
+          title="Task runs"
+        >
+          {status ? (waiting ? "waiting for approval" : status.replace("_", " ")) : "idle"}
+        </button>
         {error ? <span className="truncate">{error}</span> : null}
         <span className="ml-auto hidden sm:inline">{AUTONOMY_LABELS[team.autonomy]?.label ?? team.autonomy}</span>
-        <span className="hidden sm:inline">{team.decision_policy} review</span>
-        <span className="hidden sm:inline">{team.max_model_calls} calls max</span>
+        <span className="hidden sm:inline">{team.members.length} agents</span>
         {team.parallel ? <span className="hidden sm:inline">parallel</span> : null}
-        {active?.kind === "file" ? <span>{languageFor(active.path)}</span> : null}
+        {view === "code" && active?.kind === "file" ? <span>{languageFor(active.path)}</span> : null}
       </footer>
     </div>
   );

@@ -202,3 +202,63 @@ export function RunsPanel({ runs, selectedId, onSelect }: { runs: CollabRun[]; s
     </div>
   );
 }
+
+/** Text search across the project's files; results open at the matching line. */
+export function SearchPanel({ access, team, onOpen }: { access: ApiAccess; team: CollabTeam; onOpen: (path: string, line: number) => void }) {
+  const [query, setQuery] = useState("");
+  const [submitted, setSubmitted] = useState("");
+  const results = useQuery({ queryKey: ["collab-search", team.id, submitted], queryFn: () => api.searchProject(access, team.id, submitted), enabled: submitted.length >= 2 });
+  const grouped = new Map<string, Array<{ line: number; text: string }>>();
+  for (const match of results.data?.matches ?? []) {
+    const list = grouped.get(match.path) ?? [];
+    list.push(match);
+    grouped.set(match.path, list);
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <PanelHeader title="Search" />
+      <form
+        className="px-3 pb-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setSubmitted(query.trim());
+        }}
+      >
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search files… (Enter)"
+          className="h-7 w-full rounded-md border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </form>
+      <div className="min-h-0 flex-1 overflow-y-auto pb-4 text-xs">
+        {results.isFetching ? <p className="px-3 text-foreground-muted">Searching…</p> : null}
+        {results.error ? <p className="px-3 text-destructive">{results.error.message}</p> : null}
+        {results.data && !results.data.matches.length ? <p className="px-3 text-foreground-muted">No results.</p> : null}
+        {results.data?.matches.length ? (
+          <p className="px-3 pb-1 text-muted">
+            {results.data.matches.length}
+            {results.data.truncated ? "+" : ""} results in {grouped.size} files
+          </p>
+        ) : null}
+        {[...grouped.entries()].map(([path, matches]) => (
+          <div key={path} className="mb-1">
+            <p className="truncate px-3 py-0.5 font-medium text-foreground">{path}</p>
+            {matches.map((match) => (
+              <button
+                key={match.line}
+                type="button"
+                onClick={() => onOpen(path, match.line)}
+                className="flex w-full gap-2 px-3 py-0.5 pl-5 text-left hover:bg-surface-strong/60"
+              >
+                <span className="shrink-0 font-mono text-muted">{match.line}</span>
+                <span className="truncate font-mono text-foreground-muted">{match.text}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
