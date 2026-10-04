@@ -85,6 +85,10 @@ test("runOnce claims and fully processes exactly one queued job, returning false
 
     const finishedJob = db.select().from(jobs).where(eq(jobs.id, job.id)).get()!;
     assert.equal(finishedJob.status, "completed");
+    assert.deepEqual(
+      repo.listEvents(job.id).map((event) => event.eventType),
+      ["queued", "started", "stage", "stage", "stage", "completed"],
+    );
 
     const nothingLeft = await worker.runOnce();
     assert.equal(nothingLeft, false);
