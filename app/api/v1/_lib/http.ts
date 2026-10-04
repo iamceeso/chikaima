@@ -73,3 +73,50 @@ export async function handleRoute(body: () => Promise<NextResponse>): Promise<Ne
     return NextResponse.json({ detail: "Internal server error" }, { status: 500 });
   }
 }
+
+/**
+ * Streams a long-running command's output as plain text, ending with an
+ * `[exit N]` line. Errors after the stream has started (Docker missing, a
+ * refused command) are written into the stream, since the status line has
+ * already been sent. The client aborting the request aborts the command.
+ */
+export function streamCommandOutput(
+  request: NextRequest,
+  work: (handlers: { onOutput: (chunk: string) => void; signal: AbortSignal }) => Promise<{ exitCode: number | null; timedOut: boolean }>,
+): Response {
+  const encoder = new TextEncoder();
+  const abort = new AbortController();
+  request.signal.addEventListener("abort", () => abort.abort());
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const write = (text: string) => {
+        try {
+          controller.enqueue(encoder.encode(text));
+        } catch {
+          // client went away
+        }
+      };
+      try {
+        const result = await work({ onOutput: write, signal: abort.signal });
+        write(`\n[${result.timedOut ? "timed out" : `exit ${result.exitCode ?? "?"}`}]\n`);
+      } catch (error) {
+        write(`\n[error] ${error instanceof HttpError ? error.detail : error instanceof Error ? error.message : String(error)}\n`);
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // already closed
+        }
+      }
+    },
+    cancel() {
+      abort.abort();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache", "X-Accel-Buffering": "no" },
+  });
+}

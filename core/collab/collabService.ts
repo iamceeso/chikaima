@@ -15,7 +15,9 @@ import {
   type NewMember,
   type TeamSettings,
 } from "./repository.js";
+import { getPreviewManager } from "./preview.js";
 import { getCollabRunner } from "./runner.js";
+import { disposeExecutor } from "./sandbox.js";
 import { normalizeTeamFolder, Workspace } from "./workspace.js";
 
 const MAX_MEMBERS = 8;
@@ -44,6 +46,10 @@ export interface TeamInput {
   autonomy?: string;
   test_command?: string | null;
   max_model_calls?: number;
+  git_enabled?: boolean;
+  parallel?: boolean;
+  preview_command?: string | null;
+  deploy_command?: string | null;
   members: TeamMemberInput[];
 }
 
@@ -85,6 +91,8 @@ export class CollabService {
     this.getTeam(userId, teamId);
     this.assertIdle(teamId, "Cancel the team's run before deleting it.");
     this.repo.deleteTeam(teamId);
+    void getPreviewManager().stop(teamId);
+    void disposeExecutor(teamId);
   }
 
   listRuns(userId: string, teamId: string): CollabRunRow[] {
@@ -154,6 +162,11 @@ export class CollabService {
     return { path: relative };
   }
 
+  /** Whether a run is active in this folder (from any team). */
+  isFolderBusy(folder: string): boolean {
+    return this.folderBusy(folder);
+  }
+
   private folderBusy(folder: string): boolean {
     return this.repo.listAllActiveRuns().some((run) => this.repo.getTeam(run.teamId)?.folder === folder);
   }
@@ -183,6 +196,11 @@ export class CollabService {
       throw badRequest(`max_model_calls must be a whole number from 1 to ${MAX_MODEL_CALLS}.`);
     }
     const testCommand = (input.test_command ?? "").trim() || null;
+    const previewCommand = (input.preview_command ?? "").trim() || null;
+    const deployCommand = (input.deploy_command ?? "").trim() || null;
+    const gitEnabled = input.git_enabled ?? true;
+    const parallel = input.parallel ?? false;
+    if (parallel && !gitEnabled) throw badRequest("Parallel work needs git: each agent works in its own git worktree.");
 
     const rawMembers = Array.isArray(input.members) ? input.members : [];
     if (rawMembers.length === 0 || rawMembers.length > MAX_MEMBERS) {
@@ -241,6 +259,6 @@ export class CollabService {
 
     if (!members.some((member) => member.role === "implementer")) throw badRequest("A team needs at least one implementer.");
     if (members.filter((member) => member.role === "lead").length > 1) throw badRequest("A team can have at most one lead.");
-    return { name, folder, decisionPolicy, maxRevisions, autonomy, testCommand, maxModelCalls, members };
+    return { name, folder, decisionPolicy, maxRevisions, autonomy, testCommand, maxModelCalls, gitEnabled, parallel, previewCommand, deployCommand, members };
   }
 }
