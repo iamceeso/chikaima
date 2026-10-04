@@ -1,9 +1,11 @@
 import { and, desc, eq } from "drizzle-orm";
 
+import { getConfig } from "../config/index.js";
 import { getSecretManager } from "../crypto/index.js";
 import type { ChikaimaDatabase } from "../db/client.js";
 import { aiModels, providers } from "../db/schema.js";
 import { badGateway, badRequest } from "../errors.js";
+import { isEconomyModel, sortModels } from "../providers/catalog.js";
 import { AdapterFactory } from "../providers/factory.js";
 import type { ChatMessage } from "../providers/types.js";
 import { AssetSearchService } from "../rag/assetSearchService.js";
@@ -60,6 +62,34 @@ export class LLMService {
       throw badRequest("No enabled AI model is available. Add an OpenAI provider and model first.");
     }
     return selection;
+  }
+
+  /**
+   * Model choices for routine background work (summaries, key points), in
+   * the order to try them: a cheaper model on the default provider first,
+   * when routing is enabled and one exists, then the default model as a
+   * fallback. Chat always uses `resolveModelAndProvider` directly.
+   */
+  resolveBackgroundCandidates(userId: string): Array<{ model: AIModelRow; provider: ProviderRow }> {
+    const primary = this.resolveModelAndProvider(userId, null);
+    if (getConfig().backgroundModelRouting !== "economy" || isEconomyModel(primary.model.modelKey, primary.model.capabilities as Record<string, boolean>)) {
+      return [primary];
+    }
+
+    const economyModels = this.db
+      .select()
+      .from(aiModels)
+      .where(and(eq(aiModels.providerId, primary.provider.id), eq(aiModels.isAvailable, true)))
+      .all()
+      .filter((model) => isEconomyModel(model.modelKey, model.capabilities as Record<string, boolean>));
+    if (economyModels.length === 0) return [primary];
+
+    const ranked = sortModels(
+      primary.provider.providerType,
+      economyModels.map((model) => ({ key: model.modelKey, name: model.displayName, capabilities: {} })),
+    );
+    const economy = economyModels.find((model) => model.modelKey === ranked[0]!.key)!;
+    return [{ model: economy, provider: primary.provider }, primary];
   }
 
   async generateReply(provider: ProviderRow, model: AIModelRow, messages: ChatMessage[]): Promise<string> {
