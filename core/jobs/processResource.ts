@@ -6,11 +6,11 @@ import { LLMService } from "../chat/llmService.js";
 import { generateSummaryBundle, type SummaryBundle } from "../assets/summaryBundle.js";
 import { chunkText, type ChunkPayload } from "../chunking/index.js";
 import type { ChikaimaDatabase } from "../db/client.js";
-import { audioAssets, documents, jobs, summaryArtifacts, transcripts, videos } from "../db/schema.js";
+import { audioAssets, documents, summaryArtifacts, transcripts, videos } from "../db/schema.js";
 import { documentProcessorRegistry } from "../documents/registry.js";
 import { EmbeddingsService } from "../embeddings/embeddingsService.js";
 import { TranscriptionProviderService } from "../media/transcriptionService.js";
-import type { JobRow } from "./repository.js";
+import { JobRepository } from "./repository.js";
 import type { JobType } from "./types.js";
 import { RESOURCE_TYPE_BY_JOB_TYPE } from "./types.js";
 
@@ -46,14 +46,15 @@ export async function processResourceJob(db: ChikaimaDatabase, jobId: string, jo
   const resourceType = RESOURCE_TYPE_BY_JOB_TYPE[jobType] as ResourceKind;
   const table = resourceTable(resourceType);
 
-  const job = db.select().from(jobs).where(eq(jobs.id, jobId)).get();
+  const jobRepo = new JobRepository(db);
+  const job = jobRepo.get(jobId);
   if (!job) {
     return { jobId, status: "failed", message: "Job not found" };
   }
 
   const resource = job.resourceId ? (db.select().from(table).where(eq(table.id, job.resourceId)).get() as ResourceRow | undefined) : undefined;
   if (!resource) {
-    markJobFailed(db, job, "Resource not found");
+    jobRepo.markFailed(job.id, "Resource not found");
     return { jobId, status: "failed", message: "Resource not found" };
   }
 
@@ -63,6 +64,7 @@ export async function processResourceJob(db: ChikaimaDatabase, jobId: string, jo
     let extractedText: string;
     let extractedChunks: ChunkPayload[];
 
+    jobRepo.markProgress(jobId, 10, resourceType === "document" ? "Extracting text" : "Transcribing media");
     if (resourceType === "audio" || resourceType === "video") {
       const transcribed = await new TranscriptionProviderService(db).transcribeMedia(resource.userId, resource.filePath, resource.name, null);
       extractedText = transcribed.trim();
@@ -84,10 +86,12 @@ export async function processResourceJob(db: ChikaimaDatabase, jobId: string, jo
     }
 
     const transcript = upsertTranscript(db, resource, resourceType, extractedText);
+    jobRepo.markProgress(jobId, 40, "Generating summary");
     const summaryBundle = await generateSummaryBundle(new LLMService(db), resource.userId, resourceType, resource.name, extractedText);
     upsertSummaryArtifacts(db, resource, resourceType, summaryBundle);
     updateResourceFields(db, resource, resourceType, extractedText, summaryBundle);
 
+    jobRepo.markProgress(jobId, 70, `Embedding ${extractedChunks.length} chunk(s)`);
     await new EmbeddingsService(db).replaceChunksForSource({
       userId: resource.userId,
       sourceType: resourceType,
@@ -99,10 +103,7 @@ export async function processResourceJob(db: ChikaimaDatabase, jobId: string, jo
 
     const now = new Date().toISOString();
     db.update(table).set({ status: "completed", updatedAt: now }).where(eq(table.id, resource.id)).run();
-    db.update(jobs)
-      .set({ status: "completed", progress: 100, result: { resource_type: resourceType, resource_id: resource.id, transcript_id: transcript.id }, completedAt: now, updatedAt: now })
-      .where(eq(jobs.id, jobId))
-      .run();
+    jobRepo.markCompleted(jobId, { resource_type: resourceType, resource_id: resource.id, transcript_id: transcript.id });
 
     return { jobId, status: "completed", resourceId: resource.id };
   } catch (error) {
@@ -113,10 +114,6 @@ export async function processResourceJob(db: ChikaimaDatabase, jobId: string, jo
     db.update(table).set({ status: "failed", updatedAt: new Date().toISOString() }).where(eq(table.id, resource.id)).run();
     throw error;
   }
-}
-
-function markJobFailed(db: ChikaimaDatabase, job: JobRow, message: string): void {
-  db.update(jobs).set({ status: "failed", errorMessage: message, completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }).where(eq(jobs.id, job.id)).run();
 }
 
 function upsertTranscript(db: ChikaimaDatabase, resource: ResourceRow, resourceType: ResourceKind, content: string) {

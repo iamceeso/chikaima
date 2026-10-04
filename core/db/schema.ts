@@ -118,10 +118,26 @@ export const jobs = sqliteTable("jobs", {
   progress: integer("progress").notNull().default(0),
   attempts: integer("attempts").notNull().default(0),
   maxAttempts: integer("max_attempts").notNull().default(3),
+  dependsOn: text("depends_on", { mode: "json" }).$type<string[]>().notNull().default([]),
   errorMessage: text("error_message"),
   startedAt: text("started_at"),
   completedAt: text("completed_at"),
   ...timestamps,
+});
+
+/** Append-only audit trail of everything that happened to a job: rows are only ever inserted, never updated or deleted (except by FK cascade). */
+export const jobEvents = sqliteTable("job_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  jobId: text("job_id")
+    .notNull()
+    .references(() => jobs.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  eventType: text("event_type").notNull(),
+  message: text("message"),
+  data: text("data", { mode: "json" }).notNull().default("{}"),
+  createdAt: text("created_at").notNull(),
 });
 
 export const settingsTable = sqliteTable("settings", {

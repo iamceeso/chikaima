@@ -36,6 +36,13 @@
       "when": 1786375535962,
       "tag": "0004_indexes_and_vectors",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791128316101,
+      "tag": "0005_job_events_and_dependencies",
+      "breakpoints": true
     }
   ]
 }
