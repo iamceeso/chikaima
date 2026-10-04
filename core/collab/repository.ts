@@ -88,6 +88,10 @@ export interface TeamSettings {
   autonomy: string;
   testCommand: string | null;
   maxModelCalls: number;
+  gitEnabled: boolean;
+  parallel: boolean;
+  previewCommand: string | null;
+  deployCommand: string | null;
   members: NewMember[];
 }
 
@@ -150,6 +154,8 @@ export class CollabRepository {
       status: "queued",
       result: {},
       errorMessage: null,
+      baseBranch: null,
+      runBranch: null,
       startedAt: null,
       completedAt: null,
       createdAt: now,
@@ -182,7 +188,7 @@ export class CollabRepository {
     return this.db.select().from(collabRuns).where(inArray(collabRuns.status, ACTIVE_RUN_STATUSES)).all();
   }
 
-  updateRun(runId: string, fields: Partial<Pick<CollabRunRow, "status" | "result" | "errorMessage" | "startedAt" | "completedAt">>): void {
+  updateRun(runId: string, fields: Partial<Pick<CollabRunRow, "status" | "result" | "errorMessage" | "startedAt" | "completedAt" | "baseBranch" | "runBranch">>): void {
     this.db
       .update(collabRuns)
       .set({ ...fields, updatedAt: new Date().toISOString() })
@@ -253,6 +259,14 @@ export class CollabRepository {
 
   listApprovals(runId: string): CollabApprovalRow[] {
     return this.db.select().from(collabApprovals).where(eq(collabApprovals.runId, runId)).orderBy(asc(collabApprovals.createdAt)).all();
+  }
+
+  countPendingApprovals(runId: string): number {
+    return this.db
+      .select()
+      .from(collabApprovals)
+      .where(and(eq(collabApprovals.runId, runId), eq(collabApprovals.status, "pending")))
+      .all().length;
   }
 
   /** Records the human's decision on a pending approval. Returns false if it was already decided. */

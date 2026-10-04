@@ -4,18 +4,18 @@
  * the team's autonomy level decides which actions pause for approval.
  */
 
-export type Permission = "edit" | "delete" | "run_tests" | "run_commands" | "review";
+export type Permission = "edit" | "delete" | "run_tests" | "run_commands" | "review" | "browser" | "deploy";
 export type Autonomy = "supervised" | "semi" | "autonomous";
-export type ApprovalKind = "command" | "delete" | "sensitive_file" | "step";
+export type ApprovalKind = "command" | "delete" | "sensitive_file" | "step" | "merge" | "deploy";
 
-export const PERMISSIONS: readonly Permission[] = ["edit", "delete", "run_tests", "run_commands", "review"];
+export const PERMISSIONS: readonly Permission[] = ["edit", "delete", "run_tests", "run_commands", "review", "browser", "deploy"];
 export const AUTONOMY_LEVELS: readonly Autonomy[] = ["supervised", "semi", "autonomous"];
 
 export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
   lead: ["review"],
   implementer: ["edit", "delete", "run_tests"],
   reviewer: ["review", "run_tests"],
-  tester: ["edit", "run_tests", "review"],
+  tester: ["edit", "run_tests", "review", "browser"],
 };
 
 /** A member's stored permissions, or its role's defaults when none were set. */
@@ -76,8 +76,12 @@ export function isSensitivePath(path: string): boolean {
   return SENSITIVE_PATH.test(path);
 }
 
-/** Whether an action needs a human decision at this autonomy level. */
-export function needsApproval(autonomy: Autonomy, action: { kind: "command"; command: string } | { kind: "delete"; path: string } | { kind: "write"; path: string } | { kind: "step" }): boolean {
+/** Whether an action needs a human decision at this autonomy level. Deploys always do. */
+export function needsApproval(
+  autonomy: Autonomy,
+  action: { kind: "command"; command: string } | { kind: "delete"; path: string } | { kind: "write"; path: string } | { kind: "step" } | { kind: "merge" } | { kind: "deploy" },
+): boolean {
+  if (action.kind === "deploy") return true;
   if (autonomy === "autonomous") return false;
   switch (action.kind) {
     case "command":
@@ -88,5 +92,7 @@ export function needsApproval(autonomy: Autonomy, action: { kind: "command"; com
       return isSensitivePath(action.path);
     case "step":
       return autonomy === "supervised";
+    case "merge":
+      return true;
   }
 }

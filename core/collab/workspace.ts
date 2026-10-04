@@ -7,7 +7,7 @@ import { badRequest } from "../errors.js";
 const MAX_READ_BYTES = 256 * 1024;
 const MAX_WRITE_BYTES = 1024 * 1024;
 const MAX_LIST_ENTRIES = 400;
-const IGNORED_DIRS = new Set([".git", "node_modules", ".next", "dist", "build", ".venv", "__pycache__"]);
+const IGNORED_DIRS = new Set([".git", "node_modules", ".next", "dist", "build", ".venv", "__pycache__", ".chikaima"]);
 
 export interface FileChange {
   path: string;
@@ -40,6 +40,9 @@ export function normalizeTeamFolder(folder: string): string {
   if (normalized === "." || normalized.split("/").some((segment) => segment === ".." || segment === ".git")) {
     throw badRequest("Folder must stay inside the collaboration root.");
   }
+  if (normalized.split("/")[0] === ".chikaima") {
+    throw badRequest("The .chikaima directory is reserved.");
+  }
   return normalized;
 }
 
@@ -55,6 +58,13 @@ export class Workspace {
 
   private constructor(root: string) {
     this.root = root;
+  }
+
+  /** A workspace over an existing directory inside the collaboration root, such as a step's git worktree. */
+  static at(root: string): Workspace {
+    const real = realpathSync(root);
+    if (!isWithin(collabRoot(), real)) throw badRequest("Workspace must stay inside the collaboration root.");
+    return new Workspace(real);
   }
 
   static open(folder: string): Workspace {
