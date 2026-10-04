@@ -43,6 +43,13 @@
       "when": 1791128316101,
       "tag": "0005_job_events_and_dependencies",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791131191773,
+      "tag": "0006_collaboration",
+      "breakpoints": true
     }
   ]
 }

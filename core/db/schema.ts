@@ -210,3 +210,106 @@ export const summaryArtifacts = sqliteTable("summary_artifacts", {
   status: text("status").notNull().default("completed"),
   ...timestamps,
 });
+
+/**
+ * A collaboration team: several models working on one sandboxed folder
+ * under the collaboration root. `folder` is stored relative to that root.
+ */
+export const collabTeams = sqliteTable("collab_teams", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  folder: text("folder").notNull(),
+  /** How reviewer votes become a decision: "majority", "unanimous" or "precedence". */
+  decisionPolicy: text("decision_policy").notNull().default("majority"),
+  /** How many times a rejected step is sent back to its implementer before it is abandoned. */
+  maxRevisions: integer("max_revisions").notNull().default(2),
+  /** "supervised", "semi" or "autonomous": which agent actions wait for a human. */
+  autonomy: text("autonomy").notNull().default("semi"),
+  /** Shell command that runs the project's tests (e.g. "npm test"); used by agents with the run_tests permission. */
+  testCommand: text("test_command"),
+  /** Hard cap on model calls per run, so agents can't loop indefinitely on the user's API budget. */
+  maxModelCalls: integer("max_model_calls").notNull().default(80),
+  ...timestamps,
+});
+
+/** A model seat on a team. `precedence` is unique per team; 1 outranks 2. */
+export const collabMembers = sqliteTable("collab_members", {
+  id: text("id").primaryKey(),
+  teamId: text("team_id")
+    .notNull()
+    .references(() => collabTeams.id, { onDelete: "cascade" }),
+  modelId: text("model_id")
+    .notNull()
+    .references(() => aiModels.id),
+  name: text("name").notNull(),
+  /** Behaviour: "lead", "implementer", "reviewer" or "tester". `title` is the free-form job title shown to people and models. */
+  role: text("role").notNull(),
+  title: text("title").notNull().default(""),
+  instructions: text("instructions").notNull().default(""),
+  precedence: integer("precedence").notNull(),
+  /** Paths/globs this agent may edit, relative to the team folder; empty means the whole folder. */
+  scope: text("scope", { mode: "json" }).$type<string[]>().notNull().default([]),
+  /** Capabilities: "edit", "delete", "run_tests", "run_commands", "review". */
+  permissions: text("permissions", { mode: "json" }).$type<string[]>().notNull().default([]),
+  /** Precedence of the member this one reports to, if any. */
+  reportsTo: integer("reports_to"),
+  /** Precedences of the members who review this one's work; empty means every member with the review permission. */
+  reviewedBy: text("reviewed_by", { mode: "json" }).$type<number[]>().notNull().default([]),
+  ...timestamps,
+});
+
+export const collabRuns = sqliteTable("collab_runs", {
+  id: text("id").primaryKey(),
+  teamId: text("team_id")
+    .notNull()
+    .references(() => collabTeams.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  task: text("task").notNull(),
+  status: text("status").notNull().default("queued"),
+  result: text("result", { mode: "json" }).notNull().default("{}"),
+  errorMessage: text("error_message"),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  ...timestamps,
+});
+
+/** Append-only transcript of a run: what each member said, changed, and voted, and what was decided. */
+export const collabMessages = sqliteTable("collab_messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  runId: text("run_id")
+    .notNull()
+    .references(() => collabRuns.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  memberId: text("member_id"),
+  kind: text("kind").notNull(),
+  content: text("content").notNull().default(""),
+  data: text("data", { mode: "json" }).notNull().default("{}"),
+  createdAt: text("created_at").notNull(),
+});
+
+/** A human decision an agent is waiting on (a risky command, a delete, or a finished step under supervised autonomy). */
+export const collabApprovals = sqliteTable("collab_approvals", {
+  id: text("id").primaryKey(),
+  runId: text("run_id")
+    .notNull()
+    .references(() => collabRuns.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  memberId: text("member_id"),
+  kind: text("kind").notNull(),
+  summary: text("summary").notNull(),
+  payload: text("payload", { mode: "json" }).notNull().default("{}"),
+  /** "pending", "approved" or "rejected". */
+  status: text("status").notNull().default("pending"),
+  note: text("note"),
+  createdAt: text("created_at").notNull(),
+  resolvedAt: text("resolved_at"),
+});
