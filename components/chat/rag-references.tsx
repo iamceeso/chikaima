@@ -49,10 +49,7 @@ export function RAGReferences({ message }: RAGReferencesProps) {
       </div>
       <div className="space-y-1.5">
         {citations.map((citation) => (
-          <div
-            key={citation.chunk_id}
-            className="rounded-xl border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground-muted"
-          >
+          <div key={citation.chunk_id} className="rounded-xl border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground-muted">
             <div className="flex items-start gap-1.5">
               <FileText className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
               <div className="min-w-0 flex-1">

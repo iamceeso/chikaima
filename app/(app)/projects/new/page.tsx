@@ -33,7 +33,15 @@ function repoName(url: string): string {
   return /([^/:]+?)(\.git)?\/?$/.exec(url.trim())?.[1] ?? "";
 }
 
-function buildInput(name: string, folder: string, preset: CollabTemplate, models: AIModel[], modelId: string, mix: boolean, autonomy: CollabAutonomy): CollabTeamInput {
+function buildInput(
+  name: string,
+  folder: string,
+  preset: CollabTemplate,
+  models: AIModel[],
+  modelId: string,
+  mix: boolean,
+  autonomy: CollabAutonomy,
+): CollabTeamInput {
   const pick = (index: number) => (mix ? models[index % models.length]!.id : modelId);
   return {
     name,
@@ -92,7 +100,12 @@ function NewProjectForm({ access, models }: { access: ApiAccess; models: AIModel
 
       <div className="mt-6 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Project source">
         {[
-          { id: "blank" as const, icon: FolderPlus, title: "Blank or existing folder", copy: "Start empty, or open a folder of code that's already in the projects root." },
+          {
+            id: "blank" as const,
+            icon: FolderPlus,
+            title: "Blank or existing folder",
+            copy: "Start empty, or open a folder of code that's already in the projects root.",
+          },
           { id: "import" as const, icon: Download, title: "Import Git repository", copy: "Clone a repository from GitHub, GitLab or any git host." },
         ].map((option) => (
           <button
@@ -101,7 +114,10 @@ function NewProjectForm({ access, models }: { access: ApiAccess; models: AIModel
             role="radio"
             aria-checked={source === option.id}
             onClick={() => setSource(option.id)}
-            className={cn("flex gap-3 rounded-lg border p-4 text-left", source === option.id ? "border-primary bg-primary/6" : "border-border hover:border-primary/50")}
+            className={cn(
+              "flex gap-3 rounded-lg border p-4 text-left",
+              source === option.id ? "border-primary bg-primary/6" : "border-border hover:border-primary/50",
+            )}
           >
             <option.icon className={cn("mt-0.5 h-4 w-4 shrink-0", source === option.id ? "text-primary" : "text-foreground-muted")} />
             <span>
@@ -122,13 +138,23 @@ function NewProjectForm({ access, models }: { access: ApiAccess; models: AIModel
         ) : null}
         <div>
           <Label htmlFor="project_name">Project name</Label>
-          <Input id="project_name" value={name} onChange={(event) => setName(event.target.value)} placeholder={source === "import" ? repoName(repoUrl) || "my-saas" : "my-saas"} />
+          <Input
+            id="project_name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={source === "import" ? repoName(repoUrl) || "my-saas" : "my-saas"}
+          />
         </div>
         <div>
           <Label>Folder</Label>
           <p className="mb-1.5 text-xs text-foreground-muted">
             {source === "import" ? "The repository is cloned into a new folder." : "Pick an existing folder of code, or name a new one."}
-            {!folder && projectFolder ? <> Default: <span className="font-mono">{projectFolder}</span></> : null}
+            {!folder && projectFolder ? (
+              <>
+                {" "}
+                Default: <span className="font-mono">{projectFolder}</span>
+              </>
+            ) : null}
           </p>
           <FolderPicker access={access} value={folder} onChange={setFolder} allowExisting={source === "blank"} />
         </div>
@@ -137,22 +163,31 @@ function NewProjectForm({ access, models }: { access: ApiAccess; models: AIModel
       <section className="mt-8">
         <h2 className="text-sm font-semibold text-foreground">AI engineering team</h2>
         <div className="mt-2 grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Team preset">
-          {[...templates.filter((template) => PRIMARY_PRESETS.includes(template.id)), { id: "custom", name: "Custom team", description: "Start small and configure every role yourself.", members: [] } as Pick<CollabTemplate, "id" | "name" | "description" | "members">].map(
-            (template) => (
-              <button
-                key={template.id}
-                type="button"
-                role="radio"
-                aria-checked={presetId === template.id}
-                onClick={() => setPresetId(template.id)}
-                className={cn("flex flex-col items-start justify-start rounded-lg border p-3 text-left", presetId === template.id ? "border-primary bg-primary/6" : "border-border hover:border-primary/50")}
-              >
-                <span className="block text-sm font-medium text-foreground">{template.name.replace(" Team", "")}</span>
-                <span className="mt-0.5 block text-xs text-foreground-muted">{template.description}</span>
-                {template.members.length ? <span className="mt-2 block text-[11px] text-muted">{template.members.map((seat) => seat.title).join(" · ")}</span> : null}
-              </button>
-            ),
-          )}
+          {[
+            ...templates.filter((template) => PRIMARY_PRESETS.includes(template.id)),
+            { id: "custom", name: "Custom team", description: "Start small and configure every role yourself.", members: [] } as Pick<
+              CollabTemplate,
+              "id" | "name" | "description" | "members"
+            >,
+          ].map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              role="radio"
+              aria-checked={presetId === template.id}
+              onClick={() => setPresetId(template.id)}
+              className={cn(
+                "flex flex-col items-start justify-start rounded-lg border p-3 text-left",
+                presetId === template.id ? "border-primary bg-primary/6" : "border-border hover:border-primary/50",
+              )}
+            >
+              <span className="block text-sm font-medium text-foreground">{template.name.replace(" Team", "")}</span>
+              <span className="mt-0.5 block text-xs text-foreground-muted">{template.description}</span>
+              {template.members.length ? (
+                <span className="mt-2 block text-[11px] text-muted">{template.members.map((seat) => seat.title).join(" · ")}</span>
+              ) : null}
+            </button>
+          ))}
         </div>
         {templates.some((template) => !PRIMARY_PRESETS.includes(template.id)) ? (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-foreground-muted">
@@ -164,7 +199,10 @@ function NewProjectForm({ access, models }: { access: ApiAccess; models: AIModel
                   key={template.id}
                   type="button"
                   onClick={() => setPresetId(template.id)}
-                  className={cn("rounded border px-2 py-0.5", presetId === template.id ? "border-primary text-foreground" : "border-border hover:text-foreground")}
+                  className={cn(
+                    "rounded border px-2 py-0.5",
+                    presetId === template.id ? "border-primary text-foreground" : "border-border hover:text-foreground",
+                  )}
                 >
                   {template.name}
                 </button>
@@ -175,7 +213,13 @@ function NewProjectForm({ access, models }: { access: ApiAccess; models: AIModel
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="model">Model</Label>
-            <select id="model" value={modelId} onChange={(event) => setModelId(event.target.value)} disabled={mix} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm disabled:opacity-50">
+            <select
+              id="model"
+              value={modelId}
+              onChange={(event) => setModelId(event.target.value)}
+              disabled={mix}
+              className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm disabled:opacity-50"
+            >
               {models.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.display_name}
@@ -214,7 +258,13 @@ function NewProjectForm({ access, models }: { access: ApiAccess; models: AIModel
           Cancel
         </Button>
         <Button type="button" disabled={create.isPending || !projectName || (source === "import" && !repoUrl.trim())} onClick={() => create.mutate()}>
-          {create.isPending ? (source === "import" ? "Cloning…" : "Creating…") : source === "import" ? "Import and open workspace" : "Create and open workspace"}
+          {create.isPending
+            ? source === "import"
+              ? "Cloning…"
+              : "Creating…"
+            : source === "import"
+              ? "Import and open workspace"
+              : "Create and open workspace"}
         </Button>
       </div>
     </div>
@@ -228,7 +278,10 @@ export default function NewProjectPage() {
 
   if (!hasAdminAccess || !access) {
     return workspaceAuthDisabled ? (
-      <AdminAccessGate title="Administrator access required" description="Projects run code and AI agents on this server, so only administrators can create them." />
+      <AdminAccessGate
+        title="Administrator access required"
+        description="Projects run code and AI agents on this server, so only administrators can create them."
+      />
     ) : (
       <p className="p-6 text-sm text-foreground-muted">Only administrators can create projects.</p>
     );
@@ -238,7 +291,9 @@ export default function NewProjectPage() {
     return (
       <div className="mx-auto max-w-xl pt-10 text-center">
         <h1 className="text-lg font-semibold text-foreground">Connect a model first</h1>
-        <p className="mt-2 text-sm text-foreground-muted">Your AI engineering team runs on the models you enable. Add a provider, then enable at least one model.</p>
+        <p className="mt-2 text-sm text-foreground-muted">
+          Your AI engineering team runs on the models you enable. Add a provider, then enable at least one model.
+        </p>
         <Button asChild href="/settings/providers" className="mt-4">
           Add a provider
         </Button>

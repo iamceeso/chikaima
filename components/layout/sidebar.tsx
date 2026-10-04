@@ -4,18 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ChevronDown,
-  Code2,
-  Cog,
-  FolderGit2,
-  KanbanSquare,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Settings,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { ChevronDown, Code2, Cog, FolderGit2, KanbanSquare, PanelLeftClose, PanelLeftOpen, Settings, Sparkles, Users } from "lucide-react";
 
 import { useAdminAccess } from "@/hooks/use-admin-access";
 import { useLastProject } from "@/lib/last-project";
@@ -103,27 +92,48 @@ export function Sidebar({
   ];
 
   return (
-    <aside className={cn("flex h-full w-full flex-col border-r border-border bg-background-secondary/55 p-2.5 transition-all xl:h-screen", narrow ? "xl:w-16" : "xl:w-60")}>
+    <aside
+      className={cn(
+        "flex h-full w-full flex-col border-r border-border bg-background-secondary/55 p-2.5 transition-all xl:h-screen",
+        narrow ? "xl:w-16" : "xl:w-60",
+      )}
+    >
       <div className={cn("mb-3 flex items-center px-1.5 py-1", narrow ? "justify-center" : "gap-2")}>
         <Link href="/projects" className="flex min-w-0 flex-1 items-center gap-2" onClick={onClose}>
           <Image src="/chikaima-logo.png" alt="Chikaima logo" width={24} height={24} className="h-6 w-6 shrink-0 object-contain" priority />
           {narrow ? null : <span className="truncate text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground">Chikaima</span>}
         </Link>
         {onToggleCollapse && !narrow ? (
-          <button type="button" onClick={onToggleCollapse} className="hidden h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-surface hover:text-foreground xl:flex" aria-label="Collapse menu">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="hidden h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-surface hover:text-foreground xl:flex"
+            aria-label="Collapse menu"
+          >
             <PanelLeftClose className="h-4 w-4" />
           </button>
         ) : null}
       </div>
       {onToggleCollapse && narrow ? (
-        <button type="button" onClick={onToggleCollapse} className="mx-auto mb-2 hidden h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-surface hover:text-foreground xl:flex" aria-label="Expand menu">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="mx-auto mb-2 hidden h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-surface hover:text-foreground xl:flex"
+          aria-label="Expand menu"
+        >
           <PanelLeftOpen className="h-4 w-4" />
         </button>
       ) : null}
 
       <nav className="space-y-0.5" aria-label="Primary">
         {primary.map((item) => (
-          <NavLink key={item.label} {...item} collapsed={narrow} hint={item.disabled ? "Open a project first" : current ? `${item.label} · ${current.name}` : undefined} onClick={onClose} />
+          <NavLink
+            key={item.label}
+            {...item}
+            collapsed={narrow}
+            hint={item.disabled ? "Open a project first" : current ? `${item.label} · ${current.name}` : undefined}
+            onClick={onClose}
+          />
         ))}
       </nav>
 
@@ -133,7 +143,10 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => setSettingsOpen((value) => !value)}
-          className={cn("flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[12.5px] text-foreground-muted hover:bg-surface/70 hover:text-foreground", narrow && "justify-center px-1.5")}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[12.5px] text-foreground-muted hover:bg-surface/70 hover:text-foreground",
+            narrow && "justify-center px-1.5",
+          )}
           aria-expanded={settingsOpen}
         >
           <Settings className="h-4 w-4 shrink-0" />
@@ -149,7 +162,15 @@ export function Sidebar({
             {settingsItems
               .filter((item) => !item.adminOnly || hasAdminAccess)
               .map((item) => (
-                <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} active={pathname === item.href} collapsed={false} onClick={onClose} />
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  active={pathname === item.href}
+                  collapsed={false}
+                  onClick={onClose}
+                />
               ))}
           </div>
         ) : null}
@@ -168,7 +189,12 @@ export function Sidebar({
                 pathname.startsWith(`/projects/${project.id}`) ? "bg-surface text-foreground" : "text-foreground-muted hover:text-foreground",
               )}
             >
-              <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", project.active_run ? "bg-emerald-500" : project.runtime === "running" ? "bg-sky-500" : "bg-border")} />
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 shrink-0 rounded-full",
+                  project.active_run ? "bg-emerald-500" : project.runtime === "running" ? "bg-sky-500" : "bg-border",
+                )}
+              />
               <span className="min-w-0 flex-1 truncate">{project.name}</span>
               {project.branch ? <span className="shrink-0 font-mono text-[10.5px] text-muted">{project.branch}</span> : null}
             </Link>
@@ -178,7 +204,6 @@ export function Sidebar({
       ) : (
         <div className="flex-1" />
       )}
-
     </aside>
   );
 }

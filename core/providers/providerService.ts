@@ -220,7 +220,10 @@ export class ProviderService {
 
   private replaceProviderModels(provider: ProviderRow, models: CuratedModel[]): void {
     const listed = dedupeModels(models);
-    const syncedModels = sortModels(provider.providerType, listed.length > 0 ? mergeUserModels(provider.providerType, listed) : getCuratedModels(provider.providerType));
+    const syncedModels = sortModels(
+      provider.providerType,
+      listed.length > 0 ? mergeUserModels(provider.providerType, listed) : getCuratedModels(provider.providerType),
+    );
 
     const existingModels = this.db.select().from(aiModels).where(eq(aiModels.providerId, provider.id)).all();
     const existingByKey = new Map(existingModels.map((model) => [model.modelKey, model]));
@@ -237,11 +240,7 @@ export class ProviderService {
     syncedModels.forEach((model, index) => {
       const existing = existingByKey.get(model.key);
       if (existing) {
-        this.db
-          .update(aiModels)
-          .set({ displayName: model.name, capabilities: model.capabilities, updatedAt: now })
-          .where(eq(aiModels.id, existing.id))
-          .run();
+        this.db.update(aiModels).set({ displayName: model.name, capabilities: model.capabilities, updatedAt: now }).where(eq(aiModels.id, existing.id)).run();
         return;
       }
 

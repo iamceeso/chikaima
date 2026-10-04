@@ -13,7 +13,17 @@ import { api, type ApiAccess } from "@/services/api";
  * subfolders, choose an existing one, or name a new folder in the current
  * location. Folders already used by a project can't be chosen twice.
  */
-export function FolderPicker({ access, value, onChange, allowExisting = true }: { access: ApiAccess; value: string; onChange: (folder: string) => void; allowExisting?: boolean }) {
+export function FolderPicker({
+  access,
+  value,
+  onChange,
+  allowExisting = true,
+}: {
+  access: ApiAccess;
+  value: string;
+  onChange: (folder: string) => void;
+  allowExisting?: boolean;
+}) {
   const [location, setLocation] = useState("");
   const [newName, setNewName] = useState("");
   const listing = useQuery({ queryKey: ["collab-folders", location], queryFn: () => api.getProjectFolders(access, location) });
@@ -39,7 +49,11 @@ export function FolderPicker({ access, value, onChange, allowExisting = true }: 
       <ul className="max-h-56 overflow-y-auto py-1 text-[13px]">
         {listing.data?.parent !== null && listing.data?.parent !== undefined ? (
           <li>
-            <button type="button" onClick={() => setLocation(listing.data!.parent!)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-foreground-muted hover:bg-surface">
+            <button
+              type="button"
+              onClick={() => setLocation(listing.data!.parent!)}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-foreground-muted hover:bg-surface"
+            >
               <CornerLeftUp className="h-3.5 w-3.5" /> ..
             </button>
           </li>
@@ -49,7 +63,12 @@ export function FolderPicker({ access, value, onChange, allowExisting = true }: 
           const selected = value === folder.path;
           return (
             <li key={folder.path} className={cn("flex items-center gap-2 px-3 py-1 hover:bg-surface", selected && "bg-primary/12")}>
-              <button type="button" onClick={() => setLocation(folder.path)} className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left text-foreground" title="Open folder">
+              <button
+                type="button"
+                onClick={() => setLocation(folder.path)}
+                className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left text-foreground"
+                title="Open folder"
+              >
                 {folder.isGit ? <FolderGit2 className="h-4 w-4 shrink-0 text-primary" /> : <Folder className="h-4 w-4 shrink-0 text-foreground-muted" />}
                 <span className="truncate">{folder.name}</span>
                 {folder.isGit ? <span className="shrink-0 text-[10.5px] text-muted">git</span> : null}
@@ -60,7 +79,10 @@ export function FolderPicker({ access, value, onChange, allowExisting = true }: 
                 <button
                   type="button"
                   onClick={() => onChange(folder.path)}
-                  className={cn("shrink-0 rounded px-2 py-0.5 text-[11.5px]", selected ? "bg-primary text-primary-foreground" : "border border-border text-foreground-muted hover:text-foreground")}
+                  className={cn(
+                    "shrink-0 rounded px-2 py-0.5 text-[11.5px]",
+                    selected ? "bg-primary text-primary-foreground" : "border border-border text-foreground-muted hover:text-foreground",
+                  )}
                 >
                   {selected ? "Selected" : "Use this folder"}
                 </button>
@@ -91,7 +113,8 @@ export function FolderPicker({ access, value, onChange, allowExisting = true }: 
         </p>
       ) : null}
       <p className="border-t border-border px-3 py-1.5 text-[11px] text-muted">
-        Only folders inside this root are available. To pick from your existing code, set CHIKAIMA_COLLAB_ROOT to its parent folder (for example ~/Projects) and restart Chikaima.
+        Only folders inside this root are available. To pick from your existing code, set CHIKAIMA_COLLAB_ROOT to its parent folder (for example ~/Projects) and
+        restart Chikaima.
       </p>
     </div>
   );

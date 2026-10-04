@@ -6,12 +6,8 @@ export default function LoginPage() {
     <main className="flex min-h-screen bg-background">
       <section className="hidden flex-1 border-r border-border bg-surface p-12 lg:flex lg:flex-col lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
-            Chikaima
-          </p>
-          <h1 className="text-5xl font-semibold leading-tight text-foreground max-w-lg">
-            Self-hosted intelligence workspace.
-          </h1>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">Chikaima</p>
+          <h1 className="text-5xl font-semibold leading-tight text-foreground max-w-lg">Self-hosted intelligence workspace.</h1>
         </div>
         <Image
           src="/chikaima-logo.png"
@@ -23,8 +19,7 @@ export default function LoginPage() {
           className="mx-auto select-none pointer-events-none"
         />
         <p className="text-base leading-relaxed text-foreground-muted max-w-md">
-          Open a project, assemble specialised AI agents, and build, test and
-          review software together directly from your browser.
+          Open a project, assemble specialised AI agents, and build, test and review software together directly from your browser.
         </p>
       </section>
       <section className="flex flex-1 items-center justify-center px-6 py-10">

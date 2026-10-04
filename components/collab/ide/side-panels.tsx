@@ -64,7 +64,12 @@ export function SourceControl({
         {git && !git.is_repo ? (
           <div className="space-y-2 text-foreground-muted">
             <p>This folder isn&apos;t a git repository{team.git_enabled ? " yet — the team's first run will create one" : ""}.</p>
-            <button type="button" disabled={disabled || action.isPending} onClick={() => action.mutate({ action: "init" })} className="w-full rounded-md bg-primary py-1.5 text-primary-foreground disabled:opacity-50">
+            <button
+              type="button"
+              disabled={disabled || action.isPending}
+              onClick={() => action.mutate({ action: "init" })}
+              className="w-full rounded-md bg-primary py-1.5 text-primary-foreground disabled:opacity-50"
+            >
               Initialize repository
             </button>
           </div>
@@ -113,11 +118,18 @@ export function SourceControl({
               </button>
             </div>
 
-            <p className="mt-4 mb-1 font-semibold uppercase tracking-[0.1em] text-foreground-muted">Changes {git.changes.length ? `(${git.changes.length})` : ""}</p>
+            <p className="mt-4 mb-1 font-semibold uppercase tracking-[0.1em] text-foreground-muted">
+              Changes {git.changes.length ? `(${git.changes.length})` : ""}
+            </p>
             {git.changes.map((change) => {
               const code = change.code.trim()[0] ?? "M";
               return (
-                <button key={change.path} type="button" onClick={() => onOpenFile(change.path)} className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left hover:bg-surface-strong/60">
+                <button
+                  key={change.path}
+                  type="button"
+                  onClick={() => onOpenFile(change.path)}
+                  className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left hover:bg-surface-strong/60"
+                >
                   <span className="truncate text-foreground">{change.path}</span>
                   <span className={cn("ml-auto font-mono font-semibold", STATUS_COLOR[code] ?? "text-foreground-muted")}>{code === "?" ? "U" : code}</span>
                 </button>
@@ -189,7 +201,9 @@ export function RunsPanel({ runs, selectedId, onSelect }: { runs: CollabRun[]; s
             onClick={() => onSelect(run.id)}
             className={cn("flex w-full items-start gap-2 px-3 py-1.5 text-left hover:bg-surface-strong/60", run.id === selectedId && "bg-primary/12")}
           >
-            <span className="mt-0.5 shrink-0">{RUN_ICON[run.status] ?? (ACTIVE_STATUSES.includes(run.status) ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-primary" /> : null)}</span>
+            <span className="mt-0.5 shrink-0">
+              {RUN_ICON[run.status] ?? (ACTIVE_STATUSES.includes(run.status) ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-primary" /> : null)}
+            </span>
             <span className="min-w-0">
               <span className="block truncate text-xs text-foreground">{run.task}</span>
               <span className="block text-[11px] text-muted">
@@ -207,7 +221,11 @@ export function RunsPanel({ runs, selectedId, onSelect }: { runs: CollabRun[]; s
 export function SearchPanel({ access, team, onOpen }: { access: ApiAccess; team: CollabTeam; onOpen: (path: string, line: number) => void }) {
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState("");
-  const results = useQuery({ queryKey: ["collab-search", team.id, submitted], queryFn: () => api.searchProject(access, team.id, submitted), enabled: submitted.length >= 2 });
+  const results = useQuery({
+    queryKey: ["collab-search", team.id, submitted],
+    queryFn: () => api.searchProject(access, team.id, submitted),
+    enabled: submitted.length >= 2,
+  });
   const grouped = new Map<string, Array<{ line: number; text: string }>>();
   for (const match of results.data?.matches ?? []) {
     const list = grouped.get(match.path) ?? [];

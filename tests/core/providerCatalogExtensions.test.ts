@@ -111,7 +111,12 @@ test("user catalog models are synced onto a provider alongside the built-in fall
     const userId = seedUser();
     const provider = await new ProviderService(getDb()).create(userId, { name: "OpenAI", providerType: "openai" });
 
-    const keys = getDb().select().from(aiModels).where(eq(aiModels.providerId, provider.id)).all().map((model) => model.modelKey);
+    const keys = getDb()
+      .select()
+      .from(aiModels)
+      .where(eq(aiModels.providerId, provider.id))
+      .all()
+      .map((model) => model.modelKey);
     assert.ok(keys.includes("gpt-custom"));
     assert.ok(keys.includes("gpt-5.2"));
     assert.equal(toProviderResponse(provider).support_tier, "verified");
@@ -137,7 +142,10 @@ test("background routing can be turned off, always using the default model", asy
       const userId = seedUser();
       await new ProviderService(getDb()).create(userId, { name: "OpenAI", providerType: "openai" });
       const candidates = new LLMService(getDb()).resolveBackgroundCandidates(userId);
-      assert.deepEqual(candidates.map((candidate) => candidate.model.modelKey), ["gpt-5.2"]);
+      assert.deepEqual(
+        candidates.map((candidate) => candidate.model.modelKey),
+        ["gpt-5.2"],
+      );
     },
     { CHIKAIMA_BACKGROUND_MODEL_ROUTING: "default" },
   );

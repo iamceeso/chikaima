@@ -131,7 +131,10 @@ export class VectorStore {
       deleteVector.run(BigInt(row.id));
     }
 
-    this.db.delete(assetChunks).where(and(eq(assetChunks.userId, userId), eq(assetChunks.sourceType, sourceType), eq(assetChunks.sourceId, sourceId))).run();
+    this.db
+      .delete(assetChunks)
+      .where(and(eq(assetChunks.userId, userId), eq(assetChunks.sourceType, sourceType), eq(assetChunks.sourceId, sourceId)))
+      .run();
     return rows.length;
   }
 
@@ -155,7 +158,11 @@ export class VectorStore {
       filters.push(inArray(assetChunks.assetType, [...options.assetTypes]));
     }
 
-    const candidates = this.db.select().from(assetChunks).where(and(...filters)).all();
+    const candidates = this.db
+      .select()
+      .from(assetChunks)
+      .where(and(...filters))
+      .all();
     if (candidates.length === 0) return [];
 
     const candidateById = new Map(candidates.map((row) => [row.id, row]));
@@ -163,7 +170,9 @@ export class VectorStore {
 
     const raw = getRawConnection();
     const matches = raw
-      .prepare(`SELECT rowid, distance FROM ${EMBEDDING_VECTOR_TABLE} WHERE rowid IN (${idList}) AND embedding MATCH ? AND k = ${candidates.length} ORDER BY distance`)
+      .prepare(
+        `SELECT rowid, distance FROM ${EMBEDDING_VECTOR_TABLE} WHERE rowid IN (${idList}) AND embedding MATCH ? AND k = ${candidates.length} ORDER BY distance`,
+      )
       .all(new Float32Array(queryVector)) as { rowid: number; distance: number }[];
 
     const grouped = new Map<string, RetrievalSource>();

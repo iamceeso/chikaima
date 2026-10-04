@@ -151,13 +151,16 @@ function toolList(permissions: Set<Permission>, options: ToolOptions): string {
   const lines = ['<list path="."/>                   list a directory (recursive)', '<read path="src/app.ts"/>          read a file'];
   if (permissions.has("edit")) lines.push('<write path="src/app.ts">…</write>  create or replace a file with its full new content (no Markdown fences)');
   if (permissions.has("delete")) lines.push('<delete path="old.txt"/>           delete a file');
-  if (permissions.has("run_tests") && options.testCommand && options.commandsEnabled) lines.push(`<test/>                            run the project's tests (${options.testCommand})`);
-  if (permissions.has("run_commands") && options.commandsEnabled) lines.push("<run>npm run lint</run>             run a shell command in the folder (risky commands may wait for human approval)");
+  if (permissions.has("run_tests") && options.testCommand && options.commandsEnabled)
+    lines.push(`<test/>                            run the project's tests (${options.testCommand})`);
+  if (permissions.has("run_commands") && options.commandsEnabled)
+    lines.push("<run>npm run lint</run>             run a shell command in the folder (risky commands may wait for human approval)");
   if (permissions.has("browser") && options.previewRunning) {
     lines.push('<browse path="/pricing"/>          load a page of the running app preview and read its text');
     if (options.screenshots) lines.push('<screenshot path="/pricing"/>      capture a screenshot of a preview page (you will see the image)');
   }
-  if (permissions.has("deploy") && options.deployCommand && options.commandsEnabled) lines.push(`<deploy/>                          deploy the project (${options.deployCommand}); always waits for human approval`);
+  if (permissions.has("deploy") && options.deployCommand && options.commandsEnabled)
+    lines.push(`<deploy/>                          deploy the project (${options.deployCommand}); always waits for human approval`);
   return lines.join("\n");
 }
 

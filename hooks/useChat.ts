@@ -54,12 +54,7 @@ export function useChat(token: string | null) {
   }, []);
 
   const addMessage = useCallback(
-    async (
-      conversationId: string,
-      content: string,
-      role: string = "user",
-      metadata?: Record<string, unknown>,
-    ) => {
+    async (conversationId: string, content: string, role: string = "user", metadata?: Record<string, unknown>) => {
       if (!token || !currentConversation) return;
       try {
         setIsLoading(true);

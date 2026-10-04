@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -21,12 +14,7 @@ interface NewConversationDialogProps {
   isLoading?: boolean;
 }
 
-export function NewConversationDialog({
-  open,
-  onOpenChange,
-  onSubmit,
-  isLoading,
-}: NewConversationDialogProps) {
+export function NewConversationDialog({ open, onOpenChange, onSubmit, isLoading }: NewConversationDialogProps) {
   const [title, setTitle] = useState("");
   const [selectedModel, setSelectedModel] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,9 +37,7 @@ export function NewConversationDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New Conversation</DialogTitle>
-          <DialogDescription>
-            Create a new conversation with an optional title and model selection.
-          </DialogDescription>
+          <DialogDescription>Create a new conversation with an optional title and model selection.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -67,25 +53,14 @@ export function NewConversationDialog({
             />
           </div>
 
-          <ModelSelector
-            value={selectedModel}
-            onChange={setSelectedModel}
-            disabled={isSubmitting || isLoading}
-          />
+          <ModelSelector value={selectedModel} onChange={setSelectedModel} disabled={isSubmitting || isLoading} />
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting || isLoading}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting || isLoading}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!title.trim() || isSubmitting || isLoading}
-          >
+          <Button onClick={handleSubmit} disabled={!title.trim() || isSubmitting || isLoading}>
             {isSubmitting ? "Creating..." : "Create"}
           </Button>
         </DialogFooter>

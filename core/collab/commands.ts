@@ -42,7 +42,12 @@ export function clip(output: string, max = MAX_OUTPUT_CHARS): string {
  * combined stdout/stderr, streaming output and abort. The whole process
  * group is killed on timeout or abort so test runners' children die too.
  */
-export function spawnCollected(program: string, args: string[], cwd: string, options: RunOptions & { processEnv?: NodeJS.ProcessEnv } = {}): Promise<CommandResult> {
+export function spawnCollected(
+  program: string,
+  args: string[],
+  cwd: string,
+  options: RunOptions & { processEnv?: NodeJS.ProcessEnv } = {},
+): Promise<CommandResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   return new Promise((resolve) => {
     let output = "";

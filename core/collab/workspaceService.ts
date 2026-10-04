@@ -96,7 +96,8 @@ export class CollabWorkspaceService {
     this.assertIdle(team.folder);
     if (!(await repo.branches()).includes(branch)) throw badRequest(`Unknown branch: ${branch}`);
     if (await repo.isDirty()) throw conflict("Commit or discard your changes before merging.");
-    if (!(await repo.merge(branch, `Merge ${branch}`))) throw conflict(`Merging ${branch} conflicts with the current branch; resolve it in your editor or terminal.`);
+    if (!(await repo.merge(branch, `Merge ${branch}`)))
+      throw conflict(`Merging ${branch} conflicts with the current branch; resolve it in your editor or terminal.`);
   }
 
   async gitDiscard(userId: string, teamId: string): Promise<void> {
@@ -122,7 +123,11 @@ export class CollabWorkspaceService {
     if (!team.deployCommand) throw badRequest("Set a deploy command in the team settings first.");
     this.assertIdle(team.folder);
     handlers.onOutput(`$ ${team.deployCommand}\n`);
-    return this.executor(team.id, ws.root).run(team.deployCommand, ws.root, { timeoutMs: DEPLOY_TIMEOUT_MS, onOutput: handlers.onOutput, signal: handlers.signal });
+    return this.executor(team.id, ws.root).run(team.deployCommand, ws.root, {
+      timeoutMs: DEPLOY_TIMEOUT_MS,
+      onOutput: handlers.onOutput,
+      signal: handlers.signal,
+    });
   }
 
   // --- preview -----------------------------------------------------------------

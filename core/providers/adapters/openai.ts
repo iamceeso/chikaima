@@ -90,10 +90,7 @@ export class OpenAIAdapter implements ProviderAdapter {
       const content = message.content;
       if (Array.isArray(content)) {
         const parts: OpenAIBuiltPart[] = content
-          .filter(
-            (part) =>
-              (part.type === "text" && part.text?.trim()) || (part.type === "image" && part.mime_type && part.data),
-          )
+          .filter((part) => (part.type === "text" && part.text?.trim()) || (part.type === "image" && part.mime_type && part.data))
           .map((part) =>
             part.type === "text"
               ? { type: "text", text: part.text.trim() }

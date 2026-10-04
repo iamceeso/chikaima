@@ -18,15 +18,10 @@ export interface GitResult {
 /** Runs git with an argument list (never a shell string), so model- or user-supplied text can't be interpreted as shell syntax. */
 export function git(cwd: string, args: string[]): Promise<GitResult> {
   return new Promise((resolve) => {
-    execFile(
-      "git",
-      args,
-      { cwd, maxBuffer: MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "C" } },
-      (error, stdout, stderr) => {
-        const code = error ? (typeof (error as NodeJS.ErrnoException & { code?: unknown }).code === "number" ? Number((error as { code: number }).code) : 1) : 0;
-        resolve({ code, stdout: String(stdout), stderr: String(stderr) });
-      },
-    );
+    execFile("git", args, { cwd, maxBuffer: MAX_BUFFER, env: { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "C" } }, (error, stdout, stderr) => {
+      const code = error ? (typeof (error as NodeJS.ErrnoException & { code?: unknown }).code === "number" ? Number((error as { code: number }).code) : 1) : 0;
+      resolve({ code, stdout: String(stdout), stderr: String(stderr) });
+    });
   });
 }
 
@@ -106,7 +101,10 @@ export class GitRepo {
   }
 
   async branches(): Promise<string[]> {
-    return (await ok(this.root, ["branch", "--format=%(refname:short)"])).split("\n").map((line) => line.trim()).filter(Boolean);
+    return (await ok(this.root, ["branch", "--format=%(refname:short)"]))
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
   }
 
   async createBranch(name: string, from = "HEAD"): Promise<void> {

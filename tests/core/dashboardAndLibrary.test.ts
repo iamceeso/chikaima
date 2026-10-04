@@ -47,9 +47,33 @@ test("DashboardService.getSummary counts only the requesting user's resources", 
     }
 
     const now = new Date().toISOString();
-    db.insert(documents).values({ id: "doc-1", userId: user.id, name: "a.txt", filePath: "/tmp/a.txt", mimeType: "text/plain", status: "completed", createdAt: now, updatedAt: now }).run();
-    db.insert(documents).values({ id: "doc-2", userId: other.id, name: "b.txt", filePath: "/tmp/b.txt", mimeType: "text/plain", status: "completed", createdAt: now, updatedAt: now }).run();
-    db.insert(videos).values({ id: "vid-1", userId: user.id, name: "v.mp4", filePath: "/tmp/v.mp4", status: "completed", createdAt: now, updatedAt: now }).run();
+    db.insert(documents)
+      .values({
+        id: "doc-1",
+        userId: user.id,
+        name: "a.txt",
+        filePath: "/tmp/a.txt",
+        mimeType: "text/plain",
+        status: "completed",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    db.insert(documents)
+      .values({
+        id: "doc-2",
+        userId: other.id,
+        name: "b.txt",
+        filePath: "/tmp/b.txt",
+        mimeType: "text/plain",
+        status: "completed",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    db.insert(videos)
+      .values({ id: "vid-1", userId: user.id, name: "v.mp4", filePath: "/tmp/v.mp4", status: "completed", createdAt: now, updatedAt: now })
+      .run();
 
     const summary = new DashboardService(db).getSummary(user.id);
     assert.equal(summary.providers, 1);
@@ -67,8 +91,30 @@ test("LibraryService.getBundle returns only the requesting user's assets, mapped
     const other = new AuthService(db).register({ email: "other@example.com", fullName: "Other", password: "password123" });
 
     const now = new Date().toISOString();
-    db.insert(documents).values({ id: "doc-1", userId: user.id, name: "a.txt", filePath: "/tmp/a.txt", mimeType: "text/plain", status: "completed", createdAt: now, updatedAt: now }).run();
-    db.insert(documents).values({ id: "doc-2", userId: other.id, name: "b.txt", filePath: "/tmp/b.txt", mimeType: "text/plain", status: "completed", createdAt: now, updatedAt: now }).run();
+    db.insert(documents)
+      .values({
+        id: "doc-1",
+        userId: user.id,
+        name: "a.txt",
+        filePath: "/tmp/a.txt",
+        mimeType: "text/plain",
+        status: "completed",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    db.insert(documents)
+      .values({
+        id: "doc-2",
+        userId: other.id,
+        name: "b.txt",
+        filePath: "/tmp/b.txt",
+        mimeType: "text/plain",
+        status: "completed",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
 
     const bundle = new LibraryService(db).getBundle(user.id);
     assert.equal(bundle.documents.length, 1);

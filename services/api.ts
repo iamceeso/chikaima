@@ -160,15 +160,12 @@ export const api = {
   getPublicWorkspaceSettings: () => request<WorkspacePublicSettings>("/settings/public"),
   register: (payload: { email: string; full_name: string; password: string }) =>
     request<User>("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
-  login: (payload: { email: string; password: string }) =>
-    request<AuthTokens>("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+  login: (payload: { email: string; password: string }) => request<AuthTokens>("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   logout: (token: string) => request<{ message: string }>("/auth/logout", { method: "POST", token }),
   getProfile: (token: string) => request<User>("/users/me", { token }),
   getUsers: (access: ApiAccess) => request<User[]>("/users", access),
-  createUser: (
-    access: ApiAccess,
-    payload: { email: string; full_name: string; password: string; is_superuser?: boolean; is_active?: boolean },
-  ) => request<User>("/users", { method: "POST", ...access, body: JSON.stringify(payload) }),
+  createUser: (access: ApiAccess, payload: { email: string; full_name: string; password: string; is_superuser?: boolean; is_active?: boolean }) =>
+    request<User>("/users", { method: "POST", ...access, body: JSON.stringify(payload) }),
   updateUser: (
     access: ApiAccess,
     userId: string,
@@ -206,17 +203,13 @@ export const api = {
       config?: Record<string, unknown>;
     },
   ) => request<Provider>(`/providers/${providerId}`, { method: "PATCH", ...access, body: JSON.stringify(payload) }),
-  resyncProviderModels: (access: ApiAccess, providerId: string) =>
-    request<Provider>(`/providers/${providerId}/resync`, { method: "POST", ...access }),
-  deleteProvider: (access: ApiAccess, providerId: string) =>
-    request<void>(`/providers/${providerId}`, { method: "DELETE", ...access }),
+  resyncProviderModels: (access: ApiAccess, providerId: string) => request<Provider>(`/providers/${providerId}/resync`, { method: "POST", ...access }),
+  deleteProvider: (access: ApiAccess, providerId: string) => request<void>(`/providers/${providerId}`, { method: "DELETE", ...access }),
   getModels: (token: string) => request<AIModel[]>("/models", { token }),
   getLibraryBundle: (token: string) => request<LibraryBundle>("/library", { token }),
-  getAssetFile: (token: string, resourceType: AssetResourceType, resourceId: string) =>
-    requestBlob(`/assets/${resourceType}/${resourceId}/file`, { token }),
+  getAssetFile: (token: string, resourceType: AssetResourceType, resourceId: string) => requestBlob(`/assets/${resourceType}/${resourceId}/file`, { token }),
   getDocuments: (token: string) => request<DocumentAsset[]>("/documents", { token }),
-  deleteDocument: (token: string, documentId: string) =>
-    request<void>(`/documents/${documentId}`, { method: "DELETE", token }),
+  deleteDocument: (token: string, documentId: string) => request<void>(`/documents/${documentId}`, { method: "DELETE", token }),
   clearDocuments: (token: string) => request<void>("/documents", { method: "DELETE", token }),
   uploadDocument: (token: string, file: File) => {
     const formData = new FormData();
@@ -253,40 +246,26 @@ export const api = {
     token: string,
     payload: { title: string; folder?: string; model_id?: string; initial_message?: string; initial_metadata?: Record<string, unknown> },
   ) => request<Conversation>("/chat/conversations", { method: "POST", token, body: JSON.stringify(payload) }),
-  deleteConversation: (token: string, conversationId: string) =>
-    request<void>(`/chat/conversations/${conversationId}`, { method: "DELETE", token }),
-  sendMessage: (
-    token: string,
-    conversationId: string,
-    payload: { role: string; content: string; metadata?: Record<string, unknown> },
-  ) =>
+  deleteConversation: (token: string, conversationId: string) => request<void>(`/chat/conversations/${conversationId}`, { method: "DELETE", token }),
+  sendMessage: (token: string, conversationId: string, payload: { role: string; content: string; metadata?: Record<string, unknown> }) =>
     request<Message>(`/chat/conversations/${conversationId}/messages`, {
       method: "POST",
       token,
       body: JSON.stringify(payload),
     }),
-  updateMessage: (
-    token: string,
-    messageId: string,
-    payload: { content: string },
-  ) => request<Message>(`/chat/messages/${messageId}`, {
-    method: "PATCH",
-    token,
-    body: JSON.stringify(payload),
-  }),
-  regenerateMessage: (
-    token: string,
-    payload: { message_id: string },
-  ) => request<Message>(`/chat/messages/regenerate`, {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload),
-  }),
-  streamChat: async (
-    token: string,
-    payload: StreamChatPayload,
-    handlers: StreamChatHandlers = {},
-  ) => {
+  updateMessage: (token: string, messageId: string, payload: { content: string }) =>
+    request<Message>(`/chat/messages/${messageId}`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    }),
+  regenerateMessage: (token: string, payload: { message_id: string }) =>
+    request<Message>(`/chat/messages/regenerate`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }),
+  streamChat: async (token: string, payload: StreamChatPayload, handlers: StreamChatHandlers = {}) => {
     const headers = new Headers({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" });
     const response = await fetch(`${env.apiBaseUrl}/chat/stream`, {
       method: "POST",
@@ -374,7 +353,15 @@ export const api = {
     request<CollabTeam>("/collab/teams", { method: "POST", ...access, body: JSON.stringify(payload) }),
   updateCollabTeam: (access: ApiAccess, teamId: string, payload: CollabTeamInput) =>
     request<CollabTeam>(`/collab/teams/${teamId}`, { method: "PUT", ...access, body: JSON.stringify(payload) }),
-  deleteCollabTeam: (access: ApiAccess, teamId: string) => request<void>(`/collab/teams/${teamId}`, { method: "DELETE", ...access }),
+  deleteCollabTeam: (access: ApiAccess, teamId: string, options: { deleteFiles?: boolean } = {}) =>
+    request<void>(`/collab/teams/${teamId}${options.deleteFiles ? "?files=true" : ""}`, { method: "DELETE", ...access }),
+  saveCollabProjectCopy: (access: ApiAccess, teamId: string, destination: string) =>
+    request<{ path: string }>(`/collab/teams/${teamId}/save-copy`, {
+      method: "POST",
+      ...access,
+      body: JSON.stringify({ destination }),
+      timeoutMs: 10 * 60_000,
+    }),
   getCollabRuns: (access: ApiAccess, teamId: string) => request<CollabRun[]>(`/collab/teams/${teamId}/runs`, access),
   startCollabRun: (access: ApiAccess, teamId: string, task: string) =>
     request<CollabRun>(`/collab/teams/${teamId}/runs`, { method: "POST", ...access, body: JSON.stringify({ task }) }),
@@ -391,12 +378,16 @@ export const api = {
   getTasks: (access: ApiAccess, teamId: string) => request<CollabTask[]>(`/collab/teams/${teamId}/tasks`, { ...access, cache: "no-store" }),
   createTask: (access: ApiAccess, teamId: string, payload: { title: string; description?: string }) =>
     request<CollabTask>(`/collab/teams/${teamId}/tasks`, { method: "POST", ...access, body: JSON.stringify(payload) }),
-  startTask: (access: ApiAccess, teamId: string, taskId: string) => request<CollabRun>(`/collab/teams/${teamId}/tasks/${taskId}`, { method: "POST", ...access }),
+  startTask: (access: ApiAccess, teamId: string, taskId: string) =>
+    request<CollabRun>(`/collab/teams/${teamId}/tasks/${taskId}`, { method: "POST", ...access }),
   deleteTask: (access: ApiAccess, teamId: string, taskId: string) => request<void>(`/collab/teams/${teamId}/tasks/${taskId}`, { method: "DELETE", ...access }),
   searchProject: (access: ApiAccess, teamId: string, query: string) =>
     request<CollabSearchResult>(`/collab/teams/${teamId}/search?q=${encodeURIComponent(query)}`, { ...access, cache: "no-store" }),
   compareBranches: (access: ApiAccess, teamId: string, base: string, head: string) =>
-    request<CollabFileChange[]>(`/collab/teams/${teamId}/git/compare?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`, { ...access, cache: "no-store" }),
+    request<CollabFileChange[]>(`/collab/teams/${teamId}/git/compare?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`, {
+      ...access,
+      cache: "no-store",
+    }),
   getCollabFiles: (access: ApiAccess, teamId: string) =>
     request<{ entries: CollabFileEntry[]; truncated: boolean }>(`/collab/teams/${teamId}/files`, { ...access, cache: "no-store" }),
   getCollabFile: (access: ApiAccess, teamId: string, path: string) =>
@@ -410,8 +401,11 @@ export const api = {
   deleteCollabEntry: (access: ApiAccess, teamId: string, path: string) =>
     request<void>(`/collab/teams/${teamId}/files?path=${encodeURIComponent(path)}`, { method: "DELETE", ...access }),
   getCollabGit: (access: ApiAccess, teamId: string) => request<CollabGitOverview>(`/collab/teams/${teamId}/git`, { ...access, cache: "no-store" }),
-  collabGitAction: (access: ApiAccess, teamId: string, payload: { action: "init" | "commit" | "checkout" | "merge" | "discard"; message?: string; branch?: string }) =>
-    request<{ ok?: boolean; commit?: string }>(`/collab/teams/${teamId}/git`, { method: "POST", ...access, body: JSON.stringify(payload) }),
+  collabGitAction: (
+    access: ApiAccess,
+    teamId: string,
+    payload: { action: "init" | "commit" | "checkout" | "merge" | "discard"; message?: string; branch?: string },
+  ) => request<{ ok?: boolean; commit?: string }>(`/collab/teams/${teamId}/git`, { method: "POST", ...access, body: JSON.stringify(payload) }),
   getCollabCommitFiles: (access: ApiAccess, teamId: string, hash: string) => request<CollabFileChange[]>(`/collab/teams/${teamId}/git/commits/${hash}`, access),
   getCollabPreview: (access: ApiAccess, teamId: string) => request<CollabPreview>(`/collab/teams/${teamId}/preview`, { ...access, cache: "no-store" }),
   startCollabPreview: (access: ApiAccess, teamId: string) => request<CollabPreview>(`/collab/teams/${teamId}/preview`, { method: "POST", ...access }),
@@ -512,7 +506,11 @@ export const api = {
    * Holds open the job event stream until `signal` aborts or the server
    * closes it. Pass the last event id seen as `after` to replay missed events.
    */
-  streamJobEvents: async (token: string, handlers: { onEvent: (event: JobEvent) => void; onReady?: () => void }, options: { after?: number | null; signal?: AbortSignal } = {}) => {
+  streamJobEvents: async (
+    token: string,
+    handlers: { onEvent: (event: JobEvent) => void; onReady?: () => void },
+    options: { after?: number | null; signal?: AbortSignal } = {},
+  ) => {
     const query = options.after != null ? `?after=${options.after}` : "";
     const response = await fetch(`${env.apiBaseUrl}/jobs/stream${query}`, {
       headers: { Authorization: `Bearer ${token}` },

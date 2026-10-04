@@ -44,7 +44,10 @@ const DEPLOY_TIMEOUT_MS = 15 * 60_000;
 export class ProviderModelClient implements CollabModelClient {
   private readonly llm: LLMService;
 
-  constructor(private readonly userId: string, db: ChikaimaDatabase) {
+  constructor(
+    private readonly userId: string,
+    db: ChikaimaDatabase,
+  ) {
     this.llm = new LLMService(db);
   }
 
@@ -205,7 +208,14 @@ export class CollabOrchestrator {
         outcomes.push(...(await this.runParallel(steps, implementers, runBranch)));
       } else {
         for (const [index, step] of steps.entries()) {
-          outcomes.push(await this.runStep(implementers.find((member) => member.precedence === step.assignee)!, step, index, this.main));
+          outcomes.push(
+            await this.runStep(
+              implementers.find((member) => member.precedence === step.assignee)!,
+              step,
+              index,
+              this.main,
+            ),
+          );
         }
       }
 
@@ -244,7 +254,8 @@ export class CollabOrchestrator {
   // --- git: one branch per run ---------------------------------------------------
 
   private async startBranch(repo: GitRepo): Promise<{ baseBranch: string; runBranch: string }> {
-    if (await repo.ensureRepo()) this.log(null, "system", "Turned the folder into a git repository with an initial commit, so every step can be tracked and undone.");
+    if (await repo.ensureRepo())
+      this.log(null, "system", "Turned the folder into a git repository with an initial commit, so every step can be tracked and undone.");
     if (await repo.isDirty()) {
       throw badRequest("The folder has uncommitted changes. Commit them from the Git panel (or discard them) before starting a run.");
     }
@@ -271,11 +282,16 @@ export class CollabOrchestrator {
     let note: string | null = null;
     if (needsApproval(this.team.autonomy as Autonomy, { kind: "merge" })) {
       const kept = outcomes.filter((outcome) => outcome.status === "approved");
-      ({ approved, note } = await this.awaitApproval(lead, "merge", `Merge ${ahead} commit(s) from ${runBranch} into ${baseBranch}? Kept: ${kept.map((o) => `step ${o.index + 1}`).join(", ") || "none"}.`, {
-        branch: runBranch,
-        base: baseBranch,
-        commits: (await repo.log(ahead, runBranch)).map((commit) => ({ hash: commit.shortHash, subject: commit.subject })),
-      }));
+      ({ approved, note } = await this.awaitApproval(
+        lead,
+        "merge",
+        `Merge ${ahead} commit(s) from ${runBranch} into ${baseBranch}? Kept: ${kept.map((o) => `step ${o.index + 1}`).join(", ") || "none"}.`,
+        {
+          branch: runBranch,
+          base: baseBranch,
+          commits: (await repo.log(ahead, runBranch)).map((commit) => ({ hash: commit.shortHash, subject: commit.subject })),
+        },
+      ));
     }
 
     await repo.checkout(baseBranch);
@@ -287,7 +303,12 @@ export class CollabOrchestrator {
       await repo.deleteBranch(runBranch);
       this.log(null, "system", `Merged ${ahead} commit(s) into ${baseBranch}.`, { git: "merged", branch: runBranch, base: baseBranch });
     } else {
-      this.log(null, "error", `Merging into ${baseBranch} conflicted (it changed during the run). The work stays on branch ${runBranch}; merge it from the Git panel.`, { git: "conflict" });
+      this.log(
+        null,
+        "error",
+        `Merging into ${baseBranch} conflicted (it changed during the run). The work stays on branch ${runBranch}; merge it from the Git panel.`,
+        { git: "conflict" },
+      );
     }
   }
 
@@ -311,12 +332,27 @@ export class CollabOrchestrator {
     }
 
     this.status(lead, "planning", "is planning the work.");
-    const reply = await this.call(lead, [{ role: "user", content: leadPlanPrompt(this.like(lead), this.members.map((m) => this.like(m)), this.run.task, this.main.ws.list()) }]);
+    const reply = await this.call(lead, [
+      {
+        role: "user",
+        content: leadPlanPrompt(
+          this.like(lead),
+          this.members.map((m) => this.like(m)),
+          this.run.task,
+          this.main.ws.list(),
+        ),
+      },
+    ]);
     this.status(lead, "idle", "finished planning.");
     const valid = new Set(implementers.map((member) => member.precedence));
     const steps = parsePlan(reply).map((step) => (valid.has(step.assignee) ? step : { ...step, assignee: implementers[0]!.precedence }));
     const plan = steps.length > 0 ? steps : fallback;
-    this.log(lead.id, "plan", steps.length > 0 ? reply : `${lead.name}'s plan could not be read; assigning the whole task to #${implementers[0]!.precedence}.`, { steps: plan });
+    this.log(
+      lead.id,
+      "plan",
+      steps.length > 0 ? reply : `${lead.name}'s plan could not be read; assigning the whole task to #${implementers[0]!.precedence}.`,
+      { steps: plan },
+    );
     return plan;
   }
 
@@ -342,7 +378,11 @@ export class CollabOrchestrator {
         continue;
       }
 
-      this.log(null, "system", `Running ${wave.length} steps in parallel: ${wave.map(({ step, index }) => `step ${index + 1} (${memberFor(step).name})`).join(", ")}.`);
+      this.log(
+        null,
+        "system",
+        `Running ${wave.length} steps in parallel: ${wave.map(({ step, index }) => `step ${index + 1} (${memberFor(step).name})`).join(", ")}.`,
+      );
       const lanes = await Promise.all(
         wave.map(async ({ step, index }) => {
           const path = join(worktreeDir(this.team.id), `${this.run.id.slice(0, 8)}-s${index + 1}`);
@@ -350,7 +390,8 @@ export class CollabOrchestrator {
           await this.main.repo!.addWorktree(path, branch, runBranch);
           // Host commands in a worktree can reuse the main folder's installed dependencies.
           const deps = join(this.main.ws.root, "node_modules");
-          if (this.executor?.kind === "host" && existsSync(deps) && !existsSync(join(path, "node_modules"))) symlinkSync(deps, join(path, "node_modules"), "dir");
+          if (this.executor?.kind === "host" && existsSync(deps) && !existsSync(join(path, "node_modules")))
+            symlinkSync(deps, join(path, "node_modules"), "dir");
           return { step, index, path, branch, ctx: { ws: Workspace.at(path), repo: new GitRepo(path), worktree: true } as StepContext };
         }),
       );
@@ -373,10 +414,15 @@ export class CollabOrchestrator {
             this.log(null, "system", `Merged step ${lane.index + 1} (${outcome.assignee}) into ${runBranch}.`, { git: "merged_step", step: lane.index });
             waveOutcomes.push(outcome);
           } else {
-            this.log(null, "system", `Step ${lane.index + 1} conflicts with work merged before it (higher precedence wins); ${outcome.assignee} will redo it on the merged code.`, {
-              git: "conflict",
-              step: lane.index,
-            });
+            this.log(
+              null,
+              "system",
+              `Step ${lane.index + 1} conflicts with work merged before it (higher precedence wins); ${outcome.assignee} will redo it on the merged code.`,
+              {
+                git: "conflict",
+                step: lane.index,
+              },
+            );
             waveOutcomes.push(await this.runStep(memberFor(lane.step), lane.step, lane.index, this.main));
           }
         }
@@ -413,7 +459,15 @@ export class CollabOrchestrator {
       const { note } = await this.agentLoop(
         implementer,
         "work",
-        implementerPrompt(this.like(implementer), this.likeAll(), this.permissionsOf(implementer), this.toolOptions(), this.run.task, step.instruction, ctx.ws.list()),
+        implementerPrompt(
+          this.like(implementer),
+          this.likeAll(),
+          this.permissionsOf(implementer),
+          this.toolOptions(),
+          this.run.task,
+          step.instruction,
+          ctx.ws.list(),
+        ),
         feedback ? `Your previous attempt was rejected and has been reverted. Feedback:\n\n${feedback}\n\nRedo the step addressing it.` : "Begin the step.",
         ctx,
       );
@@ -451,12 +505,17 @@ export class CollabOrchestrator {
 
       // 3. The human, when the team is supervised.
       if (decision.approved && needsApproval(this.team.autonomy as Autonomy, { kind: "step" })) {
-        const human = await this.awaitApproval(implementer, "step", `Step ${index + 1} by ${implementer.name} is ready for your approval: ${step.instruction}`, {
-          ...where,
-          files: this.changedFiles(ctx),
-          diff: this.diffOf(ctx),
-          files_detail: this.filesDetail(ctx),
-        });
+        const human = await this.awaitApproval(
+          implementer,
+          "step",
+          `Step ${index + 1} by ${implementer.name} is ready for your approval: ${step.instruction}`,
+          {
+            ...where,
+            files: this.changedFiles(ctx),
+            diff: this.diffOf(ctx),
+            files_detail: this.filesDetail(ctx),
+          },
+        );
         if (!human.approved) {
           decision = { approved: false, reason: `Rejected by the supervisor${human.note ? `: ${human.note}` : "."}` };
           comments.push(`Supervisor: ${human.note || "Rejected without a note; reconsider the approach."}`);
@@ -480,8 +539,25 @@ export class CollabOrchestrator {
     }
   }
 
-  private async review(reviewer: CollabMemberRow, author: CollabMemberRow, step: PlanStep, note: string | null, diff: string, ctx: StepContext): Promise<ReviewVerdict> {
-    const system = reviewerPrompt(this.like(reviewer), this.likeAll(), this.permissionsOf(reviewer), this.toolOptions(), this.run.task, step.instruction, this.like(author), note, diff);
+  private async review(
+    reviewer: CollabMemberRow,
+    author: CollabMemberRow,
+    step: PlanStep,
+    note: string | null,
+    diff: string,
+    ctx: StepContext,
+  ): Promise<ReviewVerdict> {
+    const system = reviewerPrompt(
+      this.like(reviewer),
+      this.likeAll(),
+      this.permissionsOf(reviewer),
+      this.toolOptions(),
+      this.run.task,
+      step.instruction,
+      this.like(author),
+      note,
+      diff,
+    );
     const { verdict } = await this.agentLoop(reviewer, "review", system, "Review the change.", ctx);
     return verdict ?? { vote: null, comments: `${reviewer.name} did not return a verdict.` };
   }
@@ -524,7 +600,9 @@ export class CollabOrchestrator {
       )
       .join("\n");
     if (lead) this.status(lead, "summarizing", "is writing the report.");
-    const summary = lead ? await this.call(lead, [{ role: "user", content: leadSummaryPrompt(this.like(lead), this.likeAll(), this.run.task, outcomeText) }]) : outcomeText;
+    const summary = lead
+      ? await this.call(lead, [{ role: "user", content: leadSummaryPrompt(this.like(lead), this.likeAll(), this.run.task, outcomeText) }])
+      : outcomeText;
     if (lead) this.status(lead, "idle", "finished the report.");
     this.log(lead?.id ?? null, "summary", summary);
     return summary;
@@ -537,7 +615,13 @@ export class CollabOrchestrator {
    * implementers, a `<verdict>` for reviewers and testers. Actions run
    * against the step's folder subject to the agent's permissions and scope.
    */
-  private async agentLoop(member: CollabMemberRow, mode: "work" | "review", system: string, opening: string, ctx: StepContext): Promise<{ note: string | null; verdict: ReviewVerdict | null }> {
+  private async agentLoop(
+    member: CollabMemberRow,
+    mode: "work" | "review",
+    system: string,
+    opening: string,
+    ctx: StepContext,
+  ): Promise<{ note: string | null; verdict: ReviewVerdict | null }> {
     const messages: ChatMessage[] = [
       { role: "system", content: system },
       { role: "user", content: opening },
@@ -561,7 +645,13 @@ export class CollabOrchestrator {
 
       if (parsed.actions.length === 0) {
         if (++idle >= MAX_IDLE_TURNS) break;
-        messages.push({ role: "user", content: mode === "work" ? "Use the action tags to work on the folder, or reply <done/> if the step is complete." : "Reply with your <verdict> and <comments>." });
+        messages.push({
+          role: "user",
+          content:
+            mode === "work"
+              ? "Use the action tags to work on the folder, or reply <done/> if the step is complete."
+              : "Reply with your <verdict> and <comments>.",
+        });
         continue;
       }
       idle = 0;
@@ -569,7 +659,8 @@ export class CollabOrchestrator {
       const images = results.flatMap((result) => (result.image ? [result.image] : []));
       messages.push({
         role: "user",
-        content: images.length > 0 ? [{ type: "text", text }, ...images.map((data): MessageContentPart => ({ type: "image", mime_type: "image/png", data }))] : text,
+        content:
+          images.length > 0 ? [{ type: "text", text }, ...images.map((data): MessageContentPart => ({ type: "image", mime_type: "image/png", data }))] : text,
       });
     }
     return { note, verdict: null };
@@ -603,7 +694,11 @@ export class CollabOrchestrator {
           }
           if (action.type === "write") ws.write(relative, action.content);
           else ws.delete(relative);
-          this.log(member.id, "action", `${action.type === "write" ? "Edited" : "Deleted"} ${relative}`, { action: action.type, path: relative, worktree: ctx.worktree || undefined });
+          this.log(member.id, "action", `${action.type === "write" ? "Edited" : "Deleted"} ${relative}`, {
+            action: action.type,
+            path: relative,
+            worktree: ctx.worktree || undefined,
+          });
           return text("ok");
         }
         case "test": {
@@ -641,7 +736,9 @@ export class CollabOrchestrator {
           if (!permissions.has("deploy")) return refuse("you do not have the deploy permission.");
           if (!this.team.deployCommand) return refuse("this team has no deploy command configured.");
           if (!this.executor) return refuse("command execution is disabled on this server.");
-          const human = await this.awaitApproval(member, "deploy", `${member.name} wants to deploy: ${this.team.deployCommand}`, { command: this.team.deployCommand });
+          const human = await this.awaitApproval(member, "deploy", `${member.name} wants to deploy: ${this.team.deployCommand}`, {
+            command: this.team.deployCommand,
+          });
           if (!human.approved) return refuse(`the supervisor declined${human.note ? `: ${human.note}` : "."}`);
           const result = await this.execCommand(member, this.team.deployCommand, this.main.ws.root, { stage: "deploy" }, DEPLOY_TIMEOUT_MS);
           return text(`\nexit code: ${result.exitCode ?? "timeout"}\n${result.output}\n`);
@@ -653,10 +750,22 @@ export class CollabOrchestrator {
     }
   }
 
-  private async execCommand(member: CollabMemberRow | null, command: string, cwd: string, data: Record<string, unknown> = {}, timeoutMs?: number): Promise<CommandResult> {
+  private async execCommand(
+    member: CollabMemberRow | null,
+    command: string,
+    cwd: string,
+    data: Record<string, unknown> = {},
+    timeoutMs?: number,
+  ): Promise<CommandResult> {
     this.checkpoint();
     const result = await this.executor!.run(command, cwd, timeoutMs ? { timeoutMs } : {});
-    this.log(member?.id ?? null, "command", result.output, { ...data, command, exit_code: result.exitCode, timed_out: result.timedOut, sandbox: this.executor!.kind });
+    this.log(member?.id ?? null, "command", result.output, {
+      ...data,
+      command,
+      exit_code: result.exitCode,
+      timed_out: result.timedOut,
+      sandbox: this.executor!.kind,
+    });
     this.checkpoint();
     return result;
   }
@@ -664,7 +773,12 @@ export class CollabOrchestrator {
   // --- human approval ----------------------------------------------------------
 
   /** Pauses until the supervisor approves or rejects, or the run is cancelled. Parallel steps can each be waiting at once. */
-  private async awaitApproval(member: CollabMemberRow | null, kind: ApprovalKind, summary: string, payload: Record<string, unknown>): Promise<{ approved: boolean; note: string | null }> {
+  private async awaitApproval(
+    member: CollabMemberRow | null,
+    kind: ApprovalKind,
+    summary: string,
+    payload: Record<string, unknown>,
+  ): Promise<{ approved: boolean; note: string | null }> {
     const approval = this.repo.createApproval({ runId: this.run.id, userId: this.run.userId, memberId: member?.id ?? null, kind, summary, payload });
     if (member) this.status(member, "waiting", "is waiting for your approval.");
     this.log(member?.id ?? null, "approval", summary, { approval_id: approval.id, approval_kind: kind, status: "pending", ...payload });
@@ -736,7 +850,15 @@ export class CollabOrchestrator {
   }
 
   private like(member: CollabMemberRow) {
-    return { name: member.name, title: member.title, role: member.role, precedence: member.precedence, instructions: member.instructions, scope: member.scope, reportsTo: member.reportsTo };
+    return {
+      name: member.name,
+      title: member.title,
+      role: member.role,
+      precedence: member.precedence,
+      instructions: member.instructions,
+      scope: member.scope,
+      reportsTo: member.reportsTo,
+    };
   }
 
   private likeAll() {

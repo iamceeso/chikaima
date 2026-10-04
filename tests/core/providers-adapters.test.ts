@@ -54,11 +54,7 @@ test("OpenAIAdapter.streamReply yields token deltas parsed from the SSE stream",
   const adapter = new OpenAIAdapter({ apiKey: "sk-test", providerLabel: "OpenAI" });
 
   const chunks = await withMockedFetch(
-    async () =>
-      sseResponse([
-        JSON.stringify({ choices: [{ delta: { content: "Hel" } }] }),
-        JSON.stringify({ choices: [{ delta: { content: "lo" } }] }),
-      ]),
+    async () => sseResponse([JSON.stringify({ choices: [{ delta: { content: "Hel" } }] }), JSON.stringify({ choices: [{ delta: { content: "lo" } }] })]),
     async () => {
       const collected: string[] = [];
       for await (const chunk of adapter.streamReply("gpt-4o-mini", [{ role: "user", content: "hi" }])) {

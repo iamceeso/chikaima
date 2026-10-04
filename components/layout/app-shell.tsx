@@ -22,11 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="h-screen w-full overflow-hidden bg-background text-foreground">
       <div className="flex h-full w-full flex-col gap-0 overflow-hidden xl:flex-row">
         <div className="hidden h-full xl:block xl:shrink-0">
-          <Sidebar
-            pathname={pathname}
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed((value) => !value)}
-          />
+          <Sidebar pathname={pathname} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((value) => !value)} />
         </div>
 
         {sidebarOpen ? (
@@ -37,14 +33,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
 
-        <div
-          className={`flex min-h-0 flex-1 flex-col overflow-hidden xl:border-l xl:border-border ${
-            isChat ? "p-0" : "px-4 py-4 lg:px-6 lg:py-5"
-          }`}
-        >
-          <div
-            className={`flex items-center ${isChat ? "justify-start px-4 py-3 sm:px-5" : "mb-2 gap-3 px-1 py-0 sm:hidden"}`}
-          >
+        <div className={`flex min-h-0 flex-1 flex-col overflow-hidden xl:border-l xl:border-border ${isChat ? "p-0" : "px-4 py-4 lg:px-6 lg:py-5"}`}>
+          <div className={`flex items-center ${isChat ? "justify-start px-4 py-3 sm:px-5" : "mb-2 gap-3 px-1 py-0 sm:hidden"}`}>
             <button
               type="button"
               onClick={() => setSidebarOpen((value) => !value)}
@@ -65,9 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </>
             )}
           </div>
-          <div className={isScrollablePage ? "min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-1" : "min-h-0 flex-1 overflow-hidden"}>
-            {children}
-          </div>
+          <div className={isScrollablePage ? "min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-1" : "min-h-0 flex-1 overflow-hidden"}>{children}</div>
         </div>
       </div>
     </div>

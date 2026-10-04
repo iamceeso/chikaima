@@ -120,35 +120,27 @@ export function RegisterForm() {
   return (
     <Card className="w-full max-w-md bg-surface-raised p-4">
       <div className="mb-8">
-        <h1 className="mt-2 text-3xl font-semibold text-foreground">
-          Join Chikaima
-        </h1>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground">Join Chikaima</h1>
       </div>
       {workspaceQuery.data?.first_user_registration_required ? (
         <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
           <div className="rounded-2xl border border-border bg-background-secondary p-4">
             <p className="text-sm font-medium text-foreground">Create the first workspace account</p>
-            <p className="mt-2 text-sm text-foreground-muted">
-              The first account is the administrator and unlocks the rest of setup.
-            </p>
+            <p className="mt-2 text-sm text-foreground-muted">The first account is the administrator and unlocks the rest of setup.</p>
           </div>
           <div>
             <Label htmlFor="full_name">
               Full name <span className="text-primary">*</span>
             </Label>
             <Input id="full_name" {...form.register("full_name")} />
-            {form.formState.errors.full_name ? (
-              <p className="mt-1 text-sm text-primary">{form.formState.errors.full_name.message}</p>
-            ) : null}
+            {form.formState.errors.full_name ? <p className="mt-1 text-sm text-primary">{form.formState.errors.full_name.message}</p> : null}
           </div>
           <div>
             <Label htmlFor="email">
               Email <span className="text-primary">*</span>
             </Label>
             <Input id="email" type="email" {...form.register("email")} />
-            {form.formState.errors.email ? (
-              <p className="mt-1 text-sm text-primary">{form.formState.errors.email.message}</p>
-            ) : null}
+            {form.formState.errors.email ? <p className="mt-1 text-sm text-primary">{form.formState.errors.email.message}</p> : null}
           </div>
           <PasswordField
             id="password"
@@ -166,9 +158,7 @@ export function RegisterForm() {
       ) : workspaceQuery.data?.public_registration_enabled === false ? (
         <div className=" rounded-2xl border border-border bg-background-secondary p-4">
           <p className="text-sm font-medium text-foreground">Public registration is disabled</p>
-          <p className="mt-2 text-sm text-foreground-muted">
-            Ask a workspace administrator to create your account from Settings.
-          </p>
+          <p className="mt-2 text-sm text-foreground-muted">Ask a workspace administrator to create your account from Settings.</p>
         </div>
       ) : (
         <form className="mt-8 space-y-4" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
@@ -177,18 +167,14 @@ export function RegisterForm() {
               Full name <span className="text-primary">*</span>
             </Label>
             <Input id="full_name" {...form.register("full_name")} />
-            {form.formState.errors.full_name ? (
-              <p className="mt-1 text-sm text-primary">{form.formState.errors.full_name.message}</p>
-            ) : null}
+            {form.formState.errors.full_name ? <p className="mt-1 text-sm text-primary">{form.formState.errors.full_name.message}</p> : null}
           </div>
           <div>
             <Label htmlFor="email">
               Email <span className="text-primary">*</span>
             </Label>
             <Input id="email" type="email" {...form.register("email")} />
-            {form.formState.errors.email ? (
-              <p className="mt-1 text-sm text-primary">{form.formState.errors.email.message}</p>
-            ) : null}
+            {form.formState.errors.email ? <p className="mt-1 text-sm text-primary">{form.formState.errors.email.message}</p> : null}
           </div>
           <PasswordField
             id="password"
@@ -242,10 +228,7 @@ export function LoginForm() {
         queryClient.setQueryData(["profile", tokens.access_token], user);
         return user;
       });
-      await Promise.allSettled([
-        profilePromise,
-        prefetchLibrary(queryClient, tokens.access_token),
-      ]);
+      await Promise.allSettled([profilePromise, prefetchLibrary(queryClient, tokens.access_token)]);
       router.replace(next);
     },
   });
@@ -260,9 +243,7 @@ export function LoginForm() {
       {workspaceQuery.data?.first_user_registration_required ? (
         <div className="mt-8 rounded-2xl border border-border bg-background-secondary p-4">
           <p className="text-sm font-medium text-foreground">Create the first workspace account first</p>
-          <p className="mt-2 text-sm text-foreground-muted">
-            Registration is required before anyone can sign in to this workspace.
-          </p>
+          <p className="mt-2 text-sm text-foreground-muted">Registration is required before anyone can sign in to this workspace.</p>
           <Link href="/register" className="mt-4 inline-flex text-sm text-foreground underline decoration-primary/30 underline-offset-4">
             Go to registration
           </Link>
@@ -270,9 +251,7 @@ export function LoginForm() {
       ) : workspaceQuery.data?.authentication_enabled === false ? (
         <div className="mt-8 rounded-2xl border border-border bg-background-secondary p-4">
           <p className="text-sm font-medium text-foreground">Authentication is disabled</p>
-          <p className="mt-2 text-sm text-foreground-muted">
-            This workspace currently allows direct access without signing in.
-          </p>
+          <p className="mt-2 text-sm text-foreground-muted">This workspace currently allows direct access without signing in.</p>
           <Link href="/projects" className="mt-4 inline-flex text-sm text-foreground underline decoration-primary/30 underline-offset-4">
             Open workspace
           </Link>
@@ -283,12 +262,7 @@ export function LoginForm() {
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" {...form.register("email")} />
           </div>
-          <PasswordField
-            id="password"
-            label="Password"
-            error={form.formState.errors.password?.message}
-            registration={form.register("password")}
-          />
+          <PasswordField id="password" label="Password" error={form.formState.errors.password?.message} registration={form.register("password")} />
           {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
           <Button type="submit" className="w-full">
             {mutation.isPending ? "Signing in..." : "Sign in"}

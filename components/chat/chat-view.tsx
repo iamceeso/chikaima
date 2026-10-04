@@ -49,9 +49,7 @@ export function ChatView({
   }, [messages]);
 
   const contentType =
-    conversation && "metadata" in conversation
-      ? ((conversation as { metadata?: { content_type?: string } }).metadata?.content_type ?? "")
-      : "";
+    conversation && "metadata" in conversation ? ((conversation as { metadata?: { content_type?: string } }).metadata?.content_type ?? "") : "";
   const suggestions = useSuggestedMessages(contentType);
   const emptyChat = messages.length === 0;
 
@@ -59,12 +57,8 @@ export function ChatView({
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
       {/* Header */}
       <div className="shrink-0 border-b border-border px-6 py-4">
-        <h2 className="text-lg font-semibold text-foreground">
-          {conversation?.title ?? "New conversation"}
-        </h2>
-        {conversation?.model_id && (
-          <p className="text-sm text-foreground-muted mt-1">Model: {conversation.model_id}</p>
-        )}
+        <h2 className="text-lg font-semibold text-foreground">{conversation?.title ?? "New conversation"}</h2>
+        {conversation?.model_id && <p className="text-sm text-foreground-muted mt-1">Model: {conversation.model_id}</p>}
       </div>
 
       {/* Main content container */}
@@ -77,9 +71,7 @@ export function ChatView({
               <div className="flex min-h-full items-center justify-center">
                 <div className="max-w-md text-center">
                   <h3 className="text-lg font-semibold text-foreground mb-2">Start a conversation</h3>
-                  <p className="text-sm text-foreground-muted mb-6">
-                    Ask questions, analyze content, or chat with the AI assistant.
-                  </p>
+                  <p className="text-sm text-foreground-muted mb-6">Ask questions, analyze content, or chat with the AI assistant.</p>
                 </div>
               </div>
             ) : (
@@ -89,16 +81,8 @@ export function ChatView({
                     key={message.id}
                     message={message}
                     isLoading={isLoading}
-                    onUpdate={
-                      onUpdateMessage
-                        ? (content) => onUpdateMessage(message.id, content)
-                        : undefined
-                    }
-                    onRegenerate={
-                      onRegenerateMessage
-                        ? () => onRegenerateMessage(message.id)
-                        : undefined
-                    }
+                    onUpdate={onUpdateMessage ? (content) => onUpdateMessage(message.id, content) : undefined}
+                    onRegenerate={onRegenerateMessage ? () => onRegenerateMessage(message.id) : undefined}
                   />
                 ))}
                 {isLoading && (
@@ -117,13 +101,7 @@ export function ChatView({
           </div>
 
           {/* Suggested messages */}
-          {emptyChat && showSuggestions && (
-            <SuggestedMessages
-              suggestions={suggestions.slice(0, 4)}
-              onSelect={onSendMessage}
-              isLoading={isLoading}
-            />
-          )}
+          {emptyChat && showSuggestions && <SuggestedMessages suggestions={suggestions.slice(0, 4)} onSelect={onSendMessage} isLoading={isLoading} />}
 
           {/* Input */}
           <div className="shrink-0">

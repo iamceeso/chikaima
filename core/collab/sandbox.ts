@@ -146,7 +146,9 @@ export class DockerExecutor implements Executor {
         "--security-opt",
         "no-new-privileges",
         // Run as Chikaima's own user so files agents create in the mounted folder aren't root-owned on Linux hosts.
-        ...(typeof process.getuid === "function" && process.getuid() !== 0 ? ["--user", `${process.getuid()}:${process.getgid?.() ?? process.getuid()}`, "-e", "HOME=/tmp"] : []),
+        ...(typeof process.getuid === "function" && process.getuid() !== 0
+          ? ["--user", `${process.getuid()}:${process.getgid?.() ?? process.getuid()}`, "-e", "HOME=/tmp"]
+          : []),
         "-v",
         `${this.hostPath(this.folderRoot)}:/workspace`,
         "-v",

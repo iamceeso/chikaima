@@ -36,9 +36,16 @@ export function problemsFrom(messages: CollabMessage[], team: CollabTeam): Probl
       });
     }
     if (message.kind === "review" && message.data.vote === "reject") {
-      problems.push({ id: message.id, severity: "warning", source: nameOf(message.member_id), text: message.content.split("\n")[0] ?? "", detail: message.content });
+      problems.push({
+        id: message.id,
+        severity: "warning",
+        source: nameOf(message.member_id),
+        text: message.content.split("\n")[0] ?? "",
+        detail: message.content,
+      });
     }
-    if (message.kind === "decision" && message.data.approved === false) problems.push({ id: message.id, severity: "warning", source: "Review", text: message.content });
+    if (message.kind === "decision" && message.data.approved === false)
+      problems.push({ id: message.id, severity: "warning", source: "Review", text: message.content });
   }
   return problems;
 }
@@ -52,11 +59,17 @@ export function ProblemsView({ messages, team }: { messages: CollabMessage[]; te
         <li key={problem.id}>
           <details>
             <summary className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 hover:bg-surface-strong/50">
-              {problem.severity === "error" ? <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-600" /> : <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />}
+              {problem.severity === "error" ? (
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-600" />
+              ) : (
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+              )}
               <span className="min-w-0 flex-1 text-foreground">{problem.text}</span>
               <span className="shrink-0 text-muted">{problem.source}</span>
             </summary>
-            {problem.detail ? <pre className="ml-6 mt-1 max-h-48 overflow-auto rounded bg-zinc-950 p-2 font-mono text-[11px] text-zinc-100">{problem.detail}</pre> : null}
+            {problem.detail ? (
+              <pre className="ml-6 mt-1 max-h-48 overflow-auto rounded bg-zinc-950 p-2 font-mono text-[11px] text-zinc-100">{problem.detail}</pre>
+            ) : null}
           </details>
         </li>
       ))}
@@ -74,7 +87,8 @@ export function GitChangesView({ access, team, onOpenCommit }: { access: ApiAcce
   return (
     <div className="pt-1 text-xs">
       <p className="mb-2 text-foreground-muted">
-        On <span className="font-mono text-foreground">{git.branch}</span> · {git.changes.length ? `${git.changes.length} uncommitted change(s)` : "working tree clean"}
+        On <span className="font-mono text-foreground">{git.branch}</span> ·{" "}
+        {git.changes.length ? `${git.changes.length} uncommitted change(s)` : "working tree clean"}
         {git.branches.filter((branch) => branch.startsWith("chikaima/")).length
           ? ` · ${git.branches.filter((branch) => branch.startsWith("chikaima/")).length} run branch(es) waiting to merge`
           : ""}
@@ -96,7 +110,11 @@ export function GitChangesView({ access, team, onOpenCommit }: { access: ApiAcce
               <span className="shrink-0 font-mono text-[11px] text-muted">{commit.files} files</span>
               <span className="shrink-0 font-mono text-[11px] text-emerald-600">+{commit.additions}</span>
               <span className="shrink-0 font-mono text-[11px] text-red-600">−{commit.deletions}</span>
-              <button type="button" onClick={() => onOpenCommit(commit.hash, `${commit.shortHash} ${commit.subject}`)} className="shrink-0 rounded border border-border px-2 py-0.5 text-foreground-muted hover:text-foreground">
+              <button
+                type="button"
+                onClick={() => onOpenCommit(commit.hash, `${commit.shortHash} ${commit.subject}`)}
+                className="shrink-0 rounded border border-border px-2 py-0.5 text-foreground-muted hover:text-foreground"
+              >
                 View diff
               </button>
             </li>

@@ -113,10 +113,13 @@ export function ProviderForm() {
       if (!token) {
         throw new Error("Please sign in first.");
       }
-      return api.createProvider({ token }, {
-        ...values,
-        base_url: values.base_url || undefined,
-      });
+      return api.createProvider(
+        { token },
+        {
+          ...values,
+          base_url: values.base_url || undefined,
+        },
+      );
     },
     onSuccess: async () => {
       form.reset();
@@ -129,9 +132,7 @@ export function ProviderForm() {
     <Card className="min-w-0 overflow-hidden bg-surface-raised p-5 sm:p-6">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-foreground">Add provider</h2>
-        <p className="mt-2 text-sm text-foreground-muted">
-          Connect cloud APIs, local Ollama instances, or OpenAI-compatible gateways.
-        </p>
+        <p className="mt-2 text-sm text-foreground-muted">Connect cloud APIs, local Ollama instances, or OpenAI-compatible gateways.</p>
       </div>
       <form
         className="grid min-w-0 gap-4"
@@ -172,7 +173,7 @@ export function ProviderForm() {
           <Label htmlFor="api_key">API key</Label>
           <Input id="api_key" type="password" {...form.register("api_key")} placeholder={defaults.apiKeyPlaceholder} />
         </div>
-       
+
         {mutation.error ? <p className="text-sm text-primary">{mutation.error.message}</p> : null}
         <Button type="submit" className="w-full sm:w-auto">
           {mutation.isPending ? "Saving..." : "Save provider"}

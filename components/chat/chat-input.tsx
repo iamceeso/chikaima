@@ -16,14 +16,7 @@ interface ChatInputProps {
   placeholder?: string;
 }
 
-export function ChatInput({
-  onSend,
-  onFileUpload,
-  attachedFiles = [],
-  onRemoveFile,
-  isLoading = false,
-  placeholder = "Type your message...",
-}: ChatInputProps) {
+export function ChatInput({ onSend, onFileUpload, attachedFiles = [], onRemoveFile, isLoading = false, placeholder = "Type your message..." }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -67,13 +60,7 @@ export function ChatInput({
 
   return (
     <div className="space-y-2 border-t border-border bg-background">
-      {attachedFiles.length > 0 && (
-        <FilePreview
-          files={attachedFiles}
-          onRemove={onRemoveFile || (() => {})}
-          isUploading={isUploading}
-        />
-      )}
+      {attachedFiles.length > 0 && <FilePreview files={attachedFiles} onRemove={onRemoveFile || (() => {})} isUploading={isUploading} />}
       <div className="p-4 space-y-2">
         <div className="flex gap-2">
           <Textarea
@@ -97,13 +84,7 @@ export function ChatInput({
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  accept=".pdf,.txt,.doc,.docx,.md"
-                />
+                <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" accept=".pdf,.txt,.doc,.docx,.md" />
               </>
             )}
             <Button
@@ -117,7 +98,8 @@ export function ChatInput({
           </div>
         </div>
         <p className="text-xs text-foreground-muted">
-          Press <kbd className="rounded px-1.5 py-0.5 bg-muted">Enter</kbd> to send and <kbd className="rounded px-1.5 py-0.5 bg-muted">Shift + Enter</kbd> for a new line
+          Press <kbd className="rounded px-1.5 py-0.5 bg-muted">Enter</kbd> to send and <kbd className="rounded px-1.5 py-0.5 bg-muted">Shift + Enter</kbd> for
+          a new line
         </p>
       </div>
     </div>

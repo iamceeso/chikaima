@@ -40,7 +40,8 @@ export async function GET(request: NextRequest, context: RouteContext): Promise<
       throw notFound("Stored file not found");
     }
 
-    const mediaType = "mimeType" in resource ? resource.mimeType : (EXTENSION_MIME_TYPES[extname(resource.filePath).toLowerCase()] ?? "application/octet-stream");
+    const mediaType =
+      "mimeType" in resource ? resource.mimeType : (EXTENSION_MIME_TYPES[extname(resource.filePath).toLowerCase()] ?? "application/octet-stream");
     const size = statSync(resource.filePath).size;
     const body = Readable.toWeb(createReadStream(resource.filePath)) as ReadableStream<Uint8Array>;
 

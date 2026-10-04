@@ -50,7 +50,10 @@ function globToRegExp(glob: string): RegExp {
 export function inScope(scope: string[], path: string): boolean {
   if (scope.length === 0) return true;
   return scope.some((entry) => {
-    const cleaned = entry.trim().replace(/^\.?\/+/, "").replace(/\/+$/, "");
+    const cleaned = entry
+      .trim()
+      .replace(/^\.?\/+/, "")
+      .replace(/\/+$/, "");
     if (!cleaned || cleaned === "**") return true;
     if (!/[*?]/.test(cleaned)) return path === cleaned || path.startsWith(`${cleaned}/`);
     return globToRegExp(cleaned).test(path) || globToRegExp(`${cleaned}/**`).test(path);
@@ -79,7 +82,13 @@ export function isSensitivePath(path: string): boolean {
 /** Whether an action needs a human decision at this autonomy level. Deploys always do. */
 export function needsApproval(
   autonomy: Autonomy,
-  action: { kind: "command"; command: string } | { kind: "delete"; path: string } | { kind: "write"; path: string } | { kind: "step" } | { kind: "merge" } | { kind: "deploy" },
+  action:
+    | { kind: "command"; command: string }
+    | { kind: "delete"; path: string }
+    | { kind: "write"; path: string }
+    | { kind: "step" }
+    | { kind: "merge" }
+    | { kind: "deploy" },
 ): boolean {
   if (action.kind === "deploy") return true;
   if (autonomy === "autonomous") return false;

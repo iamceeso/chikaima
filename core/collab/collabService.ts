@@ -18,7 +18,7 @@ import {
 import { getPreviewManager } from "./preview.js";
 import { getCollabRunner } from "./runner.js";
 import { disposeExecutor } from "./sandbox.js";
-import { normalizeTeamFolder, Workspace } from "./workspace.js";
+import { copyFolderTo, normalizeTeamFolder, removeTeamFolder, Workspace } from "./workspace.js";
 
 const MAX_MEMBERS = 8;
 const MAX_TITLE_CHARS = 120;
@@ -94,12 +94,28 @@ export class CollabService {
     return { team, members: this.repo.listMembers(team.id) };
   }
 
-  deleteTeam(userId: string, teamId: string): void {
-    this.getTeam(userId, teamId);
+  /** Deletes the team and its run history. With `deleteFiles`, its folder goes too, unless another project uses it. */
+  async deleteTeam(userId: string, teamId: string, options: { deleteFiles?: boolean } = {}): Promise<void> {
+    const { team } = this.getTeam(userId, teamId);
     this.assertIdle(teamId, "Cancel the team's run before deleting it.");
+    if (options.deleteFiles) {
+      const others = this.repo.listTeamsByFolder(team.folder).filter((other) => other.id !== teamId);
+      if (others.length > 0)
+        throw conflict(
+          `Another project (${others[0]!.name}) uses this folder, so its files can't be deleted. Delete the project only, or delete that project first.`,
+        );
+      if (this.folderBusy(team.folder)) throw conflict("Agents are working in this folder; wait for the run to finish or stop it first.");
+    }
     this.repo.deleteTeam(teamId);
-    void getPreviewManager().stop(teamId);
-    void disposeExecutor(teamId);
+    await Promise.allSettled([getPreviewManager().stop(teamId), disposeExecutor(teamId)]);
+    if (options.deleteFiles) removeTeamFolder(team.folder);
+  }
+
+  /** Saves a copy of the team folder to another location on this machine, outside the projects root if you like. */
+  async saveCopy(userId: string, teamId: string, destination: string): Promise<{ path: string }> {
+    const { team } = this.getTeam(userId, teamId);
+    if (this.folderBusy(team.folder)) throw conflict("Agents are working in this folder; wait for the run to finish so the copy is consistent.");
+    return { path: await copyFolderTo(team.folder, destination) };
   }
 
   listRuns(userId: string, teamId: string): CollabRunRow[] {
@@ -274,7 +290,8 @@ export class CollabService {
       }
       const reviewedBy = Array.from(new Set(member.reviewed_by ?? []));
       for (const rank of reviewedBy) {
-        if (rank === member.precedence || !ranks.has(rank)) throw badRequest(`#${member.precedence} is reviewed by #${rank}, which is not another member of the team.`);
+        if (rank === member.precedence || !ranks.has(rank))
+          throw badRequest(`#${member.precedence} is reviewed by #${rank}, which is not another member of the team.`);
       }
 
       const model = this.db

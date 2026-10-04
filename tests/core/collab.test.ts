@@ -34,7 +34,10 @@ async function withCollabEnv<T>(fn: (collabRoot: string) => T | Promise<T>): Pro
     __resetDbForTests();
     __resetConfigForTests();
     __resetSecretManagerForTests();
-    for (const [key, value] of [["CHIKAIMA_DB_PATH", previous.db], ["CHIKAIMA_COLLAB_ROOT", previous.root]] as const) {
+    for (const [key, value] of [
+      ["CHIKAIMA_DB_PATH", previous.db],
+      ["CHIKAIMA_COLLAB_ROOT", previous.root],
+    ] as const) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
@@ -44,10 +47,34 @@ async function withCollabEnv<T>(fn: (collabRoot: string) => T | Promise<T>): Pro
 
 function seedModels(db: ChikaimaDatabase, userId: string, keys: string[]): string[] {
   const now = new Date().toISOString();
-  db.insert(providers).values({ id: "prov-1", userId, name: "OpenAI", providerType: "openai", baseUrl: null, encryptedConfig: {}, isEnabled: true, createdAt: now, updatedAt: now }).run();
+  db.insert(providers)
+    .values({
+      id: "prov-1",
+      userId,
+      name: "OpenAI",
+      providerType: "openai",
+      baseUrl: null,
+      encryptedConfig: {},
+      isEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
   return keys.map((key) => {
     const id = `model-${key}`;
-    db.insert(aiModels).values({ id, providerId: "prov-1", modelKey: key, displayName: key.toUpperCase(), capabilities: {}, isDefault: false, isAvailable: true, createdAt: now, updatedAt: now }).run();
+    db.insert(aiModels)
+      .values({
+        id,
+        providerId: "prov-1",
+        modelKey: key,
+        displayName: key.toUpperCase(),
+        capabilities: {},
+        isDefault: false,
+        isAvailable: true,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
     return id;
   });
 }
@@ -57,7 +84,11 @@ function textOf(messages: ChatMessage[]): string {
 }
 
 /** Plays every team member by recognising which prompt it was sent. */
-function scriptedClient(script: { plan?: string; implement: (attempt: number) => string; review: (modelId: string, attempt: number) => string }): CollabModelClient & { calls: string[] } {
+function scriptedClient(script: {
+  plan?: string;
+  implement: (attempt: number) => string;
+  review: (modelId: string, attempt: number) => string;
+}): CollabModelClient & { calls: string[] } {
   let implementCalls = 0;
   const reviewCalls = new Map<string, number>();
   const calls: string[] = [];
@@ -282,9 +313,18 @@ test("a run plans, edits the folder, gets reviewed, and keeps approved work", as
     assert.equal(finished.status, "completed");
     assert.equal(readFileSync(join(Workspace.open("site").root, "hello.txt"), "utf8"), "hello\n");
     // Both the lead and the reviewer validate the implementer's change.
-    assert.deepEqual(client.calls, [`plan:${models.lead}`, `implement:${models.impl}`, `review:${models.lead}`, `review:${models.reviewer}`, `summary:${models.lead}`]);
+    assert.deepEqual(client.calls, [
+      `plan:${models.lead}`,
+      `implement:${models.impl}`,
+      `review:${models.lead}`,
+      `review:${models.reviewer}`,
+      `summary:${models.lead}`,
+    ]);
     const steps = (finished.result as { steps: Array<{ status: string; files: string[] }> }).steps;
-    assert.deepEqual(steps.map((step) => [step.status, step.files]), [["approved", ["hello.txt"]]]);
+    assert.deepEqual(
+      steps.map((step) => [step.status, step.files]),
+      [["approved", ["hello.txt"]]],
+    );
     const kinds = repo.listMessages(run.id).map((message) => message.kind);
     for (const kind of ["plan", "action", "message", "change", "review", "decision", "summary"]) assert.ok(kinds.includes(kind), kind);
   });
@@ -378,15 +418,40 @@ test("CollabService validates team membership rules", async () => {
 
     assert.throws(() => service.createTeam(user.id, { ...base, members: [{ model_id: a!, role: "reviewer", precedence: 1 }] }), /at least one implementer/);
     assert.throws(
-      () => service.createTeam(user.id, { ...base, members: [{ model_id: a!, role: "implementer", precedence: 1 }, { model_id: b!, role: "reviewer", precedence: 1 }] }),
+      () =>
+        service.createTeam(user.id, {
+          ...base,
+          members: [
+            { model_id: a!, role: "implementer", precedence: 1 },
+            { model_id: b!, role: "reviewer", precedence: 1 },
+          ],
+        }),
       /share precedence #1/,
     );
     assert.throws(() => service.createTeam(user.id, { ...base, members: [{ model_id: "nope", role: "implementer", precedence: 1 }] }), /not an enabled model/);
-    assert.throws(() => service.createTeam(user.id, { ...base, folder: "../x", members: [{ model_id: a!, role: "implementer", precedence: 1 }] }), /inside the projects root/);
-    assert.throws(() => service.createTeam(user.id, { ...base, decision_policy: "vibes", members: [{ model_id: a!, role: "implementer", precedence: 1 }] }), /decision_policy/);
+    assert.throws(
+      () => service.createTeam(user.id, { ...base, folder: "../x", members: [{ model_id: a!, role: "implementer", precedence: 1 }] }),
+      /inside the projects root/,
+    );
+    assert.throws(
+      () => service.createTeam(user.id, { ...base, decision_policy: "vibes", members: [{ model_id: a!, role: "implementer", precedence: 1 }] }),
+      /decision_policy/,
+    );
 
-    const { members } = service.createTeam(user.id, { ...base, members: [{ model_id: b!, role: "reviewer", precedence: 2 }, { model_id: a!, role: "implementer", precedence: 1 }] });
-    assert.deepEqual(members.map((member) => [member.precedence, member.name, member.role]), [[1, "A", "implementer"], [2, "B", "reviewer"]]);
+    const { members } = service.createTeam(user.id, {
+      ...base,
+      members: [
+        { model_id: b!, role: "reviewer", precedence: 2 },
+        { model_id: a!, role: "implementer", precedence: 1 },
+      ],
+    });
+    assert.deepEqual(
+      members.map((member) => [member.precedence, member.name, member.role]),
+      [
+        [1, "A", "implementer"],
+        [2, "B", "reviewer"],
+      ],
+    );
   });
 });
 
@@ -410,13 +475,52 @@ test("startRun refuses a second concurrent run on the same folder, then runs in 
     const service = new CollabService(db);
     const run = service.startRun(user.id, team.id, "Say hello");
     assert.throws(() => service.startRun(user.id, other.id, "Also edit site"), /already working in "site"/);
-    assert.throws(() => service.deleteTeam(user.id, team.id), /Cancel the team's run/);
+    await assert.rejects(() => service.deleteTeam(user.id, team.id), /Cancel the team's run/);
 
     release();
     const finished = await runner.wait(run.id);
     assert.equal(finished?.status, "completed");
     assert.equal(service.startRun(user.id, other.id, "Now it's free").status, "queued");
     await runner.wait(service.listRuns(user.id, other.id)[0]!.id);
+  });
+});
+
+test("saveCopy copies a project outside the projects root, skipping dependencies", async () => {
+  await withCollabEnv(async (collabRoot) => {
+    const { db, user, team } = await setupTeam();
+    const root = Workspace.open("site").root;
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "src/app.ts"), "export {};\n");
+    mkdirSync(join(root, "node_modules/pkg"), { recursive: true });
+    writeFileSync(join(root, "node_modules/pkg/index.js"), "");
+    const service = new CollabService(db);
+
+    const destination = join(collabRoot, "..", "backups", "site-copy");
+    assert.equal((await service.saveCopy(user.id, team.id, destination)).path, destination);
+    assert.equal(readFileSync(join(destination, "src/app.ts"), "utf8"), "export {};\n");
+    assert.equal(existsSync(join(destination, "node_modules")), false);
+
+    await assert.rejects(() => service.saveCopy(user.id, team.id, destination), /isn't empty/);
+    await assert.rejects(() => service.saveCopy(user.id, team.id, join(root, "inside")), /outside the project folder/);
+    await assert.rejects(() => service.saveCopy(user.id, team.id, "relative/path"), /full path/);
+  });
+});
+
+test("deleteTeam keeps the folder unless asked, and never deletes a folder another project uses", async () => {
+  await withCollabEnv(async () => {
+    const { db, user, team, models } = await setupTeam();
+    const root = Workspace.open("site").root;
+    writeFileSync(join(root, "keep.txt"), "x");
+    const service = new CollabService(db);
+    const twin = service.createTeam(user.id, { name: "Twin", folder: "site", members: [{ model_id: models.impl, role: "implementer", precedence: 1 }] }).team;
+
+    await assert.rejects(() => service.deleteTeam(user.id, team.id, { deleteFiles: true }), /Another project \(Twin\)/);
+    await service.deleteTeam(user.id, team.id);
+    assert.equal(existsSync(join(root, "keep.txt")), true);
+
+    await service.deleteTeam(user.id, twin.id, { deleteFiles: true });
+    assert.equal(existsSync(root), false);
+    assert.deepEqual(service.listTeams(user.id), []);
   });
 });
 

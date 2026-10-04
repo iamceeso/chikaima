@@ -244,16 +244,9 @@ export function ChatLayout() {
   const [streamingMessages, setStreamingMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [hasReceivedStreamToken, setHasReceivedStreamToken] = useState(false);
-  const [isVoiceSupported] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition),
-  );
+  const [isVoiceSupported] = useState(() => typeof window !== "undefined" && Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition));
   const [isSpeechSupported] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      typeof window.speechSynthesis !== "undefined" &&
-      typeof window.SpeechSynthesisUtterance !== "undefined",
+    () => typeof window !== "undefined" && typeof window.speechSynthesis !== "undefined" && typeof window.SpeechSynthesisUtterance !== "undefined",
   );
   const [isListening, setIsListening] = useState(false);
   const [autoReadAloud, setAutoReadAloud] = useState(false);
@@ -305,16 +298,12 @@ export function ChatLayout() {
     staleTime: 5 * 60_000,
   });
 
-  const conversation = startFresh
-    ? undefined
-    : conversationsQuery.data?.find((item) => item.id === activeConversationId);
+  const conversation = startFresh ? undefined : conversationsQuery.data?.find((item) => item.id === activeConversationId);
   const defaultModel = modelsQuery.data?.find((model) => model.is_default) ?? modelsQuery.data?.[0];
   const modelSelectionScope = conversation?.id ?? "fresh";
   const selectedModelId = selectedModelIds[modelSelectionScope] ?? null;
   const activeModel =
-    modelsQuery.data?.find((model) => model.id === selectedModelId) ??
-    modelsQuery.data?.find((model) => model.id === conversation?.model_id) ??
-    defaultModel;
+    modelsQuery.data?.find((model) => model.id === selectedModelId) ?? modelsQuery.data?.find((model) => model.id === conversation?.model_id) ?? defaultModel;
   const displayMessages = [...(conversation?.messages ?? []), ...streamingMessages];
   const visibleMessages = (() => {
     if (!branchResetFromMessageId) {
@@ -341,19 +330,16 @@ export function ChatLayout() {
     refetchInterval: processingTarget ? 3000 : false,
   });
 
-  const processingAttachments = processingTarget?.attachments.map((attachment) => {
-    const source =
-      attachment.kind === "document"
-        ? libraryQuery.data?.documents
-        : attachment.kind === "audio"
-          ? libraryQuery.data?.audio
-          : libraryQuery.data?.videos;
-    const resource = source?.find((item) => item.id === attachment.id);
-    return {
-      ...attachment,
-      status: resource?.status ?? "processing",
-    };
-  }) ?? [];
+  const processingAttachments =
+    processingTarget?.attachments.map((attachment) => {
+      const source =
+        attachment.kind === "document" ? libraryQuery.data?.documents : attachment.kind === "audio" ? libraryQuery.data?.audio : libraryQuery.data?.videos;
+      const resource = source?.find((item) => item.id === attachment.id);
+      return {
+        ...attachment,
+        status: resource?.status ?? "processing",
+      };
+    }) ?? [];
 
   const pendingProcessingAttachments = processingAttachments.filter((attachment) => attachment.status !== "completed");
 
@@ -617,9 +603,7 @@ export function ChatLayout() {
       return;
     }
 
-    const interruptedSpeech = stopAssistantSpeech(
-      conversationMode ? "Interrupted. Listening to you..." : "Listening...",
-    );
+    const interruptedSpeech = stopAssistantSpeech(conversationMode ? "Interrupted. Listening to you..." : "Listening...");
 
     const recognitionConstructor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!recognitionConstructor) {
@@ -648,7 +632,10 @@ export function ChatLayout() {
         }))
         .filter((result) => result.transcript);
 
-      const heardSpeech = results.map((result) => result.transcript).join(" ").trim();
+      const heardSpeech = results
+        .map((result) => result.transcript)
+        .join(" ")
+        .trim();
       if (conversationMode && heardSpeech) {
         interruptAssistantSpeech("Interrupted. Listening to you...");
       }
@@ -664,7 +651,8 @@ export function ChatLayout() {
       }
 
       setDraft((current) => `${current.trim()}${current.trim() ? " " : ""}${transcript}`.trim());
-      queuedVoiceSubmissionRef.current = `${queuedVoiceSubmissionRef.current?.trim() ?? ""}${queuedVoiceSubmissionRef.current?.trim() ? " " : ""}${transcript}`.trim();
+      queuedVoiceSubmissionRef.current =
+        `${queuedVoiceSubmissionRef.current?.trim() ?? ""}${queuedVoiceSubmissionRef.current?.trim() ? " " : ""}${transcript}`.trim();
       setVoiceStatus("Voice captured.");
       requestAnimationFrame(() => textareaRef.current?.focus());
     };
@@ -677,11 +665,7 @@ export function ChatLayout() {
         speechInterruptionTimerRef.current = null;
       }
       resumeConversationAfterSpeechRef.current = false;
-      setVoiceStatus(
-        event.error === "not-allowed"
-          ? "Microphone access was blocked."
-          : "Voice input could not continue.",
-      );
+      setVoiceStatus(event.error === "not-allowed" ? "Microphone access was blocked." : "Voice input could not continue.");
     };
     recognition.onend = () => {
       setIsListening(false);
@@ -729,13 +713,7 @@ export function ChatLayout() {
 
     autoResumeMessageIdRef.current = processingTarget.messageId;
     resumeBlockedMessage.mutate(processingTarget.messageId);
-  }, [
-    isStreaming,
-    pendingProcessingAttachments.length,
-    processingAttachments.length,
-    processingTarget,
-    resumeBlockedMessage,
-  ]);
+  }, [isStreaming, pendingProcessingAttachments.length, processingAttachments.length, processingTarget, resumeBlockedMessage]);
 
   useEffect(() => {
     const historyEl = historyRef.current;
@@ -754,9 +732,7 @@ export function ChatLayout() {
     }
 
     seededConversationIdRef.current = conversation?.id ?? null;
-    const latestAssistantMessage = [...(conversation?.messages ?? [])]
-      .reverse()
-      .find((message) => message.role === "assistant" && message.content.trim());
+    const latestAssistantMessage = [...(conversation?.messages ?? [])].reverse().find((message) => message.role === "assistant" && message.content.trim());
     autoSpokenMessageIdRef.current = latestAssistantMessage?.id ?? null;
     if (typeof window !== "undefined") {
       window.speechSynthesis.cancel();
@@ -770,12 +746,7 @@ export function ChatLayout() {
 
     const latestAssistantMessage = [...visibleMessages]
       .reverse()
-      .find(
-        (message) =>
-          message.role === "assistant" &&
-          message.status !== "streaming" &&
-          message.content.trim(),
-      );
+      .find((message) => message.role === "assistant" && message.status !== "streaming" && message.content.trim());
 
     if (!latestAssistantMessage || latestAssistantMessage.id === autoSpokenMessageIdRef.current) {
       return;
@@ -1049,14 +1020,7 @@ export function ChatLayout() {
   }, [conversationMode, isListening, isStreaming]);
 
   useEffect(() => {
-    if (
-      !conversationMode ||
-      !isVoiceSupported ||
-      isListening ||
-      isStreaming ||
-      speakingMessageId ||
-      !resumeConversationAfterSpeechRef.current
-    ) {
+    if (!conversationMode || !isVoiceSupported || isListening || isStreaming || speakingMessageId || !resumeConversationAfterSpeechRef.current) {
       return;
     }
 
@@ -1142,13 +1106,7 @@ export function ChatLayout() {
     ) : null;
 
   const showDropOverlay = isDragging && !uploadAttachment.isPending;
-  const conversationVisualState = isListening
-    ? "listening"
-    : speakingMessageId
-      ? "speaking"
-      : isStreaming
-        ? "thinking"
-        : "idle";
+  const conversationVisualState = isListening ? "listening" : speakingMessageId ? "speaking" : isStreaming ? "thinking" : "idle";
 
   const renderConversationDialog = () => {
     if (!conversationMode) {
@@ -1170,13 +1128,9 @@ export function ChatLayout() {
         <div className="pointer-events-auto w-full max-w-sm rounded-[1.75rem] border border-border bg-surface/96 p-5 shadow-[0_24px_90px_rgba(20,32,25,0.16)] backdrop-blur-md dark:shadow-none">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
-                Conversation Mode
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">Conversation Mode</p>
               <h3 className="mt-1 text-lg font-semibold text-foreground">{statusLabel}</h3>
-              <p className="mt-2 text-sm text-foreground-muted">
-                {voiceStatus ?? "Start talking naturally and Chikaima will keep the voice loop going."}
-              </p>
+              <p className="mt-2 text-sm text-foreground-muted">{voiceStatus ?? "Start talking naturally and Chikaima will keep the voice loop going."}</p>
             </div>
             <button
               type="button"
@@ -1266,10 +1220,7 @@ export function ChatLayout() {
   );
 
   const renderComposer = () => (
-    <div
-      ref={composerRef}
-      className="w-full"
-    >
+    <div ref={composerRef} className="w-full">
       <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-2.5 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
         <input
           ref={fileInputRef}
@@ -1307,15 +1258,10 @@ export function ChatLayout() {
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleComposerKeyDown}
           placeholder="Ask Chikaima about your content"
-          className={cn(
-            "resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-5 shadow-none focus:ring-0",
-            "min-h-0 max-h-24",
-          )}
+          className={cn("resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-5 shadow-none focus:ring-0", "min-h-0 max-h-24")}
         />
         <div className="mt-1.5 flex items-center justify-between gap-3 pt-1">
-          <div className="flex items-center gap-2">
-            {renderModelPicker("max-w-44 bg-background-secondary")}
-          </div>
+          <div className="flex items-center gap-2">{renderModelPicker("max-w-44 bg-background-secondary")}</div>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -1419,34 +1365,20 @@ export function ChatLayout() {
             >
               <Volume2 className="h-3 w-3" />
             </button>
-            <Button
-              onClick={onSubmit}
-              disabled={busy || (!draft.trim() && !pendingAttachments.length)}
-              size="sm"
-              className="h-8 w-8 rounded-full px-0"
-            >
+            <Button onClick={onSubmit} disabled={busy || (!draft.trim() && !pendingAttachments.length)} size="sm" className="h-8 w-8 rounded-full px-0">
               {busy ? "..." : <ArrowUp className="h-3.5 w-3.5" />}
             </Button>
           </div>
         </div>
-        {voiceStatus ? (
-          <p className={cn("mt-1 text-[11px]", isListening ? "text-primary" : "text-foreground-muted")}>
-            {voiceStatus}
-          </p>
-        ) : null}
-        <p className="mt-1 text-[11px] text-foreground-muted">
-          Add a single video, mixed files, or a whole folder and keep the analysis inside this chat.
-        </p>
+        {voiceStatus ? <p className={cn("mt-1 text-[11px]", isListening ? "text-primary" : "text-foreground-muted")}>{voiceStatus}</p> : null}
+        <p className="mt-1 text-[11px] text-foreground-muted">Add a single video, mixed files, or a whole folder and keep the analysis inside this chat.</p>
       </div>
     </div>
   );
 
   return (
     <div
-      className={cn(
-        "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background mb-4",
-        isDragging ? "bg-primary/5" : "",
-      )}
+      className={cn("relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background mb-4", isDragging ? "bg-primary/5" : "")}
       onDragOver={(event) => {
         event.preventDefault();
         dragDepthRef.current = Math.max(dragDepthRef.current, 1);
@@ -1495,284 +1427,270 @@ export function ChatLayout() {
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div ref={historyRef} className="h-full min-h-0 overflow-y-auto overscroll-contain">
-        {hasConversation ? (
-          <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
-            {visibleMessages.map((message) => {
-              const isUser = message.role === "user";
-              const isTransient = message.id.startsWith("temp-") || message.status === "streaming";
-              return (
-                <article
-                  key={message.id}
-                  className={cn("flex gap-2.5", isUser ? "justify-end" : "justify-start")}
-                >
-                  {!isUser ? (
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
-                      <Bot className="h-3.5 w-3.5" />
-                    </div>
-                  ) : null}
+          {hasConversation ? (
+            <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+              {visibleMessages.map((message) => {
+                const isUser = message.role === "user";
+                const isTransient = message.id.startsWith("temp-") || message.status === "streaming";
+                return (
+                  <article key={message.id} className={cn("flex gap-2.5", isUser ? "justify-end" : "justify-start")}>
+                    {!isUser ? (
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                        <Bot className="h-3.5 w-3.5" />
+                      </div>
+                    ) : null}
 
-                  <div
-                    className={cn(
-                      "max-w-[min(100%,42rem)] rounded-[1.2rem] px-3.5 py-2.5 sm:px-4 sm:py-3",
-                      isUser
-                        ? "bg-surface-strong text-foreground"
-                        : "border border-border bg-surface text-foreground shadow-[0_10px_30px_rgba(20,32,25,0.04)] dark:shadow-none",
-                    )}
-                  >
-                    <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
-                      <span>{isUser ? "You" : "Chikaima"}</span>
-                      {message.metadata?.edited ? <PencilLine className="h-2.5 w-2.5" /> : null}
-                      {message.metadata?.regenerated_from ? <Sparkles className="h-2.5 w-2.5" /> : null}
-                    </div>
-                    {editingMessageId === message.id ? (
-                      <div className="space-y-2.5">
-                        <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-2.5 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
-                          <Textarea
-                            ref={editingTextareaRef}
-                            rows={1}
-                            value={editingDraft}
-                            onChange={(event) => setEditingDraft(event.target.value)}
-                            onKeyDown={(event) => handleEditKeyDown(event, message.id)}
-                            placeholder="Edit your message..."
-                            className={cn(
-                              "resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-[13px] leading-6 shadow-none focus:ring-0 sm:text-sm",
-                              "min-h-0 max-h-48",
-                            )}
-                          />
-                          <div className="mt-1.5 flex items-center justify-between gap-3 border-t border-border/70 pt-2">
-                            <p className="text-[11px] text-foreground-muted">
-                              Press Enter to save and Shift + Enter for a new line
-                            </p>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                size="xs"
-                                variant="ghost"
-                                className="h-7 border border-border px-2.5 text-[11px]"
-                                onClick={() => {
-                                  setEditingMessageId(null);
-                                  setEditingDraft("");
-                                  setBranchResetFromMessageId(null);
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                type="button"
-                                size="xs"
-                                className="h-7 px-2.5 text-[11px]"
-                                onClick={() => {
-                                  setBranchResetFromMessageId(message.id);
-                                  editMessage.mutate(message.id);
-                                }}
-                                disabled={editMessage.isPending || !editingDraft.trim()}
-                              >
-                                Save
-                              </Button>
+                    <div
+                      className={cn(
+                        "max-w-[min(100%,42rem)] rounded-[1.2rem] px-3.5 py-2.5 sm:px-4 sm:py-3",
+                        isUser
+                          ? "bg-surface-strong text-foreground"
+                          : "border border-border bg-surface text-foreground shadow-[0_10px_30px_rgba(20,32,25,0.04)] dark:shadow-none",
+                      )}
+                    >
+                      <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-foreground-muted">
+                        <span>{isUser ? "You" : "Chikaima"}</span>
+                        {message.metadata?.edited ? <PencilLine className="h-2.5 w-2.5" /> : null}
+                        {message.metadata?.regenerated_from ? <Sparkles className="h-2.5 w-2.5" /> : null}
+                      </div>
+                      {editingMessageId === message.id ? (
+                        <div className="space-y-2.5">
+                          <div className="rounded-[1.35rem] border border-border bg-surface px-4 py-2.5 shadow-[0_12px_35px_rgba(20,32,25,0.05)] dark:shadow-none">
+                            <Textarea
+                              ref={editingTextareaRef}
+                              rows={1}
+                              value={editingDraft}
+                              onChange={(event) => setEditingDraft(event.target.value)}
+                              onKeyDown={(event) => handleEditKeyDown(event, message.id)}
+                              placeholder="Edit your message..."
+                              className={cn(
+                                "resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-[13px] leading-6 shadow-none focus:ring-0 sm:text-sm",
+                                "min-h-0 max-h-48",
+                              )}
+                            />
+                            <div className="mt-1.5 flex items-center justify-between gap-3 border-t border-border/70 pt-2">
+                              <p className="text-[11px] text-foreground-muted">Press Enter to save and Shift + Enter for a new line</p>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  size="xs"
+                                  variant="ghost"
+                                  className="h-7 border border-border px-2.5 text-[11px]"
+                                  onClick={() => {
+                                    setEditingMessageId(null);
+                                    setEditingDraft("");
+                                    setBranchResetFromMessageId(null);
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="xs"
+                                  className="h-7 px-2.5 text-[11px]"
+                                  onClick={() => {
+                                    setBranchResetFromMessageId(message.id);
+                                    editMessage.mutate(message.id);
+                                  }}
+                                  disabled={editMessage.isPending || !editingDraft.trim()}
+                                >
+                                  Save
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <>
-                        {message.role === "assistant" && message.status === "streaming" && !hasReceivedStreamToken ? (
-                          <div className="flex items-center gap-2 text-[13px] text-foreground-muted sm:text-sm">
-                            <span>Thinking</span>
-                            <span className="animate-pulse">...</span>
-                          </div>
-                        ) : (
-                          <MessageMarkdown content={message.content} className="wrap-break-word" />
-                        )}
-                        {message.metadata?.processing_blocked && processingTarget?.messageId === message.id ? (
-                          <div className="mt-3 rounded-2xl border border-amber-300/70 bg-amber-50/80 px-3.5 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-                            <div className="flex items-center gap-2 font-medium">
-                              <LoaderCircle
-                                className={cn(
-                                  "h-4 w-4",
-                                  pendingProcessingAttachments.length > 0 || resumeBlockedMessage.isPending ? "animate-spin" : "",
-                                )}
-                              />
-                              <span>
-                                {pendingProcessingAttachments.length > 0
-                                  ? "Still transcribing"
-                                  : resumeBlockedMessage.isPending
-                                    ? "Transcription finished. Continuing now"
-                                    : "Transcription finished"}
-                              </span>
+                      ) : (
+                        <>
+                          {message.role === "assistant" && message.status === "streaming" && !hasReceivedStreamToken ? (
+                            <div className="flex items-center gap-2 text-[13px] text-foreground-muted sm:text-sm">
+                              <span>Thinking</span>
+                              <span className="animate-pulse">...</span>
                             </div>
-                            <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-100/80">
-                              {pendingProcessingAttachments.length > 0
-                                ? "Chikaima will keep watching this attachment and continue automatically when processing finishes."
-                                : resumeBlockedMessage.isPending
-                                  ? "Your original request is being continued automatically."
-                                  : "Your original request is ready to continue."}
-                            </p>
-                            {processingAttachments.length ? (
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {processingAttachments.map((attachment) => {
-                                  const Icon = attachmentIcon(attachment.kind);
-                                  const isDone = attachment.status === "completed";
-                                  return (
-                                    <span
-                                      key={`${message.id}-processing-${attachment.kind}-${attachment.id}`}
-                                      className={cn(
-                                        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px]",
-                                        isDone
-                                          ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
-                                          : "border-amber-300 bg-white/70 text-amber-900 dark:border-amber-500/30 dark:bg-background/40 dark:text-amber-100",
-                                      )}
-                                    >
-                                      <Icon className="h-3 w-3" />
-                                      <span className="max-w-52 truncate">{attachment.name}</span>
-                                      <span className="uppercase tracking-[0.12em] text-[10px]">
-                                        {isDone ? "ready" : attachment.status}
-                                      </span>
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            ) : null}
-                            {resumeError?.messageId === message.id ? (
-                              <p className="mt-2 text-xs text-destructive">{resumeError.detail}</p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
-                          <div className="mt-2.5 flex flex-wrap gap-2">
-                            {(message.metadata.attachments as Array<{ id?: string; name: string; kind: PendingAttachment["kind"] }>).map((attachment) => {
-                              const Icon = attachmentIcon(attachment.kind);
-                              return (
-                                <div
-                                  key={`${message.id}-${attachment.name}`}
-                                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-0.5 text-[11px] text-foreground-muted"
-                                >
-                                  <Icon className="h-3 w-3" />
-                                  {attachment.name}
-                                  {attachment.id ? (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setPreviewAttachment({
-                                          id: attachment.id!,
-                                          name: attachment.name,
-                                          kind: attachment.kind,
-                                        })
-                                      }
-                                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-foreground-muted transition hover:bg-background hover:text-foreground"
-                                      title="Preview attachment"
-                                    >
-                                      <Eye className="h-3 w-3" />
-                                    </button>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : null}
-                        {!isUser ? <RAGReferences message={message} /> : null}
-                        <div className="mt-2.5 flex gap-2">
-                          {isUser ? (
-                            <Button
-                              type="button"
-                              size="xs"
-                              variant="ghost"
-                              className="h-7 border border-border px-2.5 text-[11px]"
-                              disabled={isTransient}
-                              onClick={() => {
-                                setEditingMessageId(message.id);
-                                setEditingDraft(message.content);
-                              }}
-                            >
-                              <PencilLine className="h-3 w-3" />
-                              <span className="ml-1.5">Edit</span>
-                            </Button>
                           ) : (
-                            <>
-                              <Button
-                                type="button"
-                                size="xs"
-                                variant="ghost"
-                                className="h-7 border border-border px-2.5 text-[11px]"
-                                disabled={isTransient || !isSpeechSupported}
-                                onClick={() => toggleSpeechPlayback(message.id, message.content)}
-                              >
-                                {speakingMessageId === message.id ? <Square className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-                                <span className="ml-1.5">{speakingMessageId === message.id ? "Stop" : "Read"}</span>
-                              </Button>
+                            <MessageMarkdown content={message.content} className="wrap-break-word" />
+                          )}
+                          {message.metadata?.processing_blocked && processingTarget?.messageId === message.id ? (
+                            <div className="mt-3 rounded-2xl border border-amber-300/70 bg-amber-50/80 px-3.5 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                              <div className="flex items-center gap-2 font-medium">
+                                <LoaderCircle
+                                  className={cn("h-4 w-4", pendingProcessingAttachments.length > 0 || resumeBlockedMessage.isPending ? "animate-spin" : "")}
+                                />
+                                <span>
+                                  {pendingProcessingAttachments.length > 0
+                                    ? "Still transcribing"
+                                    : resumeBlockedMessage.isPending
+                                      ? "Transcription finished. Continuing now"
+                                      : "Transcription finished"}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-100/80">
+                                {pendingProcessingAttachments.length > 0
+                                  ? "Chikaima will keep watching this attachment and continue automatically when processing finishes."
+                                  : resumeBlockedMessage.isPending
+                                    ? "Your original request is being continued automatically."
+                                    : "Your original request is ready to continue."}
+                              </p>
+                              {processingAttachments.length ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {processingAttachments.map((attachment) => {
+                                    const Icon = attachmentIcon(attachment.kind);
+                                    const isDone = attachment.status === "completed";
+                                    return (
+                                      <span
+                                        key={`${message.id}-processing-${attachment.kind}-${attachment.id}`}
+                                        className={cn(
+                                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px]",
+                                          isDone
+                                            ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                                            : "border-amber-300 bg-white/70 text-amber-900 dark:border-amber-500/30 dark:bg-background/40 dark:text-amber-100",
+                                        )}
+                                      >
+                                        <Icon className="h-3 w-3" />
+                                        <span className="max-w-52 truncate">{attachment.name}</span>
+                                        <span className="uppercase tracking-[0.12em] text-[10px]">{isDone ? "ready" : attachment.status}</span>
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+                              {resumeError?.messageId === message.id ? <p className="mt-2 text-xs text-destructive">{resumeError.detail}</p> : null}
+                            </div>
+                          ) : null}
+                          {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
+                            <div className="mt-2.5 flex flex-wrap gap-2">
+                              {(message.metadata.attachments as Array<{ id?: string; name: string; kind: PendingAttachment["kind"] }>).map((attachment) => {
+                                const Icon = attachmentIcon(attachment.kind);
+                                return (
+                                  <div
+                                    key={`${message.id}-${attachment.name}`}
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background-secondary px-2.5 py-0.5 text-[11px] text-foreground-muted"
+                                  >
+                                    <Icon className="h-3 w-3" />
+                                    {attachment.name}
+                                    {attachment.id ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setPreviewAttachment({
+                                            id: attachment.id!,
+                                            name: attachment.name,
+                                            kind: attachment.kind,
+                                          })
+                                        }
+                                        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-foreground-muted transition hover:bg-background hover:text-foreground"
+                                        title="Preview attachment"
+                                      >
+                                        <Eye className="h-3 w-3" />
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                          {!isUser ? <RAGReferences message={message} /> : null}
+                          <div className="mt-2.5 flex gap-2">
+                            {isUser ? (
                               <Button
                                 type="button"
                                 size="xs"
                                 variant="ghost"
                                 className="h-7 border border-border px-2.5 text-[11px]"
                                 disabled={isTransient}
-                                onClick={async () => {
-                                  await navigator.clipboard.writeText(message.content);
-                                  setCopiedMessageId(message.id);
-                                  setTimeout(() => setCopiedMessageId(null), 1500);
+                                onClick={() => {
+                                  setEditingMessageId(message.id);
+                                  setEditingDraft(message.content);
                                 }}
                               >
-                                <Copy className="h-3 w-3" />
-                                <span className="ml-1.5">{copiedMessageId === message.id ? "Copied" : "Copy"}</span>
+                                <PencilLine className="h-3 w-3" />
+                                <span className="ml-1.5">Edit</span>
                               </Button>
-                            </>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {isUser ? (
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface text-foreground">
-                      <User2 className="h-3.5 w-3.5" />
+                            ) : (
+                              <>
+                                <Button
+                                  type="button"
+                                  size="xs"
+                                  variant="ghost"
+                                  className="h-7 border border-border px-2.5 text-[11px]"
+                                  disabled={isTransient || !isSpeechSupported}
+                                  onClick={() => toggleSpeechPlayback(message.id, message.content)}
+                                >
+                                  {speakingMessageId === message.id ? <Square className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                                  <span className="ml-1.5">{speakingMessageId === message.id ? "Stop" : "Read"}</span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="xs"
+                                  variant="ghost"
+                                  className="h-7 border border-border px-2.5 text-[11px]"
+                                  disabled={isTransient}
+                                  onClick={async () => {
+                                    await navigator.clipboard.writeText(message.content);
+                                    setCopiedMessageId(message.id);
+                                    setTimeout(() => setCopiedMessageId(null), 1500);
+                                  }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                  <span className="ml-1.5">{copiedMessageId === message.id ? "Copied" : "Copy"}</span>
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="flex min-h-full items-center justify-center px-4 py-5 sm:px-5">
-            <div className="w-full max-w-190">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary/12 text-primary">
-                <Bot className="h-5 w-5" />
-              </div>
-              <h2 className="mt-4 text-center text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
-                How can I help?
-              </h2>
-              <p className="mx-auto mt-2 max-w-xl text-center text-[13px] text-foreground-muted">
-                Drop in a single video or a whole folder, ask questions in chat, and keep the analysis in one thread.
-              </p>
 
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {quickActions.map((action) => (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => handleQuickAction(action)}
-                    className="rounded-full border border-border bg-background-secondary px-4 py-2 text-sm text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
+                    {isUser ? (
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface text-foreground">
+                        <User2 className="h-3.5 w-3.5" />
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex min-h-full items-center justify-center px-4 py-5 sm:px-5">
+              <div className="w-full max-w-190">
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary/12 text-primary">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <h2 className="mt-4 text-center text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">How can I help?</h2>
+                <p className="mx-auto mt-2 max-w-xl text-center text-[13px] text-foreground-muted">
+                  Drop in a single video or a whole folder, ask questions in chat, and keep the analysis in one thread.
+                </p>
 
-              <div className="mx-auto mt-4 max-w-162.5 rounded-2xl border border-border bg-surface">
-                {starterPrompts.map((prompt, index) => (
-                  <div key={prompt}>
-                    {index > 0 ? <div className="border-t border-border" /> : null}
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {quickActions.map((action) => (
                     <button
+                      key={action.label}
                       type="button"
-                      onClick={() => sendSuggestedPrompt(prompt)}
-                      className="w-full rounded-2xl px-4 py-3 text-left text-sm text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+                      onClick={() => handleQuickAction(action)}
+                      className="rounded-full border border-border bg-background-secondary px-4 py-2 text-sm text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
                     >
-                      {prompt}
+                      {action.label}
                     </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                <div className="mx-auto mt-4 max-w-162.5 rounded-2xl border border-border bg-surface">
+                  {starterPrompts.map((prompt, index) => (
+                    <div key={prompt}>
+                      {index > 0 ? <div className="border-t border-border" /> : null}
+                      <button
+                        type="button"
+                        onClick={() => sendSuggestedPrompt(prompt)}
+                        className="w-full rounded-2xl px-4 py-3 text-left text-sm text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
+                      >
+                        {prompt}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
         </div>
       </div>
 

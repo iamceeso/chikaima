@@ -67,8 +67,7 @@ test("api.getWorkspaceSettings surfaces backend detail messages", async () => {
 
   await assert.rejects(
     () => api.getWorkspaceSettings({ token: "token-123" }),
-    (error: unknown) =>
-      error instanceof Error && error.message === "Workspace unavailable",
+    (error: unknown) => error instanceof Error && error.message === "Workspace unavailable",
   );
 });
 
@@ -98,9 +97,7 @@ test("api.getProviders turns aborts into a timeout message", async () => {
 
   await assert.rejects(
     () => api.getProviders({ token: "token-123" }),
-    (error: unknown) =>
-      error instanceof Error &&
-      error.message === "Request timed out. Check that the backend is running.",
+    (error: unknown) => error instanceof Error && error.message === "Request timed out. Check that the backend is running.",
   );
 });
 
@@ -155,12 +152,7 @@ test("api.streamChat emits metadata tokens done and error events", async () => {
     },
   );
 
-  assert.deepEqual(seen, [
-    "metadata:conv-1",
-    "token:Hello",
-    "done",
-    "error:partial failure",
-  ]);
+  assert.deepEqual(seen, ["metadata:conv-1", "token:Hello", "done", "error:partial failure"]);
 });
 
 test("api.streamChat fails clearly when response body is missing", async () => {
@@ -174,8 +166,7 @@ test("api.streamChat fails clearly when response body is missing", async () => {
 
   await assert.rejects(
     () => api.streamChat("token-123", { content: "Hi" }),
-    (error: unknown) =>
-      error instanceof Error && error.message === "Streaming response body is unavailable.",
+    (error: unknown) => error instanceof Error && error.message === "Streaming response body is unavailable.",
   );
 });
 
@@ -185,7 +176,7 @@ test("api.streamChat handles chunked events and fallback error parsing", async (
       const encoder = new TextEncoder();
       controller.enqueue(encoder.encode('event: token\ndata: {"text":'));
       controller.enqueue(encoder.encode('"Split"}\n\n'));
-      controller.enqueue(encoder.encode("event: token\ndata: {\"count\":1}\n\n"));
+      controller.enqueue(encoder.encode('event: token\ndata: {"count":1}\n\n'));
       controller.enqueue(encoder.encode("event: error\ndata: {}\n\n"));
       controller.enqueue(encoder.encode("event: message\ndata: plain text fallback\n\n"));
       controller.enqueue(encoder.encode("event: metadata\ndata:   \n\n"));
@@ -287,23 +278,18 @@ test("api request helpers cover auth, json, blob, and upload wrappers", async ()
 
   assert.equal(await assetBlob.text(), "blob-content");
   assert.ok(requests.some(({ url, init }) => url === "https://api.example.com/auth/register" && init?.method === "POST"));
-  assert.ok(requests.some(({ url, init }) => url === "https://api.example.com/auth/logout" && (init?.headers as Headers).get("Authorization") === "Bearer token-1"));
-  assert.ok(requests.some(({ url }) => url === "https://api.example.com/assets/document/doc-1/file"));
   assert.ok(
-    requests.some(
-      ({ url, init }) =>
-        url === "https://api.example.com/documents/upload" &&
-        init?.method === "POST" &&
-        init.body instanceof FormData,
-    ),
+    requests.some(({ url, init }) => url === "https://api.example.com/auth/logout" && (init?.headers as Headers).get("Authorization") === "Bearer token-1"),
   );
+  assert.ok(requests.some(({ url }) => url === "https://api.example.com/assets/document/doc-1/file"));
+  assert.ok(requests.some(({ url, init }) => url === "https://api.example.com/documents/upload" && init?.method === "POST" && init.body instanceof FormData));
   assert.ok(
     requests.some(
       ({ url, init }) =>
         url === "https://api.example.com/chat/conversations" &&
         init?.method === "POST" &&
         typeof init.body === "string" &&
-        init.body.includes("\"title\":\"New chat\""),
+        init.body.includes('"title":"New chat"'),
     ),
   );
 });
@@ -355,8 +341,7 @@ test("api request falls back to the original json body when detail is missing", 
 
   await assert.rejects(
     () => api.getUsers({ token: "token-1" }),
-    (error: unknown) =>
-      error instanceof Error && error.message === JSON.stringify({ message: "No detail field" }),
+    (error: unknown) => error instanceof Error && error.message === JSON.stringify({ message: "No detail field" }),
   );
 });
 

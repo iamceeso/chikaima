@@ -87,7 +87,13 @@ test("login rejects an inactive user even with correct credentials", async () =>
     const db = getDb();
     const service = new AuthService(db);
     const admin = service.register({ email: "admin@example.com", fullName: "Admin", password: "password123" });
-    const target = service.createUser(admin, { email: "inactive@example.com", fullName: "Inactive", password: "password123", isSuperuser: false, isActive: false });
+    const target = service.createUser(admin, {
+      email: "inactive@example.com",
+      fullName: "Inactive",
+      password: "password123",
+      isSuperuser: false,
+      isActive: false,
+    });
     assert.equal(target.isActive, false);
 
     await assert.rejects(
@@ -114,7 +120,10 @@ test("refresh() rejects an access token presented as a refresh token", async () 
     service.register({ email: "user@example.com", fullName: "User", password: "password123" });
     const { accessToken } = await service.login({ email: "user@example.com", password: "password123" });
 
-    await assert.rejects(() => service.refresh(accessToken), (error: unknown) => error instanceof HttpError && error.statusCode === 401);
+    await assert.rejects(
+      () => service.refresh(accessToken),
+      (error: unknown) => error instanceof HttpError && error.statusCode === 401,
+    );
   });
 });
 

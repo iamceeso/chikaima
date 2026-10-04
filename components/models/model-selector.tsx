@@ -3,13 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { api } from "@/services/api";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import type { AIModel } from "@/types";
 
@@ -46,9 +40,7 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
     return (
       <div className="space-y-2">
         <Label>Model</Label>
-        <div className="text-sm text-foreground-muted">
-          {isLoading ? "Loading models..." : "No models available"}
-        </div>
+        <div className="text-sm text-foreground-muted">{isLoading ? "Loading models..." : "No models available"}</div>
       </div>
     );
   }
@@ -65,11 +57,7 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
             <SelectItem key={model.id} value={model.id}>
               <div className="flex items-center gap-2">
                 <span>{model.display_name}</span>
-                {model.provider_id && (
-                  <span className="text-xs text-foreground-muted">
-                    ({model.provider_id})
-                  </span>
-                )}
+                {model.provider_id && <span className="text-xs text-foreground-muted">({model.provider_id})</span>}
               </div>
             </SelectItem>
           ))}

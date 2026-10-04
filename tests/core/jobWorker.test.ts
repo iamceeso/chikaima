@@ -74,7 +74,9 @@ test("runOnce claims and fully processes exactly one queued job, returning false
     const filePath = join(workDir, "notes.txt");
     writeFileSync(filePath, "content for the worker to process");
     const now = new Date().toISOString();
-    db.insert(documents).values({ id: "doc-1", userId: user.id, name: "notes.txt", filePath, mimeType: "text/plain", status: "pending", createdAt: now, updatedAt: now }).run();
+    db.insert(documents)
+      .values({ id: "doc-1", userId: user.id, name: "notes.txt", filePath, mimeType: "text/plain", status: "pending", createdAt: now, updatedAt: now })
+      .run();
 
     const repo = new JobRepository(db);
     const job = repo.create({ userId: user.id, jobType: "document_analysis", resourceType: "document", resourceId: "doc-1" });
@@ -106,7 +108,9 @@ test("runOnce requeues (does not terminally fail) a job on its first failure, si
     const repo = new JobRepository(db);
     const { audioAssets } = await import("../../core/db/schema.js");
     const now = new Date().toISOString();
-    db.insert(audioAssets).values({ id: "audio-1", userId: user.id, name: "clip.mp3", filePath: "/nonexistent/clip.mp3", status: "pending", createdAt: now, updatedAt: now }).run();
+    db.insert(audioAssets)
+      .values({ id: "audio-1", userId: user.id, name: "clip.mp3", filePath: "/nonexistent/clip.mp3", status: "pending", createdAt: now, updatedAt: now })
+      .run();
     const job = repo.create({ userId: user.id, jobType: "audio_transcription", resourceType: "audio", resourceId: "audio-1" });
 
     const worker = new JobWorker(db);
@@ -152,7 +156,9 @@ test("JobDispatcher.createJob enqueues a job and nudges the worker to process it
     const filePath = join(workDir, "notes.txt");
     writeFileSync(filePath, "dispatcher pipeline content");
     const now = new Date().toISOString();
-    db.insert(documents).values({ id: "doc-1", userId: user.id, name: "notes.txt", filePath, mimeType: "text/plain", status: "pending", createdAt: now, updatedAt: now }).run();
+    db.insert(documents)
+      .values({ id: "doc-1", userId: user.id, name: "notes.txt", filePath, mimeType: "text/plain", status: "pending", createdAt: now, updatedAt: now })
+      .run();
 
     const dispatcher = new JobDispatcher(db);
     const originalFetch2 = globalThis.fetch;

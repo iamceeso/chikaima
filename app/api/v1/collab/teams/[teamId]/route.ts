@@ -27,13 +27,13 @@ export async function PUT(request: NextRequest, context: RouteContext): Promise<
   });
 }
 
-/** Deletes the team and its run history. The folder on disk is left as it is. */
+/** Deletes the team and its run history. The folder on disk is left as it is, unless `?files=true`. */
 export async function DELETE(request: NextRequest, context: RouteContext): Promise<NextResponse> {
   return handleRoute(async () => {
     const { teamId } = await context.params;
     const database = db();
     const user = await requireAdminUser(request, database);
-    new CollabService(database).deleteTeam(user.id, teamId);
+    await new CollabService(database).deleteTeam(user.id, teamId, { deleteFiles: request.nextUrl.searchParams.get("files") === "true" });
     return noContent();
   });
 }

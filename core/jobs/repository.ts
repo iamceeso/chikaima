@@ -89,11 +89,7 @@ export class JobRepository {
 
   /** Updates progress; when `stage` is given, also records a `stage` event so the pipeline's steps are visible in the job's history. */
   markProgress(id: string, progress: number, stage?: string): void {
-    this.db
-      .update(jobs)
-      .set({ progress, updatedAt: new Date().toISOString() })
-      .where(eq(jobs.id, id))
-      .run();
+    this.db.update(jobs).set({ progress, updatedAt: new Date().toISOString() }).where(eq(jobs.id, id)).run();
     if (stage) {
       const job = this.get(id);
       if (job) this.recordEvent(job, "stage", stage, { stage, progress });
@@ -150,11 +146,7 @@ export class JobRepository {
     for (const job of stale) {
       if (job.attempts < job.maxAttempts) {
         const message = "Interrupted by application restart; retrying.";
-        this.db
-          .update(jobs)
-          .set({ status: "queued", errorMessage: message, updatedAt: now })
-          .where(eq(jobs.id, job.id))
-          .run();
+        this.db.update(jobs).set({ status: "queued", errorMessage: message, updatedAt: now }).where(eq(jobs.id, job.id)).run();
         this.recordEvent(job, "recovered", message, { attempt: job.attempts });
         requeued += 1;
       } else {

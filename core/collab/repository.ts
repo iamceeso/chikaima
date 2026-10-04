@@ -14,18 +14,7 @@ export type CollabApprovalRow = typeof collabApprovals.$inferSelect;
 export type CollabTaskRow = typeof collabTasks.$inferSelect;
 
 export type CollabRunStatus = "queued" | "running" | "awaiting_approval" | "cancelling" | "completed" | "failed" | "cancelled";
-export type CollabMessageKind =
-  | "system"
-  | "plan"
-  | "message"
-  | "action"
-  | "command"
-  | "change"
-  | "review"
-  | "decision"
-  | "approval"
-  | "summary"
-  | "error";
+export type CollabMessageKind = "system" | "plan" | "message" | "action" | "command" | "change" | "review" | "decision" | "approval" | "summary" | "error";
 
 export const ACTIVE_RUN_STATUSES: CollabRunStatus[] = ["queued", "running", "awaiting_approval", "cancelling"];
 
@@ -106,7 +95,9 @@ export class CollabRepository {
     this.db.transaction((tx) => {
       tx.insert(collabTeams).values(team).run();
       for (const member of members) {
-        tx.insert(collabMembers).values({ id: randomUUID(), teamId: team.id, ...member, createdAt: now, updatedAt: now }).run();
+        tx.insert(collabMembers)
+          .values({ id: randomUUID(), teamId: team.id, ...member, createdAt: now, updatedAt: now })
+          .run();
       }
     });
     return team;
@@ -123,7 +114,9 @@ export class CollabRepository {
         .run();
       tx.delete(collabMembers).where(eq(collabMembers.teamId, teamId)).run();
       for (const member of members) {
-        tx.insert(collabMembers).values({ id: randomUUID(), teamId, ...member, createdAt: now, updatedAt: now }).run();
+        tx.insert(collabMembers)
+          .values({ id: randomUUID(), teamId, ...member, createdAt: now, updatedAt: now })
+          .run();
       }
     });
     return this.getTeam(teamId)!;
@@ -139,6 +132,11 @@ export class CollabRepository {
 
   listTeams(userId: string): CollabTeamRow[] {
     return this.db.select().from(collabTeams).where(eq(collabTeams.userId, userId)).orderBy(desc(collabTeams.createdAt)).all();
+  }
+
+  /** Every team (from any user) working in this folder. */
+  listTeamsByFolder(folder: string): CollabTeamRow[] {
+    return this.db.select().from(collabTeams).where(eq(collabTeams.folder, folder)).all();
   }
 
   listMembers(teamId: string): CollabMemberRow[] {
@@ -189,7 +187,10 @@ export class CollabRepository {
     return this.db.select().from(collabRuns).where(inArray(collabRuns.status, ACTIVE_RUN_STATUSES)).all();
   }
 
-  updateRun(runId: string, fields: Partial<Pick<CollabRunRow, "status" | "result" | "errorMessage" | "startedAt" | "completedAt" | "baseBranch" | "runBranch">>): void {
+  updateRun(
+    runId: string,
+    fields: Partial<Pick<CollabRunRow, "status" | "result" | "errorMessage" | "startedAt" | "completedAt" | "baseBranch" | "runBranch">>,
+  ): void {
     this.db
       .update(collabRuns)
       .set({ ...fields, updatedAt: new Date().toISOString() })
@@ -208,7 +209,14 @@ export class CollabRepository {
     return updated.length > 0;
   }
 
-  appendMessage(params: { runId: string; userId: string; memberId?: string | null; kind: CollabMessageKind; content?: string; data?: Record<string, unknown> }): CollabMessageRow {
+  appendMessage(params: {
+    runId: string;
+    userId: string;
+    memberId?: string | null;
+    kind: CollabMessageKind;
+    content?: string;
+    data?: Record<string, unknown>;
+  }): CollabMessageRow {
     const row = this.db
       .insert(collabMessages)
       .values({
@@ -236,7 +244,14 @@ export class CollabRepository {
       .all();
   }
 
-  createApproval(params: { runId: string; userId: string; memberId: string | null; kind: string; summary: string; payload?: Record<string, unknown> }): CollabApprovalRow {
+  createApproval(params: {
+    runId: string;
+    userId: string;
+    memberId: string | null;
+    kind: string;
+    summary: string;
+    payload?: Record<string, unknown>;
+  }): CollabApprovalRow {
     const row: CollabApprovalRow = {
       id: randomUUID(),
       runId: params.runId,
@@ -286,7 +301,13 @@ export class CollabRepository {
   createTask(params: { teamId: string; userId: string; title: string; description: string; runId?: string | null }): CollabTaskRow {
     const now = new Date().toISOString();
     return this.db.transaction((tx) => {
-      const last = tx.select({ number: collabTasks.number }).from(collabTasks).where(eq(collabTasks.teamId, params.teamId)).orderBy(desc(collabTasks.number)).limit(1).get();
+      const last = tx
+        .select({ number: collabTasks.number })
+        .from(collabTasks)
+        .where(eq(collabTasks.teamId, params.teamId))
+        .orderBy(desc(collabTasks.number))
+        .limit(1)
+        .get();
       const row: CollabTaskRow = {
         id: randomUUID(),
         teamId: params.teamId,

@@ -79,13 +79,9 @@
         "ai_models_provider_id_providers_id_fk": {
           "name": "ai_models_provider_id_providers_id_fk",
           "tableFrom": "ai_models",
-          "columnsFrom": [
-            "provider_id"
-          ],
+          "columnsFrom": ["provider_id"],
           "tableTo": "providers",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -181,13 +177,9 @@
         "asset_chunks_user_id_users_id_fk": {
           "name": "asset_chunks_user_id_users_id_fk",
           "tableFrom": "asset_chunks",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -262,13 +254,9 @@
         "audio_assets_user_id_users_id_fk": {
           "name": "audio_assets_user_id_users_id_fk",
           "tableFrom": "audio_assets",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -335,26 +323,18 @@
         "conversations_user_id_users_id_fk": {
           "name": "conversations_user_id_users_id_fk",
           "tableFrom": "conversations",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "conversations_model_id_ai_models_id_fk": {
           "name": "conversations_model_id_ai_models_id_fk",
           "tableFrom": "conversations",
-          "columnsFrom": [
-            "model_id"
-          ],
+          "columnsFrom": ["model_id"],
           "tableTo": "ai_models",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -436,13 +416,9 @@
         "documents_user_id_users_id_fk": {
           "name": "documents_user_id_users_id_fk",
           "tableFrom": "documents",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -578,13 +554,9 @@
         "jobs_user_id_users_id_fk": {
           "name": "jobs_user_id_users_id_fk",
           "tableFrom": "jobs",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -660,13 +632,9 @@
         "messages_conversation_id_conversations_id_fk": {
           "name": "messages_conversation_id_conversations_id_fk",
           "tableFrom": "messages",
-          "columnsFrom": [
-            "conversation_id"
-          ],
+          "columnsFrom": ["conversation_id"],
           "tableTo": "conversations",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -749,13 +717,9 @@
         "providers_user_id_users_id_fk": {
           "name": "providers_user_id_users_id_fk",
           "tableFrom": "providers",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -822,9 +786,7 @@
       "indexes": {
         "settings_user_id_unique": {
           "name": "settings_user_id_unique",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": true
         }
       },
@@ -832,13 +794,9 @@
         "settings_user_id_users_id_fk": {
           "name": "settings_user_id_users_id_fk",
           "tableFrom": "settings",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -928,13 +886,9 @@
         "summary_artifacts_user_id_users_id_fk": {
           "name": "summary_artifacts_user_id_users_id_fk",
           "tableFrom": "summary_artifacts",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -1024,13 +978,9 @@
         "transcripts_user_id_users_id_fk": {
           "name": "transcripts_user_id_users_id_fk",
           "tableFrom": "transcripts",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -1104,9 +1054,7 @@
       "indexes": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
@@ -1204,13 +1152,9 @@
         "videos_user_id_users_id_fk": {
           "name": "videos_user_id_users_id_fk",
           "tableFrom": "videos",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }

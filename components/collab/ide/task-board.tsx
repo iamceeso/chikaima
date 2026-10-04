@@ -51,7 +51,14 @@ function TaskCard({
             <ShieldAlert className="h-3 w-3" /> Needs approval
           </span>
         ) : task.outcome && task.outcome !== "completed" ? (
-          <span className={cn("ml-auto rounded px-1.5 py-0.5 text-[10.5px] font-medium", task.outcome === "failed" ? "bg-red-500/12 text-red-600" : "bg-surface-strong text-foreground-muted")}>{task.outcome}</span>
+          <span
+            className={cn(
+              "ml-auto rounded px-1.5 py-0.5 text-[10.5px] font-medium",
+              task.outcome === "failed" ? "bg-red-500/12 text-red-600" : "bg-surface-strong text-foreground-muted",
+            )}
+          >
+            {task.outcome}
+          </span>
         ) : null}
       </div>
       <p className="mt-1 text-[13px] font-medium leading-snug text-foreground">{task.title}</p>
@@ -69,7 +76,9 @@ function TaskCard({
             return (
               <li key={step.index} className="flex items-start gap-1.5" title={owner ? `${owner.name}${owner.title ? `, ${owner.title}` : ""}` : undefined}>
                 <span className="mt-0.5 shrink-0">{STEP_ICON[step.state]}</span>
-                <span className={cn("line-clamp-2", step.state === "done" || step.state === "skipped" ? "text-foreground-muted" : "text-foreground")}>{step.instruction}</span>
+                <span className={cn("line-clamp-2", step.state === "done" || step.state === "skipped" ? "text-foreground-muted" : "text-foreground")}>
+                  {step.instruction}
+                </span>
               </li>
             );
           })}
@@ -91,17 +100,33 @@ function TaskCard({
         <div className="ml-auto flex gap-1">
           {task.column === "backlog" ? (
             <>
-              <button type="button" onClick={onDelete} className="rounded p-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground" aria-label={`Delete ${task.key}`}>
+              <button
+                type="button"
+                onClick={onDelete}
+                className="rounded p-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground"
+                aria-label={`Delete ${task.key}`}
+              >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
-              <button type="button" disabled={busy} onClick={onStart} title={busy ? "The team is on another task" : undefined} className="flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-primary-foreground disabled:opacity-40">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onStart}
+                title={busy ? "The team is on another task" : undefined}
+                className="flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-primary-foreground disabled:opacity-40"
+              >
                 <Play className="h-3 w-3" /> Assign to team
               </button>
             </>
           ) : (
             <>
               {task.outcome === "failed" || task.outcome === "cancelled" ? (
-                <button type="button" disabled={busy} onClick={onStart} className="flex items-center gap-1 rounded border border-border px-2 py-0.5 text-foreground-muted hover:text-foreground disabled:opacity-40">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onStart}
+                  className="flex items-center gap-1 rounded border border-border px-2 py-0.5 text-foreground-muted hover:text-foreground disabled:opacity-40"
+                >
                   <RotateCcw className="h-3 w-3" /> Retry
                 </button>
               ) : null}
@@ -157,7 +182,11 @@ export function TaskBoard({ access, team, busy, onOpenRun }: { access: ApiAccess
         <h2 className="text-sm font-semibold text-foreground">Tasks</h2>
         <span className="text-xs text-muted">{tasks.length} total</span>
         {error ? <span className="truncate text-xs text-destructive">{error.message}</span> : null}
-        <button type="button" onClick={() => setAdding(true)} className="ml-auto flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="ml-auto flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
+        >
           <Plus className="h-3.5 w-3.5" /> New task
         </button>
       </div>
@@ -179,7 +208,13 @@ export function TaskBoard({ access, team, busy, onOpenRun }: { access: ApiAccess
                       if (title.trim()) create.mutate();
                     }}
                   >
-                    <input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What needs building?" className="h-7 w-full rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary" />
+                    <input
+                      autoFocus
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder="What needs building?"
+                      className="h-7 w-full rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
                     <textarea
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
@@ -187,10 +222,18 @@ export function TaskBoard({ access, team, busy, onOpenRun }: { access: ApiAccess
                       className="h-16 w-full resize-none rounded border border-border bg-background p-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                     <div className="flex justify-end gap-1">
-                      <button type="button" onClick={() => setAdding(false)} className="rounded px-2 py-0.5 text-xs text-foreground-muted hover:text-foreground">
+                      <button
+                        type="button"
+                        onClick={() => setAdding(false)}
+                        className="rounded px-2 py-0.5 text-xs text-foreground-muted hover:text-foreground"
+                      >
                         Cancel
                       </button>
-                      <button type="submit" disabled={!title.trim() || create.isPending} className="rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground disabled:opacity-40">
+                      <button
+                        type="submit"
+                        disabled={!title.trim() || create.isPending}
+                        className="rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground disabled:opacity-40"
+                      >
                         Add to backlog
                       </button>
                     </div>
@@ -207,7 +250,11 @@ export function TaskBoard({ access, team, busy, onOpenRun }: { access: ApiAccess
                     onOpen={() => task.run_id && onOpenRun(task.run_id)}
                   />
                 ))}
-                {items.length === 0 && !(column.id === "backlog" && adding) ? <p className="px-1 py-2 text-[11.5px] text-muted">{column.id === "backlog" ? "Add tasks here, then assign them to the team." : "Nothing here."}</p> : null}
+                {items.length === 0 && !(column.id === "backlog" && adding) ? (
+                  <p className="px-1 py-2 text-[11.5px] text-muted">
+                    {column.id === "backlog" ? "Add tasks here, then assign them to the team." : "Nothing here."}
+                  </p>
+                ) : null}
               </div>
             </section>
           );

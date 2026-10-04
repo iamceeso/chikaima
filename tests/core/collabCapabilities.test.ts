@@ -34,7 +34,10 @@ async function withCollabEnv<T>(fn: () => T | Promise<T>): Promise<T> {
     __resetDbForTests();
     __resetConfigForTests();
     __resetSecretManagerForTests();
-    for (const [key, value] of [["CHIKAIMA_DB_PATH", previous.db], ["CHIKAIMA_COLLAB_ROOT", previous.root]] as const) {
+    for (const [key, value] of [
+      ["CHIKAIMA_DB_PATH", previous.db],
+      ["CHIKAIMA_COLLAB_ROOT", previous.root],
+    ] as const) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
@@ -45,14 +48,38 @@ async function withCollabEnv<T>(fn: () => T | Promise<T>): Promise<T> {
 function seed(db: ChikaimaDatabase): { userId: string; model: (key: string) => string } {
   const user = new AuthService(db).register({ email: "admin@example.com", fullName: "Admin", password: "password123" });
   const now = new Date().toISOString();
-  db.insert(providers).values({ id: "prov-1", userId: user.id, name: "OpenAI", providerType: "openai", baseUrl: null, encryptedConfig: {}, isEnabled: true, createdAt: now, updatedAt: now }).run();
+  db.insert(providers)
+    .values({
+      id: "prov-1",
+      userId: user.id,
+      name: "OpenAI",
+      providerType: "openai",
+      baseUrl: null,
+      encryptedConfig: {},
+      isEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
   const made = new Set<string>();
   return {
     userId: user.id,
     model: (key) => {
       const id = `model-${key}`;
       if (!made.has(id)) {
-        db.insert(aiModels).values({ id, providerId: "prov-1", modelKey: key, displayName: key, capabilities: {}, isDefault: false, isAvailable: true, createdAt: now, updatedAt: now }).run();
+        db.insert(aiModels)
+          .values({
+            id,
+            providerId: "prov-1",
+            modelKey: key,
+            displayName: key,
+            capabilities: {},
+            isDefault: false,
+            isAvailable: true,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run();
         made.add(id);
       }
       return id;
@@ -81,14 +108,22 @@ function clientByModel(responders: Record<string, Responder>): CollabModelClient
 }
 
 const PLAN_FOR = (rank: number) => `<step assignee="${rank}">Do the thing.</step>`;
-const lead: Responder = (prompt) => (prompt.includes("Break the task") ? PLAN_FOR(2) : prompt.includes("The run is finished") ? "Report." : "<verdict>approve</verdict>");
+const lead: Responder = (prompt) =>
+  prompt.includes("Break the task") ? PLAN_FOR(2) : prompt.includes("The run is finished") ? "Report." : "<verdict>approve</verdict>";
 const approve: Responder = () => "<verdict>approve</verdict><comments>ok</comments>";
 
 function member(model: string, role: string, precedence: number, extra: Partial<TeamMemberInput> = {}): TeamMemberInput {
   return { model_id: model, role, precedence, ...extra };
 }
 
-async function runTeam(db: ChikaimaDatabase, userId: string, input: TeamInput, client: CollabModelClient, options: OrchestratorOptions = {}, beforeRun?: (runId: string) => void) {
+async function runTeam(
+  db: ChikaimaDatabase,
+  userId: string,
+  input: TeamInput,
+  client: CollabModelClient,
+  options: OrchestratorOptions = {},
+  beforeRun?: (runId: string) => void,
+) {
   // Git behaviour has its own tests (collabGit.test.ts).
   const { team } = new CollabService(db).createTeam(userId, { git_enabled: false, ...input });
   const repo = new CollabRepository(db);
@@ -169,11 +204,16 @@ test("an agent cannot edit outside its scope or without the permission", async (
       },
     });
 
-    const { run, root } = await runTeam(db, userId, {
-      name: "T",
-      folder: "site",
-      members: [member(model("lead"), "lead", 1), member(model("fe"), "implementer", 2, { scope: ["web"], permissions: ["edit"] })],
-    }, client);
+    const { run, root } = await runTeam(
+      db,
+      userId,
+      {
+        name: "T",
+        folder: "site",
+        members: [member(model("lead"), "lead", 1), member(model("fe"), "implementer", 2, { scope: ["web"], permissions: ["edit"] })],
+      },
+      client,
+    );
 
     assert.equal(run.status, "completed");
     assert.equal(existsSync(join(root, "server/api.ts")), false);
@@ -196,16 +236,21 @@ test("only the members listed in reviewed_by review an implementer's work", asyn
       },
     });
 
-    const { run } = await runTeam(db, userId, {
-      name: "T",
-      folder: "site",
-      members: [
-        member(model("lead"), "lead", 1),
-        member(model("impl"), "implementer", 2, { reviewed_by: [3] }),
-        member(model("sec"), "reviewer", 3),
-        member(model("other"), "reviewer", 4),
-      ],
-    }, client);
+    const { run } = await runTeam(
+      db,
+      userId,
+      {
+        name: "T",
+        folder: "site",
+        members: [
+          member(model("lead"), "lead", 1),
+          member(model("impl"), "implementer", 2, { reviewed_by: [3] }),
+          member(model("sec"), "reviewer", 3),
+          member(model("other"), "reviewer", 4),
+        ],
+      },
+      client,
+    );
 
     assert.equal(run.status, "completed");
     assert.deepEqual(client.calls, [model("lead"), model("impl"), model("sec"), model("lead")]);
@@ -227,7 +272,9 @@ test("a tester can add tests and run them, and a failing test sends the step bac
       [model("qa")]: (_prompt, messages) => {
         if (messages.length === 2) return '<write path="tests/sum.test.js">test\n</write><test/>';
         const result = textOf(messages.slice(-1));
-        return /exit code: 0/.test(result) ? "<verdict>approve</verdict><comments>Tests pass.</comments>" : "<verdict>reject</verdict><comments>sum test fails.</comments>";
+        return /exit code: 0/.test(result)
+          ? "<verdict>approve</verdict><comments>Tests pass.</comments>"
+          : "<verdict>reject</verdict><comments>sum test fails.</comments>";
       },
     });
     const fakeRun = async (cwd: string, command: string) => {
@@ -268,7 +315,13 @@ test("without tester agents, the team's test command gates the step when command
     const { run, root } = await runTeam(
       db,
       userId,
-      { name: "T", folder: "site", test_command: "npm test", max_revisions: 0, members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2)] },
+      {
+        name: "T",
+        folder: "site",
+        test_command: "npm test",
+        max_revisions: 0,
+        members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2)],
+      },
       client,
       { commandsEnabled: true, runCommand: async () => ({ exitCode: 1, output: "boom", timedOut: false }) },
     );
@@ -292,9 +345,19 @@ test("commands are refused when the server has command execution disabled", asyn
         return "<done/>";
       },
     });
-    await runTeam(db, userId, { name: "T", folder: "site", members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2, { permissions: ["edit", "run_commands"] })] }, client, {
-      commandsEnabled: false,
-    });
+    await runTeam(
+      db,
+      userId,
+      {
+        name: "T",
+        folder: "site",
+        members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2, { permissions: ["edit", "run_commands"] })],
+      },
+      client,
+      {
+        commandsEnabled: false,
+      },
+    );
     assert.match(result, /command execution is disabled/);
   });
 });
@@ -342,7 +405,13 @@ test("supervised autonomy waits for the human on each step and treats a rejectio
       assert.equal(run.status, "completed");
       assert.equal(readFileSync(join(root, "a.txt"), "utf8"), "2\n");
       assert.match(prompts[1]!, /Supervisor: Use a different value\./);
-      assert.deepEqual(repo.listApprovals(run.id).map((approval) => [approval.kind, approval.status]), [["step", "rejected"], ["step", "approved"]]);
+      assert.deepEqual(
+        repo.listApprovals(run.id).map((approval) => [approval.kind, approval.status]),
+        [
+          ["step", "rejected"],
+          ["step", "approved"],
+        ],
+      );
     } finally {
       stop();
     }
@@ -370,7 +439,12 @@ test("under semi-autonomy a risky command waits for approval and a declined one 
       await runTeam(
         db,
         userId,
-        { name: "T", folder: "site", autonomy: "semi", members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2, { permissions: ["edit", "run_commands"] })] },
+        {
+          name: "T",
+          folder: "site",
+          autonomy: "semi",
+          members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2, { permissions: ["edit", "run_commands"] })],
+        },
         client,
         { commandsEnabled: true, runCommand: async (_cwd, command) => (ran.push(command), { exitCode: 0, output: "ok", timedOut: false }) },
         (id) => (runId = id),
@@ -418,7 +492,12 @@ test("a run stops when it reaches its model-call budget", async () => {
     const { userId, model } = seed(db);
     // An implementer that never says done would loop; the budget ends it.
     const client = clientByModel({ [model("lead")]: lead, [model("impl")]: () => '<read path="."/>' });
-    const { run } = await runTeam(db, userId, { name: "T", folder: "site", max_model_calls: 4, members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2)] }, client);
+    const { run } = await runTeam(
+      db,
+      userId,
+      { name: "T", folder: "site", max_model_calls: 4, members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2)] },
+      client,
+    );
     assert.equal(run.status, "failed");
     assert.match(run.errorMessage ?? "", /limit of 4 model calls/);
     assert.equal(client.calls.length, 4);
@@ -432,7 +511,11 @@ test("team validation checks reporting lines, reviewers, permissions and scope",
     const db = getDb();
     const { userId, model } = seed(db);
     const service = new CollabService(db);
-    const impl = (extra: Partial<TeamMemberInput>) => ({ name: "T", folder: "site", members: [member(model("a"), "implementer", 1, extra), member(model("b"), "reviewer", 2)] });
+    const impl = (extra: Partial<TeamMemberInput>) => ({
+      name: "T",
+      folder: "site",
+      members: [member(model("a"), "implementer", 1, extra), member(model("b"), "reviewer", 2)],
+    });
 
     assert.throws(() => service.createTeam(userId, impl({ reports_to: 9 })), /reports to #9/);
     assert.throws(() => service.createTeam(userId, impl({ reports_to: 1 })), /reports to #1/);
@@ -442,7 +525,10 @@ test("team validation checks reporting lines, reviewers, permissions and scope",
     assert.throws(() => service.createTeam(userId, { ...impl({}), autonomy: "yolo" }), /autonomy/);
     assert.throws(() => service.createTeam(userId, { ...impl({}), max_model_calls: 0 }), /max_model_calls/);
 
-    const { team, members } = service.createTeam(userId, { ...impl({ title: "Backend Engineer", reports_to: 2, reviewed_by: [2], scope: ["src/api"] }), test_command: "  npm test " });
+    const { team, members } = service.createTeam(userId, {
+      ...impl({ title: "Backend Engineer", reports_to: 2, reviewed_by: [2], scope: ["src/api"] }),
+      test_command: "  npm test ",
+    });
     assert.equal(team.testCommand, "npm test");
     assert.deepEqual([members[0]!.name, members[0]!.reportsTo, members[0]!.reviewedBy, members[0]!.scope], ["Backend Engineer", 2, [2], ["src/api"]]);
   });
@@ -478,7 +564,10 @@ test("people can browse and edit the team folder, but not while agents are worki
     assert.deepEqual(service.listFiles(userId, team.id).entries, [{ path: "index.html", type: "file" }]);
     assert.equal(service.readFile(userId, team.id, "index.html").content, "<h1>hi</h1>\n");
     service.writeFile(userId, team.id, "src/app.js", "console.log(1);\n");
-    assert.deepEqual(service.listFiles(userId, team.id).entries.map((entry) => entry.path), ["index.html", "src", "src/app.js"]);
+    assert.deepEqual(
+      service.listFiles(userId, team.id).entries.map((entry) => entry.path),
+      ["index.html", "src", "src/app.js"],
+    );
     assert.throws(() => service.readFile(userId, team.id, "../../etc/passwd"), /escapes the workspace/);
 
     let release!: () => void;

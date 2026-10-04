@@ -111,8 +111,8 @@ function Welcome({ team }: { team: CollabTeam }) {
         <Bot className="mx-auto h-8 w-8 text-muted" />
         <h2 className="mt-3 text-base font-semibold text-foreground">{team.name}</h2>
         <p className="mt-2 text-[13px] text-foreground-muted">
-          Open a file from the Explorer, or assign a task to your team in the panel on the right. The lead plans it, engineers write the code, reviewers and testers check
-          it, and you approve what matters.
+          Open a file from the Explorer, or assign a task to your team in the panel on the right. The lead plans it, engineers write the code, reviewers and
+          testers check it, and you approve what matters.
         </p>
         <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-1.5 text-left text-xs text-foreground-muted">
           <dt>Save file</dt>
@@ -187,12 +187,23 @@ export function EditorArea({
                 aria-selected={tab.id === activeId}
                 className={cn(
                   "group flex shrink-0 items-center gap-1.5 border-r border-border pl-3 pr-1.5 text-[12.5px]",
-                  tab.id === activeId ? "border-t-2 border-t-primary bg-background text-foreground" : "border-t-2 border-t-transparent text-foreground-muted hover:text-foreground",
+                  tab.id === activeId
+                    ? "border-t-2 border-t-primary bg-background text-foreground"
+                    : "border-t-2 border-t-transparent text-foreground-muted hover:text-foreground",
                 )}
               >
-                <button type="button" onClick={() => onActivate(tab.id)} onAuxClick={() => onClose(tab.id)} className="flex items-center gap-1.5" title={tab.kind === "file" ? tab.path : tabTitle(tab)}>
+                <button
+                  type="button"
+                  onClick={() => onActivate(tab.id)}
+                  onAuxClick={() => onClose(tab.id)}
+                  className="flex items-center gap-1.5"
+                  title={tab.kind === "file" ? tab.path : tabTitle(tab)}
+                >
                   <Icon className="h-3.5 w-3.5 opacity-70" />
-                  <span className={cn("max-w-48 truncate", touched && "text-amber-600 dark:text-amber-400")} title={touched ? "Changed by an agent in this task" : undefined}>
+                  <span
+                    className={cn("max-w-48 truncate", touched && "text-amber-600 dark:text-amber-400")}
+                    title={touched ? "Changed by an agent in this task" : undefined}
+                  >
                     {tabTitle(tab)}
                   </span>
                 </button>
@@ -229,7 +240,6 @@ export function EditorArea({
         ) : null}
         {active?.kind === "diff" ? <FillDiff files={active.files} /> : null}
         {active?.kind === "commit" ? <CommitTab access={access} teamId={team.id} hash={active.hash} /> : null}
-
       </div>
     </div>
   );

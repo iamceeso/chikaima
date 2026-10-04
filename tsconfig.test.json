@@ -19,8 +19,5 @@
     "store/auth-store.ts",
     "store/chat-store.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".test-dist"
-  ]
+  "exclude": ["node_modules", ".test-dist"]
 }

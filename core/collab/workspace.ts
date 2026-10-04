@@ -1,4 +1,6 @@
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cp } from "node:fs/promises";
+import { homedir } from "node:os";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 
 import { getConfig } from "../config/index.js";
@@ -38,7 +40,9 @@ export function normalizeTeamFolder(folder: string): string {
     const root = collabRoot();
     const absolute = resolve(trimmed);
     if (!isWithin(root, absolute) || absolute === root) {
-      throw badRequest(`Choose a folder inside the projects root (${root}). To work on code elsewhere, set CHIKAIMA_COLLAB_ROOT to a parent folder such as ~/Projects.`);
+      throw badRequest(
+        `Choose a folder inside the projects root (${root}). To work on code elsewhere, set CHIKAIMA_COLLAB_ROOT to a parent folder such as ~/Projects.`,
+      );
     }
     trimmed = relative(root, absolute).split(sep).join("/");
   }
@@ -90,7 +94,11 @@ export class Workspace {
 
   /** Resolves a model-supplied path to an absolute path inside the folder, or throws. */
   resolvePath(path: string): { absolute: string; relative: string } {
-    const cleaned = String(path ?? "").trim().replace(/\\/g, "/").replace(/^\.\/+/, "") || ".";
+    const cleaned =
+      String(path ?? "")
+        .trim()
+        .replace(/\\/g, "/")
+        .replace(/^\.\/+/, "") || ".";
     if (isAbsolute(cleaned) || /^[a-zA-Z]:/.test(cleaned)) {
       throw badRequest(`Path must be relative to the workspace: ${path}`);
     }
@@ -352,4 +360,47 @@ export function listFolders(path = ""): FolderListing {
     parent: relativePath ? (relativePath.includes("/") ? relativePath.slice(0, relativePath.lastIndexOf("/")) : "") : null,
     folders,
   };
+}
+
+/** Reinstallable or generated directories left out of a saved copy. `.git` is kept, so history comes along. */
+const COPY_SKIPPED_DIRS = new Set(["node_modules", ".next", ".venv", "__pycache__", ".chikaima"]);
+
+/**
+ * Copies a team folder to `destination`, an absolute path anywhere on this
+ * machine (`~` is expanded). The destination must not exist yet, or be an
+ * empty folder; dependency and build-cache directories are skipped.
+ */
+export async function copyFolderTo(folder: string, destination: string): Promise<string> {
+  const source = Workspace.open(folder).root;
+  const raw = String(destination ?? "").trim();
+  if (!raw) throw badRequest("Choose where to save the project.");
+  const expanded = raw === "~" ? homedir() : raw.startsWith("~/") ? join(homedir(), raw.slice(2)) : raw;
+  if (!isAbsolute(expanded)) throw badRequest("Use a full path, such as ~/Projects/my-app or /Volumes/Backup/my-app.");
+  const target = resolve(expanded);
+  if (isWithin(source, target)) throw badRequest("Choose a location outside the project folder itself.");
+  if (existsSync(target)) {
+    if (!statSync(target).isDirectory()) throw badRequest(`${target} is a file.`);
+    if (readdirSync(target).length > 0) throw badRequest(`${target} already exists and isn't empty. Choose a new folder name.`);
+  }
+  try {
+    mkdirSync(dirname(target), { recursive: true });
+    await cp(source, target, {
+      recursive: true,
+      errorOnExist: true,
+      force: false,
+      verbatimSymlinks: true,
+      filter: (path) => !COPY_SKIPPED_DIRS.has(path.split(sep).at(-1)!) || path === source,
+    });
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "EACCES" || code === "EPERM") throw badRequest(`Chikaima isn't allowed to write to ${target}.`);
+    if (code === "EROFS") throw badRequest(`${target} is on a read-only disk.`);
+    throw error;
+  }
+  return target;
+}
+
+/** Deletes a team folder and everything in it. */
+export function removeTeamFolder(folder: string): void {
+  rmSync(Workspace.open(folder).root, { recursive: true, force: true });
 }

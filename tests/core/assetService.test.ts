@@ -51,7 +51,18 @@ function seedTranscript(userId: string, resourceId: string, content: string) {
   const now = new Date().toISOString();
   getDb()
     .insert(transcripts)
-    .values({ id: "transcript-1", userId, resourceType: "document", resourceId, language: "en", content, segments: [], status: "completed", createdAt: now, updatedAt: now })
+    .values({
+      id: "transcript-1",
+      userId,
+      resourceType: "document",
+      resourceId,
+      language: "en",
+      content,
+      segments: [],
+      status: "completed",
+      createdAt: now,
+      updatedAt: now,
+    })
     .run();
 }
 
@@ -84,7 +95,10 @@ test("getResource enforces ownership: another user's resource looks not-found", 
 
     const service = new AssetService(db);
     assert.doesNotThrow(() => service.getResource(owner.id, "document", docId));
-    assert.throws(() => service.getResource(other.id, "document", docId), (e: unknown) => e instanceof HttpError && e.statusCode === 404);
+    assert.throws(
+      () => service.getResource(other.id, "document", docId),
+      (e: unknown) => e instanceof HttpError && e.statusCode === 404,
+    );
   });
 });
 
@@ -120,9 +134,15 @@ test("deleteResource removes the file, vector chunks, jobs, transcript, summarie
     seedTranscript(user.id, docId, "hello world transcript");
     new JobRepository(db).create({ userId: user.id, jobType: "document_analysis", resourceType: "document", resourceId: docId });
 
-    await withMockedFetch(
-      (async () => new Response(JSON.stringify({ data: [{ embedding: [1, 0, 0] }] }), { status: 200 })) as typeof fetch,
-      () => new EmbeddingsService(db).replaceChunksForSource({ userId: user.id, sourceType: "document", sourceId: docId, assetType: "document", filename: "notes.txt", chunks: [{ content: "chunk", metadata: {} }] }),
+    await withMockedFetch((async () => new Response(JSON.stringify({ data: [{ embedding: [1, 0, 0] }] }), { status: 200 })) as typeof fetch, () =>
+      new EmbeddingsService(db).replaceChunksForSource({
+        userId: user.id,
+        sourceType: "document",
+        sourceId: docId,
+        assetType: "document",
+        filename: "notes.txt",
+        chunks: [{ content: "chunk", metadata: {} }],
+      }),
     );
 
     await new AssetService(db).deleteResource(user.id, "document", docId);

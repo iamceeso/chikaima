@@ -52,10 +52,7 @@ test("transcribeMedia raises AssetProcessingError when no provider is configured
     const filePath = join(workDir, "clip.mp3");
     writeFileSync(filePath, "fake audio bytes");
 
-    await assert.rejects(
-      () => new TranscriptionProviderService(db).transcribeMedia(user.id, filePath, "clip.mp3"),
-      AssetProcessingError,
-    );
+    await assert.rejects(() => new TranscriptionProviderService(db).transcribeMedia(user.id, filePath, "clip.mp3"), AssetProcessingError);
   });
 });
 

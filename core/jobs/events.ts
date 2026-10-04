@@ -4,15 +4,7 @@ import type { jobEvents } from "../db/schema.js";
 
 export type JobEventRow = typeof jobEvents.$inferSelect;
 
-export type JobEventType =
-  | "queued"
-  | "started"
-  | "stage"
-  | "completed"
-  | "retry_scheduled"
-  | "failed"
-  | "cancelled"
-  | "recovered";
+export type JobEventType = "queued" | "started" | "stage" | "completed" | "retry_scheduled" | "failed" | "cancelled" | "recovered";
 
 /**
  * In-process fan-out of job events to live subscribers (the SSE route).

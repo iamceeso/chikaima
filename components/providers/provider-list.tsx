@@ -6,14 +6,7 @@ import { Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 import type { Provider } from "@/types";
@@ -93,9 +86,7 @@ export function ProviderList() {
                   <p className="wrap-break-word text-sm text-foreground-muted">
                     {providerLabels[provider.provider_type]} {provider.base_url ? `- ${provider.base_url}` : ""}
                   </p>
-                  {provider.masked_secret ? (
-                    <p className="mt-1 text-xs text-muted">Credential {provider.masked_secret}</p>
-                  ) : null}
+                  {provider.masked_secret ? <p className="mt-1 text-xs text-muted">Credential {provider.masked_secret}</p> : null}
                 </div>
                 <div className="flex flex-wrap items-stretch gap-2 lg:justify-end">
                   {provider.support_tier ? (
@@ -139,9 +130,7 @@ export function ProviderList() {
             </div>
           ))
         ) : (
-          <div className="rounded-xl border border-dashed border-border bg-surface-strong-sm text-foreground-muted">
-            No providers added yet.
-          </div>
+          <div className="rounded-xl border border-dashed border-border bg-surface-strong-sm text-foreground-muted">No providers added yet.</div>
         )}
         {toggleMutation.error ? <p className="text-sm text-primary">{toggleMutation.error.message}</p> : null}
         {deleteMutation.error ? <p className="text-sm text-primary">{deleteMutation.error.message}</p> : null}

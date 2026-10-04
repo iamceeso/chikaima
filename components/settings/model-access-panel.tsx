@@ -32,20 +32,17 @@ export function ModelAccessPanel() {
   });
 
   const updateModelVisibility = useMutation({
-    mutationFn: async ({
-      enabledModelIds,
-      defaultModelId,
-    }: {
-      enabledModelIds: string[];
-      defaultModelId?: string | null;
-    }) => {
+    mutationFn: async ({ enabledModelIds, defaultModelId }: { enabledModelIds: string[]; defaultModelId?: string | null }) => {
       if (!token) {
         throw new Error("Please sign in first.");
       }
-      return api.updateWorkspaceModels({ token }, {
-        enabled_model_ids: enabledModelIds,
-        ...(defaultModelId !== undefined ? { default_model_id: defaultModelId } : {}),
-      });
+      return api.updateWorkspaceModels(
+        { token },
+        {
+          enabled_model_ids: enabledModelIds,
+          ...(defaultModelId !== undefined ? { default_model_id: defaultModelId } : {}),
+        },
+      );
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workspace-models"] });
@@ -70,9 +67,7 @@ export function ModelAccessPanel() {
     },
   });
 
-  const modelsByProvider = (workspaceModelsQuery.data ?? []).reduce<
-    Array<{ providerId: string; providerName: string; items: AIModel[] }>
-  >((groups, model) => {
+  const modelsByProvider = (workspaceModelsQuery.data ?? []).reduce<Array<{ providerId: string; providerName: string; items: AIModel[] }>>((groups, model) => {
     const existing = groups.find((group) => group.providerId === model.provider_id);
     if (existing) {
       existing.items.push(model);
@@ -170,9 +165,7 @@ export function ModelAccessPanel() {
   };
 
   const toggleDefaultModel = (model: AIModel) => {
-    const enabledModelIds = (workspaceModelsQuery.data ?? [])
-      .filter((item) => item.is_available)
-      .map((item) => item.id);
+    const enabledModelIds = (workspaceModelsQuery.data ?? []).filter((item) => item.is_available).map((item) => item.id);
     const enabledSet = new Set(enabledModelIds);
     enabledSet.add(model.id);
 
@@ -190,16 +183,12 @@ export function ModelAccessPanel() {
         </div>
         <div>
           <p className="text-sm font-medium text-foreground">Available models</p>
-          <p className="text-sm text-foreground-muted">
-            Choose which synced models can appear across the workspace.
-          </p>
+          <p className="text-sm text-foreground-muted">Choose which synced models can appear across the workspace.</p>
         </div>
       </div>
 
       {workspaceModelsQuery.isLoading ? (
-        <div className="rounded-xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">
-          Loading models...
-        </div>
+        <div className="rounded-xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">Loading models...</div>
       ) : providerSections.length ? (
         <div className="grid gap-3 xl:grid-cols-2">
           {providerSections.map((group) => {
@@ -208,18 +197,12 @@ export function ModelAccessPanel() {
             return (
               <div
                 key={group.providerId}
-                className={cn(
-                  "rounded-xl border border-border bg-background-secondary transition-all",
-                  isCollapsed ? "p-2.5" : "p-3",
-                )}
+                className={cn("rounded-xl border border-border bg-background-secondary transition-all", isCollapsed ? "p-2.5" : "p-3")}
               >
                 <button
                   type="button"
                   onClick={() => toggleProviderCollapsed(group.providerId)}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-3 text-left",
-                    isCollapsed ? "min-h-0" : "",
-                  )}
+                  className={cn("flex w-full items-center justify-between gap-3 text-left", isCollapsed ? "min-h-0" : "")}
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{group.providerName}</p>
@@ -227,17 +210,12 @@ export function ModelAccessPanel() {
                       {group.enabledCount} enabled · {group.items.length} shown
                     </p>
                   </div>
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 shrink-0 text-foreground-muted transition-transform",
-                      isCollapsed ? "-rotate-90" : "rotate-0",
-                    )}
-                  />
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-foreground-muted transition-transform", isCollapsed ? "-rotate-90" : "rotate-0")} />
                 </button>
 
                 {isCollapsed ? null : (
                   <div className="mt-3 space-y-3">
-                      <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <div className="relative flex-1">
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
                         <Input
@@ -247,7 +225,7 @@ export function ModelAccessPanel() {
                           className="h-7 rounded-lg bg-background pl-9 pr-3 text-xs"
                         />
                       </div>
-                    <div className="flex gap-2">
+                      <div className="flex gap-2">
                         <Button
                           type="button"
                           size="xs"
@@ -260,10 +238,7 @@ export function ModelAccessPanel() {
                           }}
                         >
                           <RefreshCw
-                            className={cn(
-                              "mr-1 h-3.5 w-3.5",
-                              resyncProviderModels.isPending && resyncingProviderId === group.providerId ? "animate-spin" : "",
-                            )}
+                            className={cn("mr-1 h-3.5 w-3.5", resyncProviderModels.isPending && resyncingProviderId === group.providerId ? "animate-spin" : "")}
                           />
                           {resyncProviderModels.isPending && resyncingProviderId === group.providerId ? "Resyncing..." : "Resync"}
                         </Button>
@@ -351,17 +326,11 @@ export function ModelAccessPanel() {
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">
-          No synced models yet.
-        </div>
+        <div className="rounded-xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">No synced models yet.</div>
       )}
 
-      {updateModelVisibility.error ? (
-        <p className="mt-3 text-sm text-primary">{updateModelVisibility.error.message}</p>
-      ) : null}
-      {resyncProviderModels.error ? (
-        <p className="mt-3 text-sm text-primary">{resyncProviderModels.error.message}</p>
-      ) : null}
+      {updateModelVisibility.error ? <p className="mt-3 text-sm text-primary">{updateModelVisibility.error.message}</p> : null}
+      {resyncProviderModels.error ? <p className="mt-3 text-sm text-primary">{resyncProviderModels.error.message}</p> : null}
     </Card>
   );
 }

@@ -134,7 +134,10 @@ export class AssetService {
     await storageService.deleteFile("filePath" in resource ? resource.filePath : null);
 
     this.vectorStore.deleteBySource(userId, resourceType, resourceId);
-    this.db.delete(jobs).where(and(eq(jobs.userId, userId), eq(jobs.resourceType, resourceType), eq(jobs.resourceId, resourceId))).run();
+    this.db
+      .delete(jobs)
+      .where(and(eq(jobs.userId, userId), eq(jobs.resourceType, resourceType), eq(jobs.resourceId, resourceId)))
+      .run();
     this.db
       .delete(transcripts)
       .where(and(eq(transcripts.userId, userId), eq(transcripts.resourceType, resourceType), eq(transcripts.resourceId, resourceId)))
@@ -178,7 +181,11 @@ export class AssetService {
 
     const summaryRow = byType.get("summary");
     if (summaryRow) {
-      this.db.update(summaryArtifacts).set({ content: bundle.summary, data: {}, status: "completed", updatedAt: now }).where(eq(summaryArtifacts.id, summaryRow.id)).run();
+      this.db
+        .update(summaryArtifacts)
+        .set({ content: bundle.summary, data: {}, status: "completed", updatedAt: now })
+        .where(eq(summaryArtifacts.id, summaryRow.id))
+        .run();
     } else {
       this.db
         .insert(summaryArtifacts)
@@ -225,7 +232,11 @@ export class AssetService {
     if (resourceType === "document") {
       this.db.update(documents).set({ summary: bundle.summary, updatedAt: now }).where(eq(documents.id, resourceId)).run();
     } else if (resourceType === "video") {
-      this.db.update(videos).set({ summary: bundle.summary, chapters: bundle.chapters, actionItems: bundle.actionItems, updatedAt: now }).where(eq(videos.id, resourceId)).run();
+      this.db
+        .update(videos)
+        .set({ summary: bundle.summary, chapters: bundle.chapters, actionItems: bundle.actionItems, updatedAt: now })
+        .where(eq(videos.id, resourceId))
+        .run();
     }
 
     return this.listSummariesForResource(userId, resourceType, resourceId);
@@ -271,7 +282,8 @@ export class AssetService {
     return this.llm.generateReply(provider, model, [
       {
         role: "system",
-        content: "Answer using the provided resource transcript, summary, and excerpts. Prefer direct evidence from the material and say when the answer is uncertain.",
+        content:
+          "Answer using the provided resource transcript, summary, and excerpts. Prefer direct evidence from the material and say when the answer is uncertain.",
       },
       { role: "user", content: promptParts.join("\n\n") },
     ]);

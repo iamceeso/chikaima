@@ -132,6 +132,9 @@ test("listAvailableModelsForUser excludes models from disabled providers and una
     const available = service.listAvailableModelsForUser(userId);
 
     assert.ok(available.every((model) => model.provider_id === enabledProvider.id));
-    assert.equal(available.some((model) => model.id === enabledModels[0]!.id), false);
+    assert.equal(
+      available.some((model) => model.id === enabledModels[0]!.id),
+      false,
+    );
   });
 });

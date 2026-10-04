@@ -10,14 +10,16 @@ import { cn } from "@/lib/utils";
 import { api, type ApiAccess } from "@/services/api";
 import type { CollabTeam } from "@/types";
 
-
 function Console({ text, className }: { text: string; className?: string }) {
   const ref = useRef<HTMLPreElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
   }, [text]);
   return (
-    <pre ref={ref} className={cn("max-h-80 min-h-40 overflow-auto rounded-xl bg-zinc-950 p-3 font-mono text-[11.5px] leading-relaxed text-zinc-100", className)}>
+    <pre
+      ref={ref}
+      className={cn("max-h-80 min-h-40 overflow-auto rounded-xl bg-zinc-950 p-3 font-mono text-[11.5px] leading-relaxed text-zinc-100", className)}
+    >
       {text || " "}
     </pre>
   );
@@ -41,7 +43,10 @@ export function TerminalPanel({ access, team, disabled }: { access: ApiAccess; t
     setCommand("");
     setOutput((current) => `${current}${current ? "\n" : ""}$ ${text}\n`);
     try {
-      await api.streamCollabCommand(access, team.id, "terminal", (chunk) => setOutput((current) => current + chunk), { command: text, signal: controller.signal });
+      await api.streamCollabCommand(access, team.id, "terminal", (chunk) => setOutput((current) => current + chunk), {
+        command: text,
+        signal: controller.signal,
+      });
     } catch (error) {
       if (!controller.signal.aborted) setOutput((current) => `${current}[error] ${error instanceof Error ? error.message : String(error)}\n`);
       else setOutput((current) => `${current}\n[stopped]\n`);
@@ -115,21 +120,39 @@ export function PreviewPanel({ access, team }: { access: ApiAccess; team: Collab
   const stop = useMutation({ mutationFn: () => api.stopCollabPreview(access, team.id), onSuccess: refresh });
 
   const preview = previewQuery.data;
-  const url = preview?.port && typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:${preview.port}${path.startsWith("/") ? path : `/${path}`}` : null;
+  const url =
+    preview?.port && typeof window !== "undefined"
+      ? `${window.location.protocol}//${window.location.hostname}:${preview.port}${path.startsWith("/") ? path : `/${path}`}`
+      : null;
 
   if (preview && !preview.configured) {
-    return <p className="text-sm text-foreground-muted">Add a preview command in the team settings (for example <code>npm run dev -- --port $PORT --hostname 0.0.0.0</code>) to see the app live here.</p>;
+    return (
+      <p className="text-sm text-foreground-muted">
+        Add a preview command in the team settings (for example <code>npm run dev -- --port $PORT --hostname 0.0.0.0</code>) to see the app live here.
+      </p>
+    );
   }
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2">
-        <span className={cn("rounded-full border px-2.5 py-0.5 text-[11px] uppercase tracking-[0.14em]", preview?.status === "running" ? "border-emerald-500 text-emerald-600" : "border-border text-foreground-muted")}>
+        <span
+          className={cn(
+            "rounded-full border px-2.5 py-0.5 text-[11px] uppercase tracking-[0.14em]",
+            preview?.status === "running" ? "border-emerald-500 text-emerald-600" : "border-border text-foreground-muted",
+          )}
+        >
           {preview?.status ?? "…"}
         </span>
         {preview?.status === "exited" ? <span className="text-xs text-destructive">exited with code {preview.exitCode}</span> : null}
         <Input className="h-8 w-48 font-mono text-xs" value={path} onChange={(event) => setPath(event.target.value)} aria-label="Preview path" />
-        <Button type="button" variant="ghost" className="h-8 border border-border px-2.5 text-xs" onClick={() => setFrameKey((value) => value + 1)} disabled={!url}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-8 border border-border px-2.5 text-xs"
+          onClick={() => setFrameKey((value) => value + 1)}
+          disabled={!url}
+        >
           <RefreshCw className="h-3.5 w-3.5" />
         </Button>
         {url ? (
@@ -151,13 +174,15 @@ export function PreviewPanel({ access, team }: { access: ApiAccess; team: Collab
           </Button>
         </div>
       </div>
-      {start.error ?? stop.error ? <p className="mt-2 text-xs text-destructive">{(start.error ?? stop.error)!.message}</p> : null}
+      {(start.error ?? stop.error) ? <p className="mt-2 text-xs text-destructive">{(start.error ?? stop.error)!.message}</p> : null}
       {showLogs ? <Console className="mt-2" text={preview?.logs ?? ""} /> : null}
       {url && preview?.status === "running" ? (
         <iframe key={frameKey} src={url} title="Live preview" className="mt-3 h-[34rem] w-full rounded-xl border border-border bg-white" />
       ) : (
         <div className="mt-3 flex h-48 items-center justify-center rounded-xl border border-dashed border-border text-sm text-foreground-muted">
-          {preview?.status === "starting" ? "Starting the dev server…" : "Start the preview to see the app. Agents with “Use the preview” can browse and screenshot it."}
+          {preview?.status === "starting"
+            ? "Starting the dev server…"
+            : "Start the preview to see the app. Agents with “Use the preview” can browse and screenshot it."}
         </div>
       )}
     </div>
@@ -170,7 +195,12 @@ export function DeployPanel({ access, team, disabled }: { access: ApiAccess; tea
   const [running, setRunning] = useState<AbortController | null>(null);
 
   if (!team.deploy_command) {
-    return <p className="text-sm text-foreground-muted">Add a deploy command in the team settings (for example <code>vercel deploy --prod</code> or <code>fly deploy</code>). Deploys always need you: agents can only ask.</p>;
+    return (
+      <p className="text-sm text-foreground-muted">
+        Add a deploy command in the team settings (for example <code>vercel deploy --prod</code> or <code>fly deploy</code>). Deploys always need you: agents
+        can only ask.
+      </p>
+    );
   }
 
   const deploy = async () => {

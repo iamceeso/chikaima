@@ -176,15 +176,18 @@ export class AuthService {
       updatedAt: now,
     };
     this.users.insert(user);
-    this.db.insert(settingsTable).values({
-      id: randomUUID(),
-      userId: user.id,
-      theme: "dark",
-      defaultModelId: null,
-      preferences: {},
-      createdAt: now,
-      updatedAt: now,
-    }).run();
+    this.db
+      .insert(settingsTable)
+      .values({
+        id: randomUUID(),
+        userId: user.id,
+        theme: "dark",
+        defaultModelId: null,
+        preferences: {},
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
     return user;
   }
 }

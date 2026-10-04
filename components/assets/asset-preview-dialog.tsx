@@ -5,13 +5,7 @@ import { ExternalLink, FileText, Loader2 } from "lucide-react";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/services/api";
 import { useAuthStore } from "@/store/auth-store";
 import type { AssetResourceType } from "@/types";
@@ -43,23 +37,10 @@ function isVideoType(mimeType: string) {
 }
 
 function isTextLikeType(mimeType: string) {
-  return (
-    mimeType.startsWith("text/") ||
-    mimeType === "application/json" ||
-    mimeType === "application/xml" ||
-    mimeType.includes("javascript")
-  );
+  return mimeType.startsWith("text/") || mimeType === "application/json" || mimeType === "application/xml" || mimeType.includes("javascript");
 }
 
-export function AssetPreviewDialog({
-  open,
-  onOpenChange,
-  resourceType,
-  resourceId,
-  name,
-  mimeType,
-  reference,
-}: AssetPreviewDialogProps) {
+export function AssetPreviewDialog({ open, onOpenChange, resourceType, resourceId, name, mimeType, reference }: AssetPreviewDialogProps) {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [detectedMimeType, setDetectedMimeType] = useState<string>(mimeType || "");
@@ -155,13 +136,7 @@ export function AssetPreviewDialog({
     }
 
     if (isPdfType(detectedMimeType)) {
-      return (
-        <iframe
-          title={name}
-          src={objectUrl}
-          className="h-[65vh] w-full rounded-2xl border border-border bg-background-secondary"
-        />
-      );
+      return <iframe title={name} src={objectUrl} className="h-[65vh] w-full rounded-2xl border border-border bg-background-secondary" />;
     }
 
     if (isAudioType(detectedMimeType)) {
@@ -181,9 +156,7 @@ export function AssetPreviewDialog({
         <div className="flex max-h-[85vh] flex-col overflow-hidden rounded-lg">
           <DialogHeader className="border-b border-border px-6 py-5">
             <DialogTitle className="pr-8">{name}</DialogTitle>
-            <DialogDescription>
-              {reference || `${resourceType[0].toUpperCase()}${resourceType.slice(1)} preview`}
-            </DialogDescription>
+            <DialogDescription>{reference || `${resourceType[0].toUpperCase()}${resourceType.slice(1)} preview`}</DialogDescription>
           </DialogHeader>
 
           <div className="min-h-0 flex-1 overflow-auto px-6 py-5">

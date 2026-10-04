@@ -140,8 +140,14 @@ export function describeTask(task: CollabTaskRow, run: CollabRunRow | undefined,
     state: resolved.get(step.index) ?? (live && step.index === activeStep ? "active" : "pending"),
   }));
 
-  const resolvedApprovals = new Set(messages.filter((message) => message.kind === "approval" && data(message).status !== "pending").map((message) => String(data(message).approval_id)));
-  const pending = live ? messages.filter((message) => message.kind === "approval" && data(message).status === "pending" && !resolvedApprovals.has(String(data(message).approval_id))) : [];
+  const resolvedApprovals = new Set(
+    messages.filter((message) => message.kind === "approval" && data(message).status !== "pending").map((message) => String(data(message).approval_id)),
+  );
+  const pending = live
+    ? messages.filter(
+        (message) => message.kind === "approval" && data(message).status === "pending" && !resolvedApprovals.has(String(data(message).approval_id)),
+      )
+    : [];
   const mergePending = pending.some((message) => data(message).approval_kind === "merge");
   const keptOnBranch = !live && messages.some((message) => data(message).git === "kept");
 
@@ -238,7 +244,10 @@ export class ProjectService {
           branch: isRepo ? await git!.currentBranch().catch(() => null) : null,
           remote: isRepo ? await git!.remoteUrl() : null,
           stack: exists ? detectStack(root) : [],
-          last_activity: [team.updatedAt, runs[0]?.updatedAt, tasks[0]?.updatedAt].filter((value): value is string => Boolean(value)).sort().at(-1)!,
+          last_activity: [team.updatedAt, runs[0]?.updatedAt, tasks[0]?.updatedAt]
+            .filter((value): value is string => Boolean(value))
+            .sort()
+            .at(-1)!,
           runtime: getPreviewManager().get(team.id).status,
           active_run: active ? { id: active.id, status: active.status, task: taskTitle(active.task) } : null,
           open_tasks: tasks.filter((task) => {

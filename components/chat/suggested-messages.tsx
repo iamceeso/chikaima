@@ -42,24 +42,9 @@ export function useSuggestedMessages(contentType?: string): string[] {
   if (!contentType) return DEFAULT_SUGGESTIONS;
 
   const suggestions: Record<string, string[]> = {
-    document: [
-      "Summarize the key points",
-      "Extract action items",
-      "What is the main topic?",
-      "Create an outline",
-    ],
-    transcript: [
-      "Summarize the conversation",
-      "Who are the speakers?",
-      "What are the main topics discussed?",
-      "Extract timestamps for specific topics",
-    ],
-    video: [
-      "Summarize the video",
-      "What are the key moments?",
-      "Extract important scenes",
-      "Generate a chapter list",
-    ],
+    document: ["Summarize the key points", "Extract action items", "What is the main topic?", "Create an outline"],
+    transcript: ["Summarize the conversation", "Who are the speakers?", "What are the main topics discussed?", "Extract timestamps for specific topics"],
+    video: ["Summarize the video", "What are the key moments?", "Extract important scenes", "Generate a chapter list"],
   };
 
   return suggestions[contentType] || DEFAULT_SUGGESTIONS;

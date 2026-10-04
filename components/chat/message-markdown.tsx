@@ -29,10 +29,7 @@ function renderInlineMarkdown(text: string): ReactNode[] {
       nodes.push(<em key={`em-${key++}`}>{token.slice(1, -1)}</em>);
     } else if (token.startsWith("`") && token.endsWith("`")) {
       nodes.push(
-        <code
-          key={`code-${key++}`}
-          className="rounded bg-background-secondary px-1 py-0.5 font-mono text-[0.95em]"
-        >
+        <code key={`code-${key++}`} className="rounded bg-background-secondary px-1 py-0.5 font-mono text-[0.95em]">
           {token.slice(1, -1)}
         </code>,
       );
@@ -57,7 +54,10 @@ function renderParagraph(text: string, key: string) {
 }
 
 export function MessageMarkdown({ content, className }: MessageMarkdownProps) {
-  const blocks = content.trim().split(/\n{2,}/).filter(Boolean);
+  const blocks = content
+    .trim()
+    .split(/\n{2,}/)
+    .filter(Boolean);
 
   if (!blocks.length) {
     return null;
@@ -95,10 +95,7 @@ export function MessageMarkdown({ content, className }: MessageMarkdownProps) {
 
         if (lines.every((line) => line.trim().startsWith(">"))) {
           return (
-            <blockquote
-              key={`quote-${blockIndex}`}
-              className="border-l-2 border-border pl-4 italic text-foreground-muted"
-            >
+            <blockquote key={`quote-${blockIndex}`} className="border-l-2 border-border pl-4 italic text-foreground-muted">
               {lines.map((line, lineIndex) => (
                 <Fragment key={`quote-line-${blockIndex}-${lineIndex}`}>
                   {lineIndex > 0 ? <br /> : null}

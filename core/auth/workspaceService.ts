@@ -116,7 +116,8 @@ export class WorkspaceService {
     if (payload.name !== undefined && payload.name !== null) patch.name = payload.name;
     if (payload.authenticationEnabled !== undefined && payload.authenticationEnabled !== null) patch.authenticationEnabled = payload.authenticationEnabled;
     if (payload.docsEnabled !== undefined && payload.docsEnabled !== null) patch.docsEnabled = payload.docsEnabled;
-    if (payload.publicRegistrationEnabled !== undefined && payload.publicRegistrationEnabled !== null) patch.publicRegistrationEnabled = payload.publicRegistrationEnabled;
+    if (payload.publicRegistrationEnabled !== undefined && payload.publicRegistrationEnabled !== null)
+      patch.publicRegistrationEnabled = payload.publicRegistrationEnabled;
     if (payload.visionAware !== undefined && payload.visionAware !== null) patch.visionAware = payload.visionAware;
 
     this.db

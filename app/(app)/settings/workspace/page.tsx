@@ -9,14 +9,7 @@ import { AdminAccessGate } from "@/components/settings/admin-access-gate";
 import { useAdminAccess } from "@/hooks/use-admin-access";
 import { libraryQueryKey } from "@/lib/library";
 import { SettingsShell } from "@/components/settings/settings-shell";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api } from "@/services/api";
@@ -56,12 +49,7 @@ function WorkspaceAccountSection({
 
         <p className="mt-1 text-sm text-foreground-muted">Permanently remove chats, documents, videos and audio.</p>
 
-        <Button
-          variant="outline"
-          className="mt-4 w-full sm:w-auto"
-          onClick={onClearAnalysis}
-          disabled={clearAnalysisPending}
-        >
+        <Button variant="outline" className="mt-4 w-full sm:w-auto" onClick={onClearAnalysis} disabled={clearAnalysisPending}>
           <Trash2 className="mr-2 h-4 w-4" />
           {clearAnalysisPending ? "Clearing..." : "Clear Analysis"}
         </Button>
@@ -175,11 +163,7 @@ export default function WorkspaceSettingsPage() {
         await api.deleteConversation(token, conversation.id);
       }
 
-      await Promise.all([
-        api.clearDocuments(token),
-        api.clearAudioAssets(token),
-        api.clearVideos(token),
-      ]);
+      await Promise.all([api.clearDocuments(token), api.clearAudioAssets(token), api.clearVideos(token)]);
     },
     onSuccess: async () => {
       await Promise.all([
@@ -237,10 +221,7 @@ export default function WorkspaceSettingsPage() {
 
   if (publicWorkspaceQuery.isLoading || (workspaceAuthDisabled && !adminAuthHydrated)) {
     return (
-      <SettingsShell
-        title="Workspace"
-        description="Manage access, routing, jobs, and account settings."
-      >
+      <SettingsShell title="Workspace" description="Manage access, routing, jobs, and account settings.">
         <Card className="p-6">
           <p className="text-sm text-foreground-muted">Loading workspace access...</p>
         </Card>
@@ -251,16 +232,9 @@ export default function WorkspaceSettingsPage() {
   if (workspaceAuthDisabled && !hasAdminAccess) {
     return (
       <>
-        <SettingsShell
-          title="Workspace"
-          description="Manage your account and personal workspace data."
-        >
+        <SettingsShell title="Workspace" description="Manage your account and personal workspace data.">
           <div className="mx-auto w-full max-w-4xl space-y-6 p-1">
-            <WorkspaceAccountSection
-              user={user}
-              clearAnalysisPending={clearAnalysis.isPending}
-              onClearAnalysis={() => setClearAnalysisDialogOpen(true)}
-            />
+            <WorkspaceAccountSection user={user} clearAnalysisPending={clearAnalysis.isPending} onClearAnalysis={() => setClearAnalysisDialogOpen(true)} />
             <AdminAccessGate
               title="Unlock admin controls"
               description="Workspace sign-in is disabled. Enter an administrator email and password only if you need to manage workspace-wide settings."
@@ -275,16 +249,9 @@ export default function WorkspaceSettingsPage() {
   if (!hasAdminAccess) {
     return (
       <>
-        <SettingsShell
-          title="Workspace"
-          description="Manage your account and personal workspace data."
-        >
+        <SettingsShell title="Workspace" description="Manage your account and personal workspace data.">
           <div className="mx-auto w-full max-w-4xl space-y-6 p-1">
-            <WorkspaceAccountSection
-              user={user}
-              clearAnalysisPending={clearAnalysis.isPending}
-              onClearAnalysis={() => setClearAnalysisDialogOpen(true)}
-            />
+            <WorkspaceAccountSection user={user} clearAnalysisPending={clearAnalysis.isPending} onClearAnalysis={() => setClearAnalysisDialogOpen(true)} />
           </div>
         </SettingsShell>
         {clearAnalysisDialog}
@@ -293,277 +260,187 @@ export default function WorkspaceSettingsPage() {
   }
 
   return (
-  <SettingsShell
-    title="Workspace"
-    description="Manage access, routing, jobs, and account settings."
-  >
-    <div className="mx-auto w-full max-w-7xl space-y-6 p-1">
-      {/* Overview */}
-      <Card className="overflow-hidden">
-        <div className="border-b border-border p-6">
-          <h1 className="text-2xl font-semibold text-foreground">
-            Workspace Overview
-          </h1>
-          <p className="mt-1 text-sm text-foreground-muted">
-            Configure workspace access, AI routing, documentation visibility,
-            and account operations.
-          </p>
-        </div>
-
-        <div className="grid gap-4 p-6 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-background-secondary p-5">
-            <p className="text-xs uppercase tracking-wider text-foreground-muted">
-              Users
-            </p>
-            <p className="mt-2 text-3xl font-bold">
-              {workspaceQuery.data?.total_users ?? 0}
-            </p>
+    <SettingsShell title="Workspace" description="Manage access, routing, jobs, and account settings.">
+      <div className="mx-auto w-full max-w-7xl space-y-6 p-1">
+        {/* Overview */}
+        <Card className="overflow-hidden">
+          <div className="border-b border-border p-6">
+            <h1 className="text-2xl font-semibold text-foreground">Workspace Overview</h1>
+            <p className="mt-1 text-sm text-foreground-muted">Configure workspace access, AI routing, documentation visibility, and account operations.</p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-background-secondary p-5">
-            <p className="text-xs uppercase tracking-wider text-foreground-muted">
-              Providers
-            </p>
-            <p className="mt-2 text-3xl font-bold">
-              {workspaceQuery.data?.total_providers ?? 0}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-background-secondary p-5">
-            <p className="text-xs uppercase tracking-wider text-foreground-muted">
-              Queued Jobs
-            </p>
-            <p className="mt-2 text-3xl font-bold">
-              {workspaceQuery.data?.pending_jobs ?? 0}
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        {/* Security */}
-        <Card className="p-6">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <ShieldCheck className="h-5 w-5" />
+          <div className="grid gap-4 p-6 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-background-secondary p-5">
+              <p className="text-xs uppercase tracking-wider text-foreground-muted">Users</p>
+              <p className="mt-2 text-3xl font-bold">{workspaceQuery.data?.total_users ?? 0}</p>
             </div>
 
-            <div>
-              <h2 className="font-semibold">Security & Access</h2>
-              <p className="text-sm text-foreground-muted">
-                Authentication and API visibility.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Authentication */}
-            <div className="rounded-xl border border-border p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="font-medium">Authentication</h3>
-                  <p className="text-sm text-foreground-muted">
-                    {workspaceQuery.data?.authentication_enabled
-                      ? "Sign-in required."
-                      : "Workspace can be accessed without login."}
-                  </p>
-                </div>
-
-                <Button
-                  onClick={() => setAuthenticationDialogOpen(true)}
-                  disabled={
-                    !hasAdminAccess ||
-                    workspaceQuery.data?.first_user_registration_required ||
-                    toggleAuthentication.isPending ||
-                    workspaceQuery.isLoading
-                  }
-                >
-                  {workspaceQuery.data?.authentication_enabled
-                    ? "Disable"
-                    : "Enable"}
-                </Button>
-              </div>
+            <div className="rounded-2xl border border-border bg-background-secondary p-5">
+              <p className="text-xs uppercase tracking-wider text-foreground-muted">Providers</p>
+              <p className="mt-2 text-3xl font-bold">{workspaceQuery.data?.total_providers ?? 0}</p>
             </div>
 
-            {/* API Docs */}
-            <div className="rounded-xl border border-border p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="font-medium">API Documentation</h3>
-                  <p className="text-sm text-foreground-muted">
-                    Control access to Swagger, ReDoc and OpenAPI.
-                  </p>
-                </div>
-
-                <Button
-                  onClick={() => setDocsDialogOpen(true)}
-                  disabled={
-                    !hasAdminAccess ||
-                    toggleDocs.isPending ||
-                    workspaceQuery.isLoading
-                  }
-                >
-                  {workspaceQuery.data?.docs_enabled
-                    ? "Disable"
-                    : "Enable"}
-                </Button>
-              </div>
+            <div className="rounded-2xl border border-border bg-background-secondary p-5">
+              <p className="text-xs uppercase tracking-wider text-foreground-muted">Queued Jobs</p>
+              <p className="mt-2 text-3xl font-bold">{workspaceQuery.data?.pending_jobs ?? 0}</p>
             </div>
           </div>
         </Card>
 
-        {/* Features */}
-        <Card className="p-6">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+        <div className="grid gap-6 xl:grid-cols-2">
+          {/* Security */}
+          <Card className="p-6">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
 
-            <div>
-              <h2 className="font-semibold">Workspace Features</h2>
-              <p className="text-sm text-foreground-muted">
-                Registration and model routing.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="rounded-xl border border-border p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="font-medium">Public Registration</h3>
-                  <p className="text-sm text-foreground-muted">
-                    Allow users to create accounts.
-                  </p>
-                </div>
-
-                <Button
-                  onClick={() => setRegistrationDialogOpen(true)}
-                  disabled={
-                    !hasAdminAccess ||
-                    toggleRegistration.isPending ||
-                    workspaceQuery.isLoading
-                  }
-                >
-                  {workspaceQuery.data?.public_registration_enabled
-                    ? "Disable"
-                    : "Enable"}
-                </Button>
+              <div>
+                <h2 className="font-semibold">Security & Access</h2>
+                <p className="text-sm text-foreground-muted">Authentication and API visibility.</p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-border p-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h3 className="font-medium">Vision Routing</h3>
-                  <p className="text-sm text-foreground-muted">
-                    Route image requests to compatible models.
-                  </p>
-                </div>
-
-                <Button
-                  onClick={() => setVisionAwareDialogOpen(true)}
-                  disabled={
-                    !hasAdminAccess ||
-                    toggleVisionAware.isPending ||
-                    workspaceQuery.isLoading
-                  }
-                >
-                  {workspaceQuery.data?.vision_aware
-                    ? "Disable"
-                    : "Enable"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        {/* Jobs */}
-        <Card className="p-6">
-          <div className="mb-5 flex items-center gap-3">
-            <Bell className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">Background Jobs</h2>
-          </div>
-
-          <div className="space-y-3">
-            {jobsQuery.data?.length ? (
-              jobsQuery.data.slice(0, 5).map((job) => (
-                <div
-                  key={job.id}
-                  className="flex items-center justify-between rounded-xl border border-border p-4"
-                >
+            <div className="space-y-4">
+              {/* Authentication */}
+              <div className="rounded-xl border border-border p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-medium">{job.job_type}</p>
-                    <p className="text-xs text-foreground-muted">
-                      {job.resource_type ?? "Task"}
+                    <h3 className="font-medium">Authentication</h3>
+                    <p className="text-sm text-foreground-muted">
+                      {workspaceQuery.data?.authentication_enabled ? "Sign-in required." : "Workspace can be accessed without login."}
                     </p>
                   </div>
 
-                  <span className="rounded-full border px-3 py-1 text-xs uppercase">
-                    {job.status}
-                  </span>
+                  <Button
+                    onClick={() => setAuthenticationDialogOpen(true)}
+                    disabled={
+                      !hasAdminAccess || workspaceQuery.data?.first_user_registration_required || toggleAuthentication.isPending || workspaceQuery.isLoading
+                    }
+                  >
+                    {workspaceQuery.data?.authentication_enabled ? "Disable" : "Enable"}
+                  </Button>
                 </div>
-              ))
-            ) : (
-              <div className="rounded-xl border border-dashed p-6 text-center text-sm text-foreground-muted">
-                No active jobs
               </div>
-            )}
-          </div>
-        </Card>
 
-        {/* Account */}
-        <Card className="p-6">
-          <div className="mb-5 flex items-center gap-3">
-            <UserCircle2 className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">Account</h2>
-          </div>
+              {/* API Docs */}
+              <div className="rounded-xl border border-border p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="font-medium">API Documentation</h3>
+                    <p className="text-sm text-foreground-muted">Control access to Swagger, ReDoc and OpenAPI.</p>
+                  </div>
 
-          <div className="rounded-xl border border-border bg-background-secondary p-4">
-            <p className="font-medium">
-              {user?.full_name ?? "Your account"}
-            </p>
+                  <Button onClick={() => setDocsDialogOpen(true)} disabled={!hasAdminAccess || toggleDocs.isPending || workspaceQuery.isLoading}>
+                    {workspaceQuery.data?.docs_enabled ? "Disable" : "Enable"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
 
-            {user?.email && (
-              <p className="text-sm text-foreground-muted">
-                {user.email}
-              </p>
-            )}
-          </div>
+          {/* Features */}
+          <Card className="p-6">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
 
-          <div className="mt-5">
-            <SignOutButton
-              redirectTo="/"
-              className="w-full sm:w-auto"
-            />
-          </div>
+              <div>
+                <h2 className="font-semibold">Workspace Features</h2>
+                <p className="text-sm text-foreground-muted">Registration and model routing.</p>
+              </div>
+            </div>
 
-          <div className="mt-6 rounded-xl border border-destructive/30 p-4">
-            <h3 className="font-medium text-destructive">
-              Danger Zone
-            </h3>
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="font-medium">Public Registration</h3>
+                    <p className="text-sm text-foreground-muted">Allow users to create accounts.</p>
+                  </div>
 
-            <p className="mt-1 text-sm text-foreground-muted">
-              Permanently remove chats, documents, videos and audio.
-            </p>
+                  <Button
+                    onClick={() => setRegistrationDialogOpen(true)}
+                    disabled={!hasAdminAccess || toggleRegistration.isPending || workspaceQuery.isLoading}
+                  >
+                    {workspaceQuery.data?.public_registration_enabled ? "Disable" : "Enable"}
+                  </Button>
+                </div>
+              </div>
 
-            <Button
-              variant="outline"
-              className="mt-4 w-full sm:w-auto"
-              onClick={() => setClearAnalysisDialogOpen(true)}
-              disabled={clearAnalysis.isPending}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {clearAnalysis.isPending
-                ? "Clearing..."
-                : "Clear Analysis"}
-            </Button>
-          </div>
-        </Card>
+              <div className="rounded-xl border border-border p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="font-medium">Vision Routing</h3>
+                    <p className="text-sm text-foreground-muted">Route image requests to compatible models.</p>
+                  </div>
+
+                  <Button onClick={() => setVisionAwareDialogOpen(true)} disabled={!hasAdminAccess || toggleVisionAware.isPending || workspaceQuery.isLoading}>
+                    {workspaceQuery.data?.vision_aware ? "Disable" : "Enable"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          {/* Jobs */}
+          <Card className="p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <Bell className="h-5 w-5 text-primary" />
+              <h2 className="font-semibold">Background Jobs</h2>
+            </div>
+
+            <div className="space-y-3">
+              {jobsQuery.data?.length ? (
+                jobsQuery.data.slice(0, 5).map((job) => (
+                  <div key={job.id} className="flex items-center justify-between rounded-xl border border-border p-4">
+                    <div>
+                      <p className="font-medium">{job.job_type}</p>
+                      <p className="text-xs text-foreground-muted">{job.resource_type ?? "Task"}</p>
+                    </div>
+
+                    <span className="rounded-full border px-3 py-1 text-xs uppercase">{job.status}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed p-6 text-center text-sm text-foreground-muted">No active jobs</div>
+              )}
+            </div>
+          </Card>
+
+          {/* Account */}
+          <Card className="p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <UserCircle2 className="h-5 w-5 text-primary" />
+              <h2 className="font-semibold">Account</h2>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background-secondary p-4">
+              <p className="font-medium">{user?.full_name ?? "Your account"}</p>
+
+              {user?.email && <p className="text-sm text-foreground-muted">{user.email}</p>}
+            </div>
+
+            <div className="mt-5">
+              <SignOutButton redirectTo="/" className="w-full sm:w-auto" />
+            </div>
+
+            <div className="mt-6 rounded-xl border border-destructive/30 p-4">
+              <h3 className="font-medium text-destructive">Danger Zone</h3>
+
+              <p className="mt-1 text-sm text-foreground-muted">Permanently remove chats, documents, videos and audio.</p>
+
+              <Button variant="outline" className="mt-4 w-full sm:w-auto" onClick={() => setClearAnalysisDialogOpen(true)} disabled={clearAnalysis.isPending}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {clearAnalysis.isPending ? "Clearing..." : "Clear Analysis"}
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
-    </div>
 
       <AlertDialog
         open={visionAwareDialogOpen}
@@ -575,9 +452,7 @@ export default function WorkspaceSettingsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {workspaceQuery.data?.vision_aware ? "Disable vision aware routing?" : "Enable vision aware routing?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{workspaceQuery.data?.vision_aware ? "Disable vision aware routing?" : "Enable vision aware routing?"}</AlertDialogTitle>
             <AlertDialogDescription>
               {workspaceQuery.data?.vision_aware
                 ? "Image requests will stay on the exact selected model, even if that model cannot analyze images directly."
@@ -606,11 +481,7 @@ export default function WorkspaceSettingsPage() {
                 })
               }
             >
-              {toggleVisionAware.isPending
-                ? "Saving..."
-                : workspaceQuery.data?.vision_aware
-                  ? "Disable vision aware"
-                  : "Enable vision aware"}
+              {toggleVisionAware.isPending ? "Saving..." : workspaceQuery.data?.vision_aware ? "Disable vision aware" : "Enable vision aware"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -629,9 +500,7 @@ export default function WorkspaceSettingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {workspaceQuery.data?.public_registration_enabled
-                ? "Disable public registration?"
-                : "Enable public registration?"}
+              {workspaceQuery.data?.public_registration_enabled ? "Disable public registration?" : "Enable public registration?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {workspaceQuery.data?.public_registration_enabled
@@ -661,11 +530,7 @@ export default function WorkspaceSettingsPage() {
                 })
               }
             >
-              {toggleRegistration.isPending
-                ? "Saving..."
-                : workspaceQuery.data?.public_registration_enabled
-                  ? "Disable registration"
-                  : "Enable registration"}
+              {toggleRegistration.isPending ? "Saving..." : workspaceQuery.data?.public_registration_enabled ? "Disable registration" : "Enable registration"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -681,11 +546,7 @@ export default function WorkspaceSettingsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {workspaceQuery.data?.authentication_enabled
-                ? "Disable authentication?"
-                : "Enable authentication?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{workspaceQuery.data?.authentication_enabled ? "Disable authentication?" : "Enable authentication?"}</AlertDialogTitle>
             <AlertDialogDescription>
               {workspaceQuery.data?.authentication_enabled
                 ? "Users will be able to open the workspace without signing in. Keep this disabled only for trusted private deployments."
@@ -714,11 +575,7 @@ export default function WorkspaceSettingsPage() {
                 })
               }
             >
-              {toggleAuthentication.isPending
-                ? "Saving..."
-                : workspaceQuery.data?.authentication_enabled
-                  ? "Disable authentication"
-                  : "Enable authentication"}
+              {toggleAuthentication.isPending ? "Saving..." : workspaceQuery.data?.authentication_enabled ? "Disable authentication" : "Enable authentication"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -734,9 +591,7 @@ export default function WorkspaceSettingsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {workspaceQuery.data?.docs_enabled ? "Disable API docs?" : "Enable API docs?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{workspaceQuery.data?.docs_enabled ? "Disable API docs?" : "Enable API docs?"}</AlertDialogTitle>
             <AlertDialogDescription>
               {workspaceQuery.data?.docs_enabled
                 ? "Swagger, ReDoc, and the OpenAPI schema will become unavailable to public visitors."
@@ -744,13 +599,7 @@ export default function WorkspaceSettingsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              className="border border-border"
-              disabled={toggleDocs.isPending}
-              onClick={() => setDocsDialogOpen(false)}
-            >
+            <Button type="button" variant="ghost" className="border border-border" disabled={toggleDocs.isPending} onClick={() => setDocsDialogOpen(false)}>
               Cancel
             </Button>
             <Button
@@ -765,11 +614,7 @@ export default function WorkspaceSettingsPage() {
                 })
               }
             >
-              {toggleDocs.isPending
-                ? "Saving..."
-                : workspaceQuery.data?.docs_enabled
-                  ? "Disable docs"
-                  : "Enable docs"}
+              {toggleDocs.isPending ? "Saving..." : workspaceQuery.data?.docs_enabled ? "Disable docs" : "Enable docs"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

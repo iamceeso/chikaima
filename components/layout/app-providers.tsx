@@ -43,11 +43,14 @@ function WorkspaceAccessBootstrap() {
 
     if (workspaceQuery.data.authentication_enabled === false) {
       if (!usingSessionlessToken) {
-        setSession({
-          access_token: SESSIONLESS_ACCESS_TOKEN,
-          refresh_token: "",
-          token_type: "bearer",
-        }, null);
+        setSession(
+          {
+            access_token: SESSIONLESS_ACCESS_TOKEN,
+            refresh_token: "",
+            token_type: "bearer",
+          },
+          null,
+        );
         setUser(null);
       }
       return;

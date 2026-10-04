@@ -63,9 +63,7 @@ export function AuthenticatedRoute({ children }: { children: React.ReactNode }) 
         <div className="max-w-md text-center">
           <p className="text-sm font-medium text-foreground">Could not load workspace.</p>
           <p className="mt-2 text-sm text-foreground-muted">
-            {publicWorkspaceQuery.error instanceof Error
-              ? publicWorkspaceQuery.error.message
-              : "Check that the backend is running and try again."}
+            {publicWorkspaceQuery.error instanceof Error ? publicWorkspaceQuery.error.message : "Check that the backend is running and try again."}
           </p>
         </div>
       </div>
@@ -77,9 +75,7 @@ export function AuthenticatedRoute({ children }: { children: React.ReactNode }) 
       <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
         <div className="max-w-md text-center">
           <p className="text-sm font-medium text-foreground">Could not load your session.</p>
-          <p className="mt-2 text-sm text-foreground-muted">
-            {profileQuery.error instanceof Error ? profileQuery.error.message : "Please sign in again."}
-          </p>
+          <p className="mt-2 text-sm text-foreground-muted">{profileQuery.error instanceof Error ? profileQuery.error.message : "Please sign in again."}</p>
         </div>
       </div>
     );

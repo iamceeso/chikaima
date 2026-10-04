@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, ChevronsDownUp, FileCode2, FilePlus2, FolderClosed, FolderOpen, FolderPlus, RefreshCw } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { CollabFileEntry } from "@/types";
+
+import { ContextMenu, type MenuItem } from "../context-menu";
 
 interface TreeNode {
   name: string;
@@ -72,8 +73,6 @@ interface MenuState {
   /** Null for the folder root (right-click on empty space). */
   node: TreeNode | null;
 }
-
-type MenuItem = { label: string; shortcut?: string; disabled?: boolean; action: () => void } | "separator";
 
 const iconButton = "rounded p-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent";
 
@@ -215,7 +214,11 @@ export function Explorer({
         { label: "Delete", shortcut: "⌫", disabled: readOnly, action: () => void remove(node.path) },
       );
     } else {
-      items.push("separator", { label: "Collapse Folders", action: () => setCollapsed(new Set(entries.filter((e) => e.type === "dir").map((e) => e.path))) }, { label: "Refresh", action: onRefresh });
+      items.push(
+        "separator",
+        { label: "Collapse Folders", action: () => setCollapsed(new Set(entries.filter((e) => e.type === "dir").map((e) => e.path))) },
+        { label: "Refresh", action: onRefresh },
+      );
     }
     return items;
   };
@@ -270,7 +273,15 @@ export function Explorer({
   });
 
   const nameBox = (depth: number, type: "file" | "dir", initial: string) => (
-    <NameBox key="__editing" depth={depth} type={type} initial={initial} error={error} onCommit={commitEditing} onCancel={() => (setEditing(null), setError(null))} />
+    <NameBox
+      key="__editing"
+      depth={depth}
+      type={type}
+      initial={initial}
+      error={error}
+      onCommit={commitEditing}
+      onCancel={() => (setEditing(null), setError(null))}
+    />
   );
 
   const render = (nodes: TreeNode[], depth: number, parent: string): React.ReactNode => {
@@ -296,7 +307,7 @@ export function Explorer({
               onContextMenu={(event) => openMenu(event, node)}
               tabIndex={-1}
               className={cn(
-                "flex w-full items-center gap-1 py-[3px] pr-2 text-left text-[12.5px] text-foreground-muted hover:bg-surface-strong/60 hover:text-foreground",
+                "flex w-full items-center gap-1 py-0.75 pr-2 text-left text-[12.5px] text-foreground-muted hover:bg-surface-strong/60 hover:text-foreground",
                 isSelected && "bg-surface-strong/80 text-foreground",
               )}
               style={{ paddingLeft: depth * 12 + 8 }}
@@ -322,7 +333,7 @@ export function Explorer({
           tabIndex={-1}
           title={[node.path, git?.title, agent ? `${agent.name} · ${agent.editing ? "editing now" : "modified this task"}` : null].filter(Boolean).join(" — ")}
           className={cn(
-            "flex w-full items-center gap-1.5 py-[3px] pr-2 text-left text-[12.5px] hover:bg-surface-strong/60",
+            "flex w-full items-center gap-1.5 py-0.75 pr-2 text-left text-[12.5px] hover:bg-surface-strong/60",
             node.path === activePath ? "bg-primary/12 text-foreground" : git ? git.className : "text-foreground-muted hover:text-foreground",
             isSelected && node.path !== activePath && "bg-surface-strong/80",
           )}
@@ -331,7 +342,12 @@ export function Explorer({
           <FileCode2 className="h-3.5 w-3.5 shrink-0 opacity-70" />
           <span className="min-w-12 shrink-0 truncate">{node.name}</span>
           {agent ? (
-            <span className={cn("ml-auto flex min-w-0 items-center gap-1 truncate text-[10.5px]", agent.editing ? "text-emerald-600 dark:text-emerald-400" : "text-muted")}>
+            <span
+              className={cn(
+                "ml-auto flex min-w-0 items-center gap-1 truncate text-[10.5px]",
+                agent.editing ? "text-emerald-600 dark:text-emerald-400" : "text-muted",
+              )}
+            >
               {agent.editing ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> : null}
               {agent.name} · {agent.editing ? "editing" : "modified"}
             </span>
@@ -354,10 +370,24 @@ export function Explorer({
       <div className="flex h-9 shrink-0 items-center justify-between px-3">
         <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">Explorer</span>
         <div className="flex items-center gap-0.5">
-          <button type="button" aria-label="New file" title="New File…" disabled={readOnly} onClick={() => startCreate("file", targetDir(selected))} className={iconButton}>
+          <button
+            type="button"
+            aria-label="New file"
+            title="New File…"
+            disabled={readOnly}
+            onClick={() => startCreate("file", targetDir(selected))}
+            className={iconButton}
+          >
             <FilePlus2 className="h-3.5 w-3.5" />
           </button>
-          <button type="button" aria-label="New folder" title="New Folder…" disabled={readOnly} onClick={() => startCreate("dir", targetDir(selected))} className={iconButton}>
+          <button
+            type="button"
+            aria-label="New folder"
+            title="New Folder…"
+            disabled={readOnly}
+            onClick={() => startCreate("dir", targetDir(selected))}
+            className={iconButton}
+          >
             <FolderPlus className="h-3.5 w-3.5" />
           </button>
           <button type="button" aria-label="Refresh files" title="Refresh" onClick={onRefresh} className={iconButton}>
@@ -377,7 +407,11 @@ export function Explorer({
       <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">{folder}</div>
       {readOnly ? <p className="px-3 pb-1 text-[11px] text-amber-600">Agents are working; file changes are paused.</p> : null}
       {error && !editing ? (
-        <button type="button" onClick={() => setError(null)} className="mx-3 mb-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-left text-[11px] text-destructive">
+        <button
+          type="button"
+          onClick={() => setError(null)}
+          className="mx-3 mb-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-left text-[11px] text-destructive"
+        >
           {error}
         </button>
       ) : null}
@@ -390,13 +424,20 @@ export function Explorer({
         onContextMenu={(event) => openMenu(event, null)}
         onClick={(event) => event.target === event.currentTarget && setSelected(null)}
         {...dropProps("")}
-        className={cn("min-h-0 flex-1 overflow-y-auto pb-4 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40", dropTarget === "" && "bg-primary/5")}
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto pb-4 outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/40",
+          dropTarget === "" && "bg-primary/5",
+        )}
         onMouseDown={(event) => {
           // Keep keyboard shortcuts working after clicking a row.
           if (!(event.target instanceof HTMLInputElement)) requestAnimationFrame(() => treeRef.current?.focus({ preventScroll: true }));
         }}
       >
-        {tree.length || editing ? render(tree, 0, "") : <p className="px-4 py-3 text-xs text-foreground-muted">Empty folder. Right-click to create a file, or give the team a task.</p>}
+        {tree.length || editing ? (
+          render(tree, 0, "")
+        ) : (
+          <p className="px-4 py-3 text-xs text-foreground-muted">Empty folder. Right-click to create a file, or give the team a task.</p>
+        )}
         {truncated ? <p className="px-4 pt-2 text-[11px] text-muted">Listing truncated.</p> : null}
       </div>
       {menu ? <ContextMenu x={menu.x} y={menu.y} items={menuItems(menu.node)} onClose={() => setMenu(null)} /> : null}
@@ -449,7 +490,7 @@ function NameBox({
 
   const Icon = type === "dir" ? FolderClosed : FileCode2;
   return (
-    <div className="relative py-[2px] pr-2" style={{ paddingLeft: depth * 12 + (type === "dir" ? 22 : 26) }}>
+    <div className="relative py-0.5 pr-2" style={{ paddingLeft: depth * 12 + (type === "dir" ? 22 : 26) }}>
       <div className="flex items-center gap-1.5">
         <Icon className={cn("h-3.5 w-3.5 shrink-0", type === "dir" ? "text-primary/80" : "opacity-70")} />
         <input
@@ -465,76 +506,13 @@ function NameBox({
           }}
           // Clicking away from a name that was refused gives up on it, as in VS Code.
           onBlur={() => (error ? cancel() : void commit())}
-          className={cn("h-5 min-w-0 flex-1 rounded-sm border bg-background px-1 text-[12.5px] text-foreground outline-none", error ? "border-destructive" : "border-primary")}
+          className={cn(
+            "h-5 min-w-0 flex-1 rounded-sm border bg-background px-1 text-[12.5px] text-foreground outline-none",
+            error ? "border-destructive" : "border-primary",
+          )}
         />
       </div>
       {error ? <p className="mt-0.5 rounded-sm bg-destructive px-1.5 py-0.5 text-[11px] text-white">{error}</p> : null}
     </div>
-  );
-}
-
-function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: MenuItem[]; onClose: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ left: x, top: y });
-
-  // Keep the menu on screen.
-  useEffect(() => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    setPosition({ left: Math.max(4, Math.min(x, window.innerWidth - rect.width - 4)), top: Math.max(4, Math.min(y, window.innerHeight - rect.height - 4)) });
-  }, [x, y]);
-
-  useEffect(() => {
-    const close = (event: Event) => {
-      if (event instanceof MouseEvent && ref.current?.contains(event.target as Node)) return;
-      onClose();
-    };
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
-    window.addEventListener("mousedown", close);
-    window.addEventListener("contextmenu", close, true);
-    window.addEventListener("blur", close);
-    window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", close);
-      window.removeEventListener("contextmenu", close, true);
-      window.removeEventListener("blur", close);
-      window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      ref={ref}
-      role="menu"
-      className="fixed z-100 min-w-52 rounded-md border border-border bg-surface py-1 text-[12.5px] text-foreground shadow-xl"
-      style={position}
-      onContextMenu={(event) => event.preventDefault()}
-    >
-      {items.map((item, index) =>
-        item === "separator" ? (
-          <div key={`sep-${index}`} className="my-1 h-px bg-border" />
-        ) : (
-          <button
-            key={item.label}
-            type="button"
-            role="menuitem"
-            disabled={item.disabled}
-            onClick={() => {
-              onClose();
-              item.action();
-            }}
-            className="flex w-full items-center justify-between gap-6 px-3 py-1 text-left hover:bg-primary hover:text-primary-foreground disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-foreground"
-          >
-            <span>{item.label}</span>
-            {item.shortcut ? <span className="text-[11px] opacity-60">{item.shortcut}</span> : null}
-          </button>
-        ),
-      )}
-    </div>,
-    document.body,
   );
 }

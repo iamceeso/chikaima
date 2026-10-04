@@ -20,13 +20,7 @@ const adminAccessSchema = z.object({
 
 type AdminAccessValues = z.infer<typeof adminAccessSchema>;
 
-export function AdminAccessGate({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+export function AdminAccessGate({ title, description }: { title: string; description: string }) {
   const savedEmail = useAdminAuthStore((state) => state.email);
   const setCredentials = useAdminAuthStore((state) => state.setCredentials);
   const form = useForm<AdminAccessValues>({

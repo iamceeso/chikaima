@@ -125,7 +125,11 @@ export function CodeEditor({
   line?: { number: number; key: number };
 }) {
   const dark = useDarkMode();
-  const editorRef = useRef<{ revealLineInCenter: (line: number) => void; setPosition: (position: { lineNumber: number; column: number }) => void; focus: () => void } | null>(null);
+  const editorRef = useRef<{
+    revealLineInCenter: (line: number) => void;
+    setPosition: (position: { lineNumber: number; column: number }) => void;
+    focus: () => void;
+  } | null>(null);
   useEffect(() => {
     if (!line || !editorRef.current) return;
     editorRef.current.revealLineInCenter(line.number);
@@ -175,13 +179,20 @@ export function DiffView({ files, height = 420 }: { files: CollabFileChange[]; h
             key={entry.path}
             type="button"
             onClick={() => setSelected(index)}
-            className={cn("rounded-md px-2 py-0.5 font-mono text-[11px]", index === selected ? "bg-surface text-foreground" : "text-foreground-muted hover:text-foreground")}
+            className={cn(
+              "rounded-md px-2 py-0.5 font-mono text-[11px]",
+              index === selected ? "bg-surface text-foreground" : "text-foreground-muted hover:text-foreground",
+            )}
           >
             {entry.before === null ? "+ " : entry.after === null ? "− " : ""}
             {entry.path}
           </button>
         ))}
-        <button type="button" onClick={() => setSideBySide((value) => !value)} className="ml-auto rounded-md px-2 py-0.5 text-[11px] text-foreground-muted hover:text-foreground">
+        <button
+          type="button"
+          onClick={() => setSideBySide((value) => !value)}
+          className="ml-auto rounded-md px-2 py-0.5 text-[11px] text-foreground-muted hover:text-foreground"
+        >
           {sideBySide ? "Inline" : "Side by side"}
         </button>
       </div>

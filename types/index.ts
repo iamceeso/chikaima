@@ -1,11 +1,4 @@
-export type ProviderType =
-  | "openai"
-  | "anthropic"
-  | "gemini"
-  | "ollama"
-  | "openrouter"
-  | "litellm"
-  | "local";
+export type ProviderType = "openai" | "anthropic" | "gemini" | "ollama" | "openrouter" | "litellm" | "local";
 
 export interface User {
   id: string;

@@ -60,9 +60,7 @@ function JobRow({ job, token, stage }: { job: Job; token: string; stage?: string
         </div>
         <div className="flex shrink-0 items-center gap-2 text-sm font-medium text-foreground">
           {job.status === "running" ? <LoaderCircle className="h-4 w-4 animate-spin text-primary" /> : null}
-          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">
-            {job.status}
-          </span>
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">{job.status}</span>
         </div>
       </button>
 
@@ -96,10 +94,7 @@ export default function ProcessingPage() {
 
   return (
     <>
-      <Topbar
-        title="Processing"
-        description="Track transcription, summarization, extraction, and media analysis jobs in one place."
-      />
+      <Topbar title="Processing" description="Track transcription, summarization, extraction, and media analysis jobs in one place." />
 
       <Card className="rounded-[1.75rem] bg-surface p-6">
         <div className="flex items-center gap-3">
@@ -108,9 +103,7 @@ export default function ProcessingPage() {
           </div>
           <div>
             <h2 className="text-xl font-semibold text-foreground">Job queue</h2>
-            <p className="mt-1 text-sm text-foreground-muted">
-              Live status for every background job. Expand a job to see its full event history.
-            </p>
+            <p className="mt-1 text-sm text-foreground-muted">Live status for every background job. Expand a job to see its full event history.</p>
           </div>
         </div>
 

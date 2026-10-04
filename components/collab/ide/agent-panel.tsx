@@ -53,8 +53,12 @@ interface AgentView {
 function describeAgents(team: CollabTeam, messages: CollabMessage[], runActive: boolean): AgentView[] {
   const plan = [...messages].reverse().find((message) => message.kind === "plan");
   const steps = ((plan?.data.steps as Array<{ assignee: number; instruction: string }> | undefined) ?? []).map((step, index) => ({ ...step, index }));
-  const abandoned = new Set(messages.filter((message) => message.kind === "system" && message.content.includes("abandoned")).map((message) => Number(message.data.step)));
-  const decided = new Set(messages.filter((message) => message.kind === "decision" && message.data.approved === true).map((message) => Number(message.data.step)));
+  const abandoned = new Set(
+    messages.filter((message) => message.kind === "system" && message.content.includes("abandoned")).map((message) => Number(message.data.step)),
+  );
+  const decided = new Set(
+    messages.filter((message) => message.kind === "decision" && message.data.approved === true).map((message) => Number(message.data.step)),
+  );
 
   return team.members.map((member) => {
     const mine = messages.filter((message) => message.member_id === member.id);
@@ -95,7 +99,9 @@ function describeAgents(team: CollabTeam, messages: CollabMessage[], runActive: 
       summary,
       since: active && status ? status.created_at : null,
       steps: mySteps,
-      files: Array.from(new Set(mine.filter((message) => message.kind === "action" && typeof message.data.path === "string").map((message) => String(message.data.path)))),
+      files: Array.from(
+        new Set(mine.filter((message) => message.kind === "action" && typeof message.data.path === "string").map((message) => String(message.data.path))),
+      ),
       recent: mine.filter((message) => ["action", "message", "review", "command", "change"].includes(message.kind)).slice(-6),
     };
   });
@@ -113,7 +119,9 @@ function AgentDetail({ view, team, models }: { view: AgentView; team: CollabTeam
           {member.title || member.role} <span className="text-muted">({member.role})</span>
         </dd>
         <dt className="text-muted">Model</dt>
-        <dd className="truncate text-foreground">{model ? `${model.display_name}${model.provider_name ? ` · ${model.provider_name}` : ""}` : member.model_id}</dd>
+        <dd className="truncate text-foreground">
+          {model ? `${model.display_name}${model.provider_name ? ` · ${model.provider_name}` : ""}` : member.model_id}
+        </dd>
         <dt className="text-muted">Reports to</dt>
         <dd className="text-foreground">{nameFor(member.reports_to)}</dd>
         {member.reviewed_by.length ? (
@@ -190,18 +198,30 @@ function MergeReview({
   const base = String(message.data.base ?? "");
   const branch = String(message.data.branch ?? "");
   const commits = (message.data.commits as Array<{ hash: string; subject: string }> | undefined) ?? [];
-  const files = new Set(messages.filter((entry) => entry.kind === "decision" && entry.data.approved === true).flatMap((entry) => (entry.data.files as string[] | undefined) ?? []));
+  const files = new Set(
+    messages.filter((entry) => entry.kind === "decision" && entry.data.approved === true).flatMap((entry) => (entry.data.files as string[] | undefined) ?? []),
+  );
   const tests = messages.filter((entry) => entry.kind === "command" && entry.data.stage === "test");
-  const manifests = [...files].filter((file) => /(^|\/)(package\.json|composer\.json|requirements\.txt|pyproject\.toml|go\.mod|Cargo\.toml|Gemfile)$/.test(file));
-  const resolve = useMutation({ mutationFn: (decision: "approve" | "reject") => api.resolveCollabApproval(access, message.run_id, String(message.data.approval_id), decision, decision === "reject" ? note || undefined : undefined) });
-  const diff = useMutation({ mutationFn: () => api.compareBranches(access, team.id, base, branch), onSuccess: (changes) => onOpenDiff(`Review: ${branch.replace("chikaima/", "")}`, changes) });
+  const manifests = [...files].filter((file) =>
+    /(^|\/)(package\.json|composer\.json|requirements\.txt|pyproject\.toml|go\.mod|Cargo\.toml|Gemfile)$/.test(file),
+  );
+  const resolve = useMutation({
+    mutationFn: (decision: "approve" | "reject") =>
+      api.resolveCollabApproval(access, message.run_id, String(message.data.approval_id), decision, decision === "reject" ? note || undefined : undefined),
+  });
+  const diff = useMutation({
+    mutationFn: () => api.compareBranches(access, team.id, base, branch),
+    onSuccess: (changes) => onOpenDiff(`Review: ${branch.replace("chikaima/", "")}`, changes),
+  });
 
   return (
     <div className="rounded-lg border border-primary/50 bg-primary/6 p-3">
       <p className="flex items-center gap-1.5 text-[13px] font-semibold text-foreground">
         <GitPullRequestArrow className="h-4 w-4 text-primary" /> Review requested
       </p>
-      <p className="mt-0.5 text-xs text-foreground-muted">The team finished. Merge {commits.length} commit(s) into {base}?</p>
+      <p className="mt-0.5 text-xs text-foreground-muted">
+        The team finished. Merge {commits.length} commit(s) into {base}?
+      </p>
       <ul className="mt-2 space-y-0.5 text-xs text-foreground">
         <li>{files.size} file(s) changed</li>
         <li className={tests.some((entry) => entry.data.exit_code !== 0) ? "text-red-600" : undefined}>
@@ -219,7 +239,12 @@ function MergeReview({
         />
       ) : null}
       <div className="mt-2 flex flex-wrap gap-1.5">
-        <button type="button" onClick={() => diff.mutate()} disabled={diff.isPending} className="rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground hover:border-primary">
+        <button
+          type="button"
+          onClick={() => diff.mutate()}
+          disabled={diff.isPending}
+          className="rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground hover:border-primary"
+        >
           {diff.isPending ? "Loading…" : "View diff"}
         </button>
         <button
@@ -233,11 +258,16 @@ function MergeReview({
         >
           {asking ? "Send back" : "Request changes"}
         </button>
-        <button type="button" disabled={resolve.isPending || resolve.isSuccess} onClick={() => resolve.mutate("approve")} className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
+        <button
+          type="button"
+          disabled={resolve.isPending || resolve.isSuccess}
+          onClick={() => resolve.mutate("approve")}
+          className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
+        >
           Approve &amp; merge
         </button>
       </div>
-      {resolve.error ?? diff.error ? <p className="mt-1 text-xs text-destructive">{(resolve.error ?? diff.error)!.message}</p> : null}
+      {(resolve.error ?? diff.error) ? <p className="mt-1 text-xs text-destructive">{(resolve.error ?? diff.error)!.message}</p> : null}
     </div>
   );
 }
@@ -364,9 +394,16 @@ export function AgentPanel({
         {runActive ? (
           <div className="mb-2 flex items-center gap-2 rounded-md bg-background px-2 py-1.5 text-xs">
             <span className={cn("h-2 w-2 rounded-full", status === "awaiting_approval" ? "bg-amber-500" : "animate-pulse bg-emerald-500")} />
-            <span className="text-foreground">{status === "awaiting_approval" ? "Waiting for your approval" : status === "cancelling" ? "Stopping…" : "Team is working"}</span>
+            <span className="text-foreground">
+              {status === "awaiting_approval" ? "Waiting for your approval" : status === "cancelling" ? "Stopping…" : "Team is working"}
+            </span>
             {status !== "cancelling" ? (
-              <button type="button" onClick={() => cancel.mutate()} disabled={cancel.isPending} className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+              <button
+                type="button"
+                onClick={() => cancel.mutate()}
+                disabled={cancel.isPending}
+                className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground"
+              >
                 <Square className="h-3 w-3" /> Stop
               </button>
             ) : null}

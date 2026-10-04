@@ -23,9 +23,17 @@ export type BottomTab = (typeof BOTTOM_TABS)[number]["id"];
 
 /** Every test run in the current run: the team's test command and testers' verdicts. */
 function TestsView({ team, messages }: { team: CollabTeam; messages: CollabMessage[] }) {
-  const results = messages.filter((message) => (message.kind === "command" && (message.data.stage === "test" || String(message.data.command) === team.test_command)) || (message.kind === "review" && message.data.stage === "test"));
+  const results = messages.filter(
+    (message) =>
+      (message.kind === "command" && (message.data.stage === "test" || String(message.data.command) === team.test_command)) ||
+      (message.kind === "review" && message.data.stage === "test"),
+  );
   if (!team.test_command && !team.members.some((member) => member.role === "tester")) {
-    return <p className="text-sm text-foreground-muted">This team has no test command or tester agent. Add one in Team settings so changes are tested before they are kept.</p>;
+    return (
+      <p className="text-sm text-foreground-muted">
+        This team has no test command or tester agent. Add one in Team settings so changes are tested before they are kept.
+      </p>
+    );
   }
   if (results.length === 0) return <p className="text-sm text-foreground-muted">No tests have run in this run yet.</p>;
   return (
@@ -39,7 +47,9 @@ function TestsView({ team, messages }: { team: CollabTeam; messages: CollabMessa
               <summary className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs">
                 <span className={cn("font-semibold", passed ? "text-emerald-600" : "text-red-600")}>{passed ? "PASS" : "FAIL"}</span>
                 <span className="text-foreground">Step {Number(message.data.step ?? 0) + 1}</span>
-                <span className="truncate text-foreground-muted">{message.kind === "command" ? `$ ${String(message.data.command)}` : `${agent?.name ?? "Tester"}: ${message.content.split("\n")[0]}`}</span>
+                <span className="truncate text-foreground-muted">
+                  {message.kind === "command" ? `$ ${String(message.data.command)}` : `${agent?.name ?? "Tester"}: ${message.content.split("\n")[0]}`}
+                </span>
                 <span className="ml-auto text-muted">{new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
               </summary>
               <pre className="max-h-64 overflow-auto border-t border-border bg-zinc-950 p-3 font-mono text-[11px] text-zinc-100">{message.content}</pre>
@@ -95,11 +105,20 @@ export function BottomPanel({
             )}
           >
             <entry.icon className="h-3.5 w-3.5" /> {entry.label}
-            {entry.id === "problems" && problemCount ? <span className="rounded-full bg-red-500/15 px-1.5 text-[10px] text-red-600">{problemCount}</span> : null}
-            {entry.id === "tests" && testRuns.length ? <span className={cn("h-1.5 w-1.5 rounded-full", testsFailed ? "bg-red-500" : "bg-emerald-500")} /> : null}
+            {entry.id === "problems" && problemCount ? (
+              <span className="rounded-full bg-red-500/15 px-1.5 text-[10px] text-red-600">{problemCount}</span>
+            ) : null}
+            {entry.id === "tests" && testRuns.length ? (
+              <span className={cn("h-1.5 w-1.5 rounded-full", testsFailed ? "bg-red-500" : "bg-emerald-500")} />
+            ) : null}
           </button>
         ))}
-        <button type="button" aria-label={open ? "Hide panel" : "Show panel"} onClick={onToggle} className="ml-auto rounded p-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+        <button
+          type="button"
+          aria-label={open ? "Hide panel" : "Show panel"}
+          onClick={onToggle}
+          className="ml-auto rounded p-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground"
+        >
           {open ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
         </button>
       </div>

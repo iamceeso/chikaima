@@ -89,9 +89,7 @@ body {
 }
 
 .dark body {
-  background:
-    radial-gradient(circle at top, rgba(83, 171, 133, 0.1), transparent 24%),
-    var(--background);
+  background: radial-gradient(circle at top, rgba(83, 171, 133, 0.1), transparent 24%), var(--background);
 }
 
 a {

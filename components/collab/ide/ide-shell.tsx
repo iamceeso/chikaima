@@ -51,7 +51,8 @@ function useRunStream(access: ApiAccess, runId: string | null, onFinished: () =>
         { token, authHeader },
         runId,
         {
-          onMessage: (message) => update((current) => ({ messages: current.messages.some((m) => m.id === message.id) ? current.messages : [...current.messages, message] })),
+          onMessage: (message) =>
+            update((current) => ({ messages: current.messages.some((m) => m.id === message.id) ? current.messages : [...current.messages, message] })),
           onStatus: (status, error) => {
             update(() => ({ status, error }));
             if (!ACTIVE_STATUSES.includes(status)) onFinished();
@@ -83,7 +84,19 @@ type SidePanel = "explorer" | "search" | "git" | "runs";
  * right, and a status bar. Mounted from the project layout, so open tabs,
  * the live run and panel state survive switching views.
  */
-export function IdeShell({ access, team, projects, models, view }: { access: ApiAccess; team: CollabTeam; projects: CollabTeam[]; models: AIModel[]; view: WorkspaceView }) {
+export function IdeShell({
+  access,
+  team,
+  projects,
+  models,
+  view,
+}: {
+  access: ApiAccess;
+  team: CollabTeam;
+  projects: CollabTeam[];
+  models: AIModel[];
+  view: WorkspaceView;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { theme, setTheme } = useTheme();
@@ -151,7 +164,13 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
     for (const message of messages) {
       if (!message.member_id) continue;
       if (typeof message.data.activity === "string") latestActivity.set(message.member_id, message.data.activity);
-      if (message.kind === "action" && typeof message.data.path === "string" && !message.data.worktree && message.data.action !== "browse" && message.data.action !== "screenshot") {
+      if (
+        message.kind === "action" &&
+        typeof message.data.path === "string" &&
+        !message.data.worktree &&
+        message.data.action !== "browse" &&
+        message.data.action !== "screenshot"
+      ) {
         latestPath.set(message.member_id, message.data.path);
         const member = team.members.find((candidate) => candidate.id === message.member_id);
         if (member) files.set(message.data.path, { name: member.title || member.name, editing: false });
@@ -175,11 +194,14 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
   const gitStatus = useMemo(() => new Map((gitQuery.data?.changes ?? []).map((change) => [change.path, change.code])), [gitQuery.data]);
 
   const openTab = (tab: EditorTab) => {
-    setTabs((current) => (current.some((existing) => existing.id === tab.id) ? current.map((existing) => (existing.id === tab.id ? tab : existing)) : [...current, tab]));
+    setTabs((current) =>
+      current.some((existing) => existing.id === tab.id) ? current.map((existing) => (existing.id === tab.id ? tab : existing)) : [...current, tab],
+    );
     setActiveTab(tab.id);
     if (view !== "code") router.push(base);
   };
-  const openFile = (path: string, line?: number) => openTab({ id: `file:${path}`, kind: "file", path, line: line ? { number: line, key: Date.now() } : undefined });
+  const openFile = (path: string, line?: number) =>
+    openTab({ id: `file:${path}`, kind: "file", path, line: line ? { number: line, key: Date.now() } : undefined });
   const openDiff = (title: string, files: CollabFileChange[]) => openTab({ id: `diff:${title}`, kind: "diff", title, files });
   const openCommit = (hash: string, title: string) => openTab({ id: `commit:${hash}`, kind: "commit", hash, title });
   const closeTab = (id: string) => {
@@ -300,16 +322,26 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
           </button>
         ) : null}
         <span className="hidden items-center gap-1.5 text-foreground-muted md:flex">
-          <span className={cn("h-1.5 w-1.5 rounded-full", preview?.status === "running" ? "bg-emerald-500" : preview?.status === "starting" ? "animate-pulse bg-amber-500" : "bg-border")} />
+          <span
+            className={cn(
+              "h-1.5 w-1.5 rounded-full",
+              preview?.status === "running" ? "bg-emerald-500" : preview?.status === "starting" ? "animate-pulse bg-amber-500" : "bg-border",
+            )}
+          />
           {preview?.status === "running" ? "Runtime running" : preview?.status === "starting" ? "Runtime starting" : "Runtime stopped"}
         </span>
         {waiting ? (
-          <button type="button" onClick={() => setRightOpen(true)} className="flex items-center gap-1.5 rounded-md bg-amber-500/15 px-2 py-1 font-medium text-amber-700 dark:text-amber-400">
+          <button
+            type="button"
+            onClick={() => setRightOpen(true)}
+            className="flex items-center gap-1.5 rounded-md bg-amber-500/15 px-2 py-1 font-medium text-amber-700 dark:text-amber-400"
+          >
             <ShieldAlert className="h-3.5 w-3.5" /> Waiting for approval
           </button>
         ) : runActive ? (
           <span className="flex items-center gap-1.5 rounded-md bg-emerald-500/12 px-2 py-1 font-medium text-emerald-700 dark:text-emerald-400">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> {activeAgents || 1} {activeAgents === 1 || !activeAgents ? "agent" : "agents"} active
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> {activeAgents || 1}{" "}
+            {activeAgents === 1 || !activeAgents ? "agent" : "agents"} active
           </span>
         ) : null}
 
@@ -333,7 +365,13 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
           >
             <Eye className="h-3.5 w-3.5" /> Preview
           </button>
-          <button type="button" title="Toggle theme" aria-label="Toggle theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+          <button
+            type="button"
+            title="Toggle theme"
+            aria-label="Toggle theme"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground"
+          >
             {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
           <button
@@ -369,12 +407,16 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
                 }}
                 className={cn(
                   "relative flex h-10 w-10 items-center justify-center rounded-md",
-                  on ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary" : "text-foreground-muted hover:text-foreground",
+                  on
+                    ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary"
+                    : "text-foreground-muted hover:text-foreground",
                 )}
               >
                 <item.icon className="h-5 w-5" />
                 {item.id === "git" && gitQuery.data?.changes.length ? (
-                  <span className="absolute right-1 top-1 rounded-full bg-primary px-1 text-[9px] font-semibold text-primary-foreground">{gitQuery.data.changes.length}</span>
+                  <span className="absolute right-1 top-1 rounded-full bg-primary px-1 text-[9px] font-semibold text-primary-foreground">
+                    {gitQuery.data.changes.length}
+                  </span>
                 ) : null}
               </button>
             );
@@ -389,14 +431,21 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
               aria-current={view === item.id ? "page" : undefined}
               className={cn(
                 "relative flex h-10 w-10 items-center justify-center rounded-md",
-                view === item.id ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary" : "text-foreground-muted hover:text-foreground",
+                view === item.id
+                  ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary"
+                  : "text-foreground-muted hover:text-foreground",
               )}
             >
               <item.icon className="h-5 w-5" />
               {item.id === "team" && waiting ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-500" /> : null}
             </Link>
           ))}
-          <Link href="/projects" title="All projects" aria-label="All projects" className="mt-auto flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+          <Link
+            href="/projects"
+            title="All projects"
+            aria-label="All projects"
+            className="mt-auto flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground"
+          >
             <FolderGit2 className="h-5 w-5" />
           </Link>
         </nav>
@@ -425,7 +474,9 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
                 />
               ) : null}
               {side === "search" ? <SearchPanel access={access} team={team} onOpen={openFile} /> : null}
-              {side === "git" ? <SourceControl access={access} team={team} disabled={runActive} onOpenFile={(path) => openFile(path)} onOpenCommit={openCommit} /> : null}
+              {side === "git" ? (
+                <SourceControl access={access} team={team} disabled={runActive} onOpenFile={(path) => openFile(path)} onOpenCommit={openCommit} />
+              ) : null}
               {side === "runs" ? <RunsPanel runs={runs} selectedId={currentRunId} onSelect={openRun} /> : null}
             </aside>
             <div className="hidden md:flex">
@@ -457,8 +508,20 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
             {view === "team" || view === "settings" ? (
               <div className="h-full overflow-y-auto">
                 <div className="mx-auto max-w-4xl p-6">
-                  {runActive ? <p className="mb-4 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">Changes can be saved once the current task finishes.</p> : null}
-                  <TeamEditor key={`${view}-${team.updated_at}`} access={access} models={models} team={team} section={view === "team" ? "team" : "project"} embedded onDone={() => undefined} />
+                  {runActive ? (
+                    <p className="mb-4 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                      Changes can be saved once the current task finishes.
+                    </p>
+                  ) : null}
+                  <TeamEditor
+                    key={`${view}-${team.updated_at}`}
+                    access={access}
+                    models={models}
+                    team={team}
+                    section={view === "team" ? "team" : "project"}
+                    embedded
+                    onDone={() => undefined}
+                  />
                 </div>
               </div>
             ) : null}
@@ -514,7 +577,12 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
       </div>
 
       {/* Status bar */}
-      <footer className={cn("flex h-6 shrink-0 items-center gap-4 px-3 text-[11px]", waiting ? "bg-amber-600 text-white" : runActive ? "bg-primary text-primary-foreground" : "bg-surface-strong text-foreground-muted")}>
+      <footer
+        className={cn(
+          "flex h-6 shrink-0 items-center gap-4 px-3 text-[11px]",
+          waiting ? "bg-amber-600 text-white" : runActive ? "bg-primary text-primary-foreground" : "bg-surface-strong text-foreground-muted",
+        )}
+      >
         {gitQuery.data?.is_repo ? (
           <span className="flex items-center gap-1">
             <GitBranch className="h-3 w-3" /> {gitQuery.data.branch}

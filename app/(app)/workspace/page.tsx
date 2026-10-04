@@ -32,10 +32,15 @@ export default function WorkspacePage() {
   if (!hasAdminAccess || !access) {
     return workspaceAuthDisabled ? (
       <div className="mx-auto max-w-md pt-16">
-        <AdminAccessGate title="Administrator access required" description="The workspace can run code and AI agents on this server, so only administrators can open it." />
+        <AdminAccessGate
+          title="Administrator access required"
+          description="The workspace can run code and AI agents on this server, so only administrators can open it."
+        />
       </div>
     ) : (
-      <div className="flex h-screen items-center justify-center bg-background p-6 text-sm text-foreground-muted">Only administrators can open the workspace.</div>
+      <div className="flex h-screen items-center justify-center bg-background p-6 text-sm text-foreground-muted">
+        Only administrators can open the workspace.
+      </div>
     );
   }
 
@@ -49,7 +54,10 @@ export default function WorkspacePage() {
         <span className="text-muted">/</span>
         <span className="text-[13px] font-semibold">Workspace</span>
         {recent ? (
-          <Link href={`/projects/${recent.id}`} className="ml-2 hidden rounded-md px-2 py-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground sm:inline-flex">
+          <Link
+            href={`/projects/${recent.id}`}
+            className="ml-2 hidden rounded-md px-2 py-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground sm:inline-flex"
+          >
             Open {recent.name}
           </Link>
         ) : null}
@@ -57,10 +65,21 @@ export default function WorkspacePage() {
           <Link href="/projects/new" className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 font-medium text-primary-foreground">
             <Plus className="h-3.5 w-3.5" /> Set up schema
           </Link>
-          <button type="button" title="Toggle theme" aria-label="Toggle theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+          <button
+            type="button"
+            title="Toggle theme"
+            aria-label="Toggle theme"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground"
+          >
             {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
-          <button type="button" title="AI team panel" aria-label="AI team panel" className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+          <button
+            type="button"
+            title="AI team panel"
+            aria-label="AI team panel"
+            className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground"
+          >
             <PanelRight className="h-4 w-4" />
           </button>
         </div>
@@ -73,21 +92,52 @@ export default function WorkspacePage() {
             { label: "Search", icon: Search },
             { label: "Source control", icon: GitBranch },
           ].map((item) => (
-            <button key={item.label} type="button" title={item.label} aria-label={item.label} className={cn("relative flex h-10 w-10 items-center justify-center rounded-md", item.active ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary" : "text-foreground-muted hover:text-foreground")}>
+            <button
+              key={item.label}
+              type="button"
+              title={item.label}
+              aria-label={item.label}
+              className={cn(
+                "relative flex h-10 w-10 items-center justify-center rounded-md",
+                item.active
+                  ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary"
+                  : "text-foreground-muted hover:text-foreground",
+              )}
+            >
               <item.icon className="h-5 w-5" />
             </button>
           ))}
           <div className="my-1 h-px w-6 bg-border" />
-          <Link href="/projects/new" title="Working schema" aria-label="Working schema" className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+          <Link
+            href="/projects/new"
+            title="Working schema"
+            aria-label="Working schema"
+            className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground"
+          >
             <Settings2 className="h-5 w-5" />
           </Link>
-          <Link href={recent ? `/projects/${recent.id}/team` : "/projects/new"} title="AI Team" aria-label="AI Team" className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+          <Link
+            href={recent ? `/projects/${recent.id}/team` : "/projects/new"}
+            title="AI Team"
+            aria-label="AI Team"
+            className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground"
+          >
             <Users className="h-5 w-5" />
           </Link>
-          <Link href={recent ? `/projects/${recent.id}/tasks` : "/projects/new"} title="Tasks" aria-label="Tasks" className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+          <Link
+            href={recent ? `/projects/${recent.id}/tasks` : "/projects/new"}
+            title="Tasks"
+            aria-label="Tasks"
+            className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground"
+          >
             <KanbanSquare className="h-5 w-5" />
           </Link>
-          <Link href="/projects" title="Schemas" aria-label="Schemas" className="mt-auto flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+          <Link
+            href="/projects"
+            title="Schemas"
+            aria-label="Schemas"
+            className="mt-auto flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground"
+          >
             <FolderGit2 className="h-5 w-5" />
           </Link>
         </nav>
@@ -103,7 +153,11 @@ export default function WorkspacePage() {
               {projects.length ? (
                 <div className="pt-1">
                   {projects.slice(0, 8).map((project) => (
-                    <Link key={project.id} href={`/projects/${project.id}`} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+                    <Link
+                      key={project.id}
+                      href={`/projects/${project.id}`}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-foreground-muted hover:bg-surface-strong hover:text-foreground"
+                    >
                       <FolderGit2 className="h-3.5 w-3.5" />
                       <span className="truncate">{project.name}</span>
                     </Link>
@@ -132,17 +186,26 @@ export default function WorkspacePage() {
                   </div>
                   <div>
                     <h1 className="text-xl font-semibold tracking-tight">Workspace ready</h1>
-                    <p className="mt-1 text-sm text-foreground-muted">Set up a working schema when you are ready to connect code, agents, tasks, and runtime commands.</p>
+                    <p className="mt-1 text-sm text-foreground-muted">
+                      Set up a working schema when you are ready to connect code, agents, tasks, and runtime commands.
+                    </p>
                   </div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Link href="/projects/new" className="rounded-md border border-border bg-surface p-4 text-sm hover:border-primary/60">
                     <span className="font-medium text-foreground">Set up working schema</span>
-                    <span className="mt-1 block text-xs leading-5 text-foreground-muted">Choose a folder, repository, team preset, model, and supervision level.</span>
+                    <span className="mt-1 block text-xs leading-5 text-foreground-muted">
+                      Choose a folder, repository, team preset, model, and supervision level.
+                    </span>
                   </Link>
-                  <Link href={recent ? `/projects/${recent.id}` : "/projects"} className="rounded-md border border-border bg-surface p-4 text-sm hover:border-primary/60">
+                  <Link
+                    href={recent ? `/projects/${recent.id}` : "/projects"}
+                    className="rounded-md border border-border bg-surface p-4 text-sm hover:border-primary/60"
+                  >
                     <span className="font-medium text-foreground">{recent ? "Open recent workspace" : "Browse schemas"}</span>
-                    <span className="mt-1 block text-xs leading-5 text-foreground-muted">{recent ? recent.name : "Review existing working schemas once they exist."}</span>
+                    <span className="mt-1 block text-xs leading-5 text-foreground-muted">
+                      {recent ? recent.name : "Review existing working schemas once they exist."}
+                    </span>
                   </Link>
                 </div>
               </div>
@@ -164,13 +227,21 @@ export default function WorkspacePage() {
         <aside className="hidden w-[330px] shrink-0 border-l border-border bg-surface lg:block">
           <EmptyPanel title="Setup">
             <div className="space-y-3 text-sm">
-              <p className="text-foreground-muted">Projects are now setup records for working schemas. The workspace itself stays available before and after you create one.</p>
-              <Link href="/projects/new" className="flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
+              <p className="text-foreground-muted">
+                Projects are now setup records for working schemas. The workspace itself stays available before and after you create one.
+              </p>
+              <Link
+                href="/projects/new"
+                className="flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+              >
                 <Plus className="h-4 w-4" />
                 Set up schema
               </Link>
               {recent ? (
-                <Link href={`/projects/${recent.id}`} className="flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-strong">
+                <Link
+                  href={`/projects/${recent.id}`}
+                  className="flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-strong"
+                >
                   <Code2 className="h-4 w-4" />
                   Open {recent.name}
                 </Link>

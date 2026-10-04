@@ -61,12 +61,7 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
     : [];
 
   return (
-    <div
-      className={cn(
-        "flex gap-3 py-4 px-4 rounded-lg mb-3",
-        isUserMessage ? "bg-primary/5 border border-primary/10" : "bg-muted/30 border border-border",
-      )}
-    >
+    <div className={cn("flex gap-3 py-4 px-4 rounded-lg mb-3", isUserMessage ? "bg-primary/5 border border-primary/10" : "bg-muted/30 border border-border")}>
       <div className="flex-1 min-w-0">
         {isEditing ? (
           <div className="space-y-2">
@@ -80,28 +75,17 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
               />
             </div>
             <div className="flex gap-2 justify-end">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
+              <Button size="sm" variant="outline" onClick={handleCancel} disabled={isSaving}>
                 Cancel
               </Button>
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={isSaving || editedContent.trim() === message.content.trim()}
-              >
+              <Button size="sm" onClick={handleSave} disabled={isSaving || editedContent.trim() === message.content.trim()}>
                 {isSaving ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
         ) : (
           <>
-            <p className="text-sm font-medium text-foreground-muted mb-1">
-              {isUserMessage ? "You" : "Assistant"}
-            </p>
+            <p className="text-sm font-medium text-foreground-muted mb-1">{isUserMessage ? "You" : "Assistant"}</p>
             <MessageMarkdown content={message.content} />
             {attachments.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -112,14 +96,8 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
                   >
                     <FileText className="h-3.5 w-3.5" />
                     <span className="max-w-52 truncate">{attachment.name ?? "Attachment"}</span>
-                    {typeof attachment.size === "number" ? (
-                      <span className="text-muted">{(attachment.size / 1024).toFixed(1)} KB</span>
-                    ) : null}
-                    {attachment.status ? (
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
-                        {attachment.status}
-                      </span>
-                    ) : null}
+                    {typeof attachment.size === "number" ? <span className="text-muted">{(attachment.size / 1024).toFixed(1)} KB</span> : null}
+                    {attachment.status ? <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">{attachment.status}</span> : null}
                     {attachment.id && attachment.kind === "document" ? (
                       <Button
                         type="button"
@@ -145,11 +123,7 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
                 ))}
               </div>
             )}
-            {message.created_at && (
-              <p className="text-xs text-foreground-muted mt-2">
-                {new Date(message.created_at).toLocaleTimeString()}
-              </p>
-            )}
+            {message.created_at && <p className="text-xs text-foreground-muted mt-2">{new Date(message.created_at).toLocaleTimeString()}</p>}
             {!isUserMessage ? <RAGReferences message={message} /> : null}
           </>
         )}
@@ -158,25 +132,12 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
       {!isEditing && isUserMessage && (
         <div className="flex gap-1">
           {onUpdate && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setIsEditing(true)}
-              className="h-8 w-8 p-0"
-              title="Edit message"
-            >
+            <Button size="sm" variant="ghost" onClick={() => setIsEditing(true)} className="h-8 w-8 p-0" title="Edit message">
               <Edit2 className="h-4 w-4" />
             </Button>
           )}
           {onRegenerate && !isUserMessage && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onRegenerate}
-              disabled={isLoading}
-              className="h-8 w-8 p-0"
-              title="Regenerate message"
-            >
+            <Button size="sm" variant="ghost" onClick={onRegenerate} disabled={isLoading} className="h-8 w-8 p-0" title="Regenerate message">
               <RotateCcw className="h-4 w-4" />
             </Button>
           )}
@@ -185,14 +146,7 @@ export function MessageItem({ message, isLoading, onUpdate, onRegenerate }: Mess
 
       {!isEditing && !isUserMessage && onRegenerate && (
         <div className="flex gap-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onRegenerate}
-            disabled={isLoading}
-            className="h-8 w-8 p-0"
-            title="Regenerate message"
-          >
+          <Button size="sm" variant="ghost" onClick={onRegenerate} disabled={isLoading} className="h-8 w-8 p-0" title="Regenerate message">
             <RotateCcw className="h-4 w-4" />
           </Button>
         </div>

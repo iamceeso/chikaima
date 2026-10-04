@@ -14,7 +14,13 @@ import type { IngestibleResource, ResourceProcessor } from "./types.js";
  * (unreachable) Audio/VideoProcessor classes.
  */
 export class DocumentProcessorRegistry {
-  private readonly processors: ResourceProcessor[] = [new PdfProcessor(), new CodeProcessor(), new OfficeProcessor(), new ImageProcessor(), new TextProcessor()];
+  private readonly processors: ResourceProcessor[] = [
+    new PdfProcessor(),
+    new CodeProcessor(),
+    new OfficeProcessor(),
+    new ImageProcessor(),
+    new TextProcessor(),
+  ];
 
   select(resource: IngestibleResource, mimeType: string | null): ResourceProcessor {
     for (const processor of this.processors) {

@@ -186,7 +186,11 @@ export class EmbeddingsService {
     const model = this.embeddingModelForProvider(provider);
     const modelPath = model.startsWith("models/") ? model : `models/${model}`;
 
-    const response = await this.postJson(`${baseUrl}/${modelPath}:embedContent?key=${encodeURIComponent(apiKey)}`, {}, { content: { parts: [{ text: text || " " }] } });
+    const response = await this.postJson(
+      `${baseUrl}/${modelPath}:embedContent?key=${encodeURIComponent(apiKey)}`,
+      {},
+      { content: { parts: [{ text: text || " " }] } },
+    );
     const embedding = (response.embedding as { values?: unknown } | undefined) ?? {};
     return this.parseEmbeddingValues(embedding.values);
   }

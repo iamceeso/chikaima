@@ -42,7 +42,11 @@ function resolveAssetType(resourceType: ResourceKind, resource: ResourceRow): st
   return "document";
 }
 
-export async function processResourceJob(db: ChikaimaDatabase, jobId: string, jobType: JobType): Promise<{ jobId: string; status: string; resourceId?: string; message?: string }> {
+export async function processResourceJob(
+  db: ChikaimaDatabase,
+  jobId: string,
+  jobType: JobType,
+): Promise<{ jobId: string; status: string; resourceId?: string; message?: string }> {
   const resourceType = RESOURCE_TYPE_BY_JOB_TYPE[jobType] as ResourceKind;
   const table = resourceTable(resourceType);
 
@@ -159,7 +163,10 @@ function upsertSummaryArtifacts(db: ChikaimaDatabase, resource: ResourceRow, res
 
   const summaryExisting = byType.get("summary");
   if (summaryExisting) {
-    db.update(summaryArtifacts).set({ content: bundle.summary, data: {}, status: "completed", updatedAt: now }).where(eq(summaryArtifacts.id, summaryExisting.id)).run();
+    db.update(summaryArtifacts)
+      .set({ content: bundle.summary, data: {}, status: "completed", updatedAt: now })
+      .where(eq(summaryArtifacts.id, summaryExisting.id))
+      .run();
   } else {
     db.insert(summaryArtifacts)
       .values({

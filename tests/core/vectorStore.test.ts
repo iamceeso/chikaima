@@ -117,9 +117,30 @@ test("search honors sourceFilters as an OR across kinds and excludes non-matchin
   await withTempDb(async () => {
     seedUser("u1");
     const store = new VectorStore(getDb());
-    await store.insertChunks({ userId: "u1", sourceType: "document", sourceId: "d1", assetType: "document", filename: "d1.pdf", chunks: [{ content: "doc", metadata: {}, embedding: vec(1) }] });
-    await store.insertChunks({ userId: "u1", sourceType: "audio", sourceId: "a1", assetType: "audio", filename: "a1.mp3", chunks: [{ content: "audio", metadata: {}, embedding: vec(1) }] });
-    await store.insertChunks({ userId: "u1", sourceType: "video", sourceId: "v1", assetType: "video", filename: "v1.mp4", chunks: [{ content: "video", metadata: {}, embedding: vec(1) }] });
+    await store.insertChunks({
+      userId: "u1",
+      sourceType: "document",
+      sourceId: "d1",
+      assetType: "document",
+      filename: "d1.pdf",
+      chunks: [{ content: "doc", metadata: {}, embedding: vec(1) }],
+    });
+    await store.insertChunks({
+      userId: "u1",
+      sourceType: "audio",
+      sourceId: "a1",
+      assetType: "audio",
+      filename: "a1.mp3",
+      chunks: [{ content: "audio", metadata: {}, embedding: vec(1) }],
+    });
+    await store.insertChunks({
+      userId: "u1",
+      sourceType: "video",
+      sourceId: "v1",
+      assetType: "video",
+      filename: "v1.mp4",
+      chunks: [{ content: "video", metadata: {}, embedding: vec(1) }],
+    });
 
     const results = store.search("u1", vec(1), { limit: 10, sourceFilters: { document: new Set(["d1"]), audio: new Set(["a1"]) } });
     const sourceIds = results.map((r) => r.sourceId).sort();

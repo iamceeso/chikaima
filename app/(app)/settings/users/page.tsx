@@ -9,14 +9,7 @@ import { z } from "zod";
 import { AdminAccessGate } from "@/components/settings/admin-access-gate";
 import { useAdminAccess } from "@/hooks/use-admin-access";
 import { SettingsShell } from "@/components/settings/settings-shell";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -130,10 +123,7 @@ export default function SettingsUsersPage() {
 
   if (publicWorkspaceQuery.isLoading || (workspaceAuthDisabled && !adminAuthHydrated)) {
     return (
-      <SettingsShell
-        title="User management"
-        description="Manage access."
-      >
+      <SettingsShell title="User management" description="Manage access.">
         <Card className="p-6">
           <p className="text-sm text-foreground-muted">Loading workspace access...</p>
         </Card>
@@ -143,10 +133,7 @@ export default function SettingsUsersPage() {
 
   if (workspaceAuthDisabled && !hasAdminAccess) {
     return (
-      <SettingsShell
-        title="User management"
-        description="Manage access."
-      >
+      <SettingsShell title="User management" description="Manage access.">
         <AdminAccessGate
           title="Admin credentials required"
           description="Workspace sign-in is disabled, so viewing or changing users requires an existing administrator email and password."
@@ -157,10 +144,7 @@ export default function SettingsUsersPage() {
 
   if (!hasAdminAccess) {
     return (
-      <SettingsShell
-        title="User management"
-        description="Only workspace administrators can create or remove users."
-      >
+      <SettingsShell title="User management" description="Only workspace administrators can create or remove users.">
         <Card className="p-6">
           <p className="text-sm text-foreground-muted">You need an admin account to manage workspace users.</p>
         </Card>
@@ -173,10 +157,7 @@ export default function SettingsUsersPage() {
   const editingLastAdmin = Boolean(editingUser?.is_superuser && adminCount <= 1);
 
   return (
-    <SettingsShell
-      title="User management"
-      description="Manage access."
-    >
+    <SettingsShell title="User management" description="Manage access.">
       <div className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
         <Card className="p-5">
           <div className="mb-4 flex items-center gap-3">
@@ -230,17 +211,16 @@ export default function SettingsUsersPage() {
           </div>
           <div className="space-y-2.5">
             {usersQuery.data?.map((user) => (
-              <div key={user.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background-secondary p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                key={user.id}
+                className="flex flex-col gap-3 rounded-2xl border border-border bg-background-secondary p-3.5 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div>
                   <p className="text-sm font-medium text-foreground">{user.full_name}</p>
                   <p className="mt-0.5 text-sm text-foreground-muted">{user.email}</p>
                   <div className="mt-1.5 flex flex-wrap gap-2 text-xs uppercase tracking-[0.16em] text-muted">
-                    <span className="rounded-full border border-border bg-background px-2.5 py-1">
-                      {user.is_superuser ? "admin" : "member"}
-                    </span>
-                    <span className="rounded-full border border-border bg-background px-2.5 py-1">
-                      {user.is_active ? "active" : "disabled"}
-                    </span>
+                    <span className="rounded-full border border-border bg-background px-2.5 py-1">{user.is_superuser ? "admin" : "member"}</span>
+                    <span className="rounded-full border border-border bg-background px-2.5 py-1">{user.is_active ? "active" : "disabled"}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -266,11 +246,7 @@ export default function SettingsUsersPage() {
                     type="button"
                     variant="ghost"
                     className="justify-center border border-border sm:w-auto"
-                    disabled={
-                      deleteMutation.isPending ||
-                      user.id === currentUser?.id ||
-                      (user.is_superuser && adminCount <= 1)
-                    }
+                    disabled={deleteMutation.isPending || user.id === currentUser?.id || (user.is_superuser && adminCount <= 1)}
                     onClick={() => setUserPendingDelete(user)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -280,9 +256,7 @@ export default function SettingsUsersPage() {
               </div>
             ))}
             {!usersQuery.data?.length ? (
-              <div className="rounded-2xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">
-                No users found.
-              </div>
+              <div className="rounded-2xl border border-dashed border-border bg-background-secondary p-4 text-sm text-foreground-muted">No users found.</div>
             ) : null}
           </div>
         </Card>
@@ -296,10 +270,7 @@ export default function SettingsUsersPage() {
             editForm.reset();
           }}
         >
-          <Card
-            className="w-full max-w-2xl p-5"
-            onClick={(event) => event.stopPropagation()}
-          >
+          <Card className="w-full max-w-2xl p-5" onClick={(event) => event.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-foreground">Edit user</h2>
@@ -336,34 +307,20 @@ export default function SettingsUsersPage() {
               </div>
               <div className="grid gap-2">
                 <label className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-primary"
-                    disabled={editingLastAdmin}
-                    {...editForm.register("is_superuser")}
-                  />
+                  <input type="checkbox" className="h-4 w-4 accent-primary" disabled={editingLastAdmin} {...editForm.register("is_superuser")} />
                   Administrator
                 </label>
                 <label className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-primary"
-                    disabled={editingLastAdmin}
-                    {...editForm.register("is_active")}
-                  />
+                  <input type="checkbox" className="h-4 w-4 accent-primary" disabled={editingLastAdmin} {...editForm.register("is_active")} />
                   Active user
                 </label>
               </div>
               {updateMutation.error ? <p className="text-sm text-primary md:col-span-2">{updateMutation.error.message}</p> : null}
               {editingLastAdmin ? (
-                <p className="text-sm text-foreground-muted md:col-span-2">
-                  The last admin cannot be made inactive or changed to a non-admin user.
-                </p>
+                <p className="text-sm text-foreground-muted md:col-span-2">The last admin cannot be made inactive or changed to a non-admin user.</p>
               ) : null}
               <div className="flex gap-3 pt-1 md:col-span-2">
-                <Button type="submit">
-                  {updateMutation.isPending ? "Saving..." : "Save changes"}
-                </Button>
+                <Button type="submit">{updateMutation.isPending ? "Saving..." : "Save changes"}</Button>
                 <Button
                   type="button"
                   variant="ghost"

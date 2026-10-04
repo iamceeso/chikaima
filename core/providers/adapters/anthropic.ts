@@ -1,6 +1,14 @@
 import { badGateway } from "../../errors.js";
 import { extractStreamErrorDetail, iterSseJsonEvents } from "../sse.js";
-import { extractSystemPrompt, mergeConsecutiveMessages, textFromContent, type ChatMessage, type GenerateOptions, type MessageContent, type ProviderAdapter } from "../types.js";
+import {
+  extractSystemPrompt,
+  mergeConsecutiveMessages,
+  textFromContent,
+  type ChatMessage,
+  type GenerateOptions,
+  type MessageContent,
+  type ProviderAdapter,
+} from "../types.js";
 
 interface AnthropicBlock {
   type: "text" | "image";

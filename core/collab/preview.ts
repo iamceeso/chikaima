@@ -142,7 +142,16 @@ export async function screenshotPreview(port: number, path: string): Promise<str
     await new Promise<void>((resolve, reject) => {
       execFile(
         chrome,
-        ["--headless=new", "--disable-gpu", "--no-sandbox", "--hide-scrollbars", "--window-size=1280,800", "--virtual-time-budget=5000", `--screenshot=${file}`, url],
+        [
+          "--headless=new",
+          "--disable-gpu",
+          "--no-sandbox",
+          "--hide-scrollbars",
+          "--window-size=1280,800",
+          "--virtual-time-budget=5000",
+          `--screenshot=${file}`,
+          url,
+        ],
         { timeout: 45_000 },
         (error) => (error ? reject(error) : resolve()),
       );

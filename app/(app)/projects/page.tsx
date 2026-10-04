@@ -1,16 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, Download, FolderGit2, GitBranch, Plus, ShieldAlert } from "lucide-react";
+import { Bot, Download, FolderGit2, GitBranch, MoreHorizontal, Plus, ShieldAlert } from "lucide-react";
 
+import { ContextMenu, type MenuItem } from "@/components/collab/context-menu";
+import { DeleteProjectDialog, SaveProjectCopyDialog } from "@/components/collab/project-actions";
 import { AdminAccessGate } from "@/components/settings/admin-access-gate";
 import { Button } from "@/components/ui/button";
 import { useAdminAccess } from "@/hooks/use-admin-access";
 import { useLastProject } from "@/lib/last-project";
 import { timeAgo } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { api } from "@/services/api";
+import { api, type ApiAccess } from "@/services/api";
 import type { CollabProject } from "@/types";
 
 function repoLabel(remote: string | null): string | null {
@@ -19,43 +23,89 @@ function repoLabel(remote: string | null): string | null {
   return match ? match[1]! : remote;
 }
 
-function ProjectCard({ project }: { project: CollabProject }) {
+/** A project card. Right-click it (or use the ⋯ button) to open, save a copy elsewhere, or delete the project. */
+function ProjectCard({ project, access }: { project: CollabProject; access: ApiAccess }) {
+  const router = useRouter();
   const waiting = project.active_run?.status === "awaiting_approval";
+  const busy = Boolean(project.active_run);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [dialog, setDialog] = useState<"delete" | "save" | null>(null);
+
+  const items: MenuItem[] = [
+    { label: "Open", action: () => router.push(`/projects/${project.id}`) },
+    { label: "Open in New Tab", action: () => window.open(`/projects/${project.id}`, "_blank") },
+    "separator",
+    { label: busy ? "Save a Copy To… (agents working)" : "Save a Copy To…", disabled: busy, action: () => setDialog("save") },
+    { label: "Copy Folder Path", action: () => void navigator.clipboard?.writeText(project.folder).catch(() => undefined) },
+    "separator",
+    { label: busy ? "Delete Project… (agents working)" : "Delete Project…", disabled: busy, danger: true, action: () => setDialog("delete") },
+  ];
+
   return (
-    <Link href={`/projects/${project.id}`} className="group flex flex-col rounded-lg border border-border bg-surface p-4 transition-colors hover:border-primary/60">
-      <div className="flex items-start gap-2">
-        <FolderGit2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">{project.name}</p>
-          <p className="truncate font-mono text-[11.5px] text-muted">{repoLabel(project.remote) ?? project.folder}</p>
+    <>
+      <Link
+        href={`/projects/${project.id}`}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          setMenu({ x: event.clientX, y: event.clientY });
+        }}
+        className="group flex flex-col rounded-lg border border-border bg-surface p-4 transition-colors hover:border-primary/60"
+      >
+        <div className="flex items-start gap-2">
+          <FolderGit2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary">{project.name}</p>
+            <p className="truncate font-mono text-[11.5px] text-muted">{repoLabel(project.remote) ?? project.folder}</p>
+          </div>
+          {project.active_run ? (
+            <span
+              className={cn(
+                "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium",
+                waiting ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
+              )}
+            >
+              {waiting ? <ShieldAlert className="h-3 w-3" /> : <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />}
+              {waiting ? "Needs approval" : "Agents working"}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            aria-label={`Actions for ${project.name}`}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const rect = event.currentTarget.getBoundingClientRect();
+              setMenu({ x: rect.left, y: rect.bottom + 4 });
+            }}
+            className="-mr-1 -mt-1 shrink-0 rounded p-1 text-foreground-muted opacity-60 hover:bg-surface-strong hover:text-foreground group-hover:opacity-100"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
         </div>
-        {project.active_run ? (
-          <span className={cn("flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium", waiting ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400")}>
-            {waiting ? <ShieldAlert className="h-3 w-3" /> : <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />}
-            {waiting ? "Needs approval" : "Agents working"}
+        <p className="mt-3 text-[12.5px] text-foreground-muted">{project.stack.length ? project.stack.join(" · ") : "No stack detected yet"}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-foreground-muted">
+          {project.branch ? (
+            <span className="flex items-center gap-1 font-mono">
+              <GitBranch className="h-3 w-3" />
+              {project.branch}
+            </span>
+          ) : null}
+          <span className="flex items-center gap-1">
+            <Bot className="h-3 w-3" />
+            {project.members.length} AI agents
           </span>
-        ) : null}
-      </div>
-      <p className="mt-3 text-[12.5px] text-foreground-muted">{project.stack.length ? project.stack.join(" · ") : "No stack detected yet"}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-foreground-muted">
-        {project.branch ? (
-          <span className="flex items-center gap-1 font-mono">
-            <GitBranch className="h-3 w-3" />
-            {project.branch}
+          {project.open_tasks ? <span>{project.open_tasks} open tasks</span> : null}
+          <span className="flex items-center gap-1">
+            <span className={cn("h-1.5 w-1.5 rounded-full", project.runtime === "running" ? "bg-emerald-500" : "bg-border")} />
+            {project.runtime === "running" ? "Runtime running" : "Runtime stopped"}
           </span>
-        ) : null}
-        <span className="flex items-center gap-1">
-          <Bot className="h-3 w-3" />
-          {project.members.length} AI agents
-        </span>
-        {project.open_tasks ? <span>{project.open_tasks} open tasks</span> : null}
-        <span className="flex items-center gap-1">
-          <span className={cn("h-1.5 w-1.5 rounded-full", project.runtime === "running" ? "bg-emerald-500" : "bg-border")} />
-          {project.runtime === "running" ? "Runtime running" : "Runtime stopped"}
-        </span>
-      </div>
-      <p className="mt-3 border-t border-border pt-2 text-[11px] text-muted">Last activity {timeAgo(project.last_activity)}</p>
-    </Link>
+        </div>
+        <p className="mt-3 border-t border-border pt-2 text-[11px] text-muted">Last activity {timeAgo(project.last_activity)}</p>
+      </Link>
+      {menu ? <ContextMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} /> : null}
+      {dialog === "delete" ? <DeleteProjectDialog access={access} project={project} onClose={() => setDialog(null)} /> : null}
+      {dialog === "save" ? <SaveProjectCopyDialog access={access} project={project} onClose={() => setDialog(null)} /> : null}
+    </>
   );
 }
 
@@ -68,7 +118,10 @@ export default function ProjectsPage() {
 
   if (!hasAdminAccess || !access) {
     return workspaceAuthDisabled ? (
-      <AdminAccessGate title="Administrator access required" description="Projects run code and AI agents on this server, so only administrators can open them." />
+      <AdminAccessGate
+        title="Administrator access required"
+        description="Projects run code and AI agents on this server, so only administrators can open them."
+      />
     ) : (
       <p className="p-6 text-sm text-foreground-muted">Only administrators can open projects, because they run code and AI agents on this server.</p>
     );
@@ -106,12 +159,14 @@ export default function ProjectsPage() {
         {!projectsQuery.isLoading && projects.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
             <p className="text-sm font-medium text-foreground">No working schemas yet</p>
-            <p className="mt-1 text-sm text-foreground-muted">The workspace is still available. Set up a schema when you are ready to attach code and agents.</p>
+            <p className="mt-1 text-sm text-foreground-muted">
+              The workspace is still available. Set up a schema when you are ready to attach code and agents.
+            </p>
           </div>
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard key={project.id} project={project} access={access} />
           ))}
         </div>
       </section>

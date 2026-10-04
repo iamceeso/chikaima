@@ -21,11 +21,19 @@ export class UserRepository {
   }
 
   countSuperusers(): number {
-    return this.db.select().from(users).all().filter((user) => user.isSuperuser).length;
+    return this.db
+      .select()
+      .from(users)
+      .all()
+      .filter((user) => user.isSuperuser).length;
   }
 
   listAll(): UserRow[] {
-    return this.db.select().from(users).all().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return this.db
+      .select()
+      .from(users)
+      .all()
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
   insert(user: UserRow): void {

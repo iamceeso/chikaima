@@ -53,10 +53,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Topbar
-        title="Real-time Analytics"
-        description="Live monitoring of your AI workspace"
-      />
+      <Topbar title="Real-time Analytics" description="Live monitoring of your AI workspace" />
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4 border-l-4 border-l-blue-500 bg-background-secondary">
@@ -85,7 +82,10 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-xs font-medium text-foreground-muted uppercase tracking-widest">Avg Response</p>
-              <p className="text-3xl font-bold text-foreground mt-1">{metrics.avgResponseTime}<span className="text-xs">ms</span></p>
+              <p className="text-3xl font-bold text-foreground mt-1">
+                {metrics.avgResponseTime}
+                <span className="text-xs">ms</span>
+              </p>
               <p className="text-xs text-green-600 mt-1">✓ Within SLA</p>
             </div>
             <Clock className="h-5 w-5 text-amber-500 opacity-60 shrink-0" />
@@ -96,7 +96,10 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-xs font-medium text-foreground-muted uppercase tracking-widest">Uptime</p>
-              <p className="text-3xl font-bold text-foreground mt-1">{metrics.uptime}<span className="text-xs">%</span></p>
+              <p className="text-3xl font-bold text-foreground mt-1">
+                {metrics.uptime}
+                <span className="text-xs">%</span>
+              </p>
               <p className="text-xs text-green-600 mt-1">Last 24h</p>
             </div>
             <CheckCircle className="h-5 w-5 text-green-500 opacity-60 shrink-0" />
@@ -110,10 +113,7 @@ export default function DashboardPage() {
           <div className="flex items-end gap-2">
             <p className="text-2xl font-bold text-foreground">{metrics.cpuUsage}%</p>
             <div className="flex-1 h-6 bg-background rounded-lg overflow-hidden">
-              <div 
-                className="h-full bg-linear-to-r from-blue-500 to-blue-600 rounded-lg transition-all"
-                style={{width: `${metrics.cpuUsage}%`}}
-              />
+              <div className="h-full bg-linear-to-r from-blue-500 to-blue-600 rounded-lg transition-all" style={{ width: `${metrics.cpuUsage}%` }} />
             </div>
           </div>
         </Card>
@@ -123,10 +123,7 @@ export default function DashboardPage() {
           <div className="flex items-end gap-2">
             <p className="text-2xl font-bold text-foreground">{metrics.memoryUsage}%</p>
             <div className="flex-1 h-6 bg-background rounded-lg overflow-hidden">
-              <div 
-                className="h-full bg-linear-to-r from-purple-500 to-purple-600 rounded-lg transition-all"
-                style={{width: `${metrics.memoryUsage}%`}}
-              />
+              <div className="h-full bg-linear-to-r from-purple-500 to-purple-600 rounded-lg transition-all" style={{ width: `${metrics.memoryUsage}%` }} />
             </div>
           </div>
         </Card>
@@ -134,11 +131,14 @@ export default function DashboardPage() {
         <Card className="p-4 bg-background-secondary">
           <p className="text-xs font-medium text-foreground-muted uppercase tracking-widest mb-2">DB Latency</p>
           <div className="flex items-end gap-2">
-            <p className="text-2xl font-bold text-foreground">{metrics.databaseLatency}<span className="text-xs">ms</span></p>
+            <p className="text-2xl font-bold text-foreground">
+              {metrics.databaseLatency}
+              <span className="text-xs">ms</span>
+            </p>
             <div className="flex-1 h-6 bg-background rounded-lg overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-linear-to-r from-green-500 to-green-600 rounded-lg transition-all"
-                style={{width: `${(metrics.databaseLatency / 100) * 100}%`}}
+                style={{ width: `${(metrics.databaseLatency / 100) * 100}%` }}
               />
             </div>
           </div>
@@ -149,10 +149,7 @@ export default function DashboardPage() {
           <div className="flex items-end gap-2">
             <p className="text-2xl font-bold text-foreground">{metrics.cacheHitRate}%</p>
             <div className="flex-1 h-6 bg-background rounded-lg overflow-hidden">
-              <div 
-                className="h-full bg-linear-to-r from-amber-500 to-amber-600 rounded-lg transition-all"
-                style={{width: `${metrics.cacheHitRate}%`}}
-              />
+              <div className="h-full bg-linear-to-r from-amber-500 to-amber-600 rounded-lg transition-all" style={{ width: `${metrics.cacheHitRate}%` }} />
             </div>
           </div>
         </Card>
@@ -168,20 +165,14 @@ export default function DashboardPage() {
             {recentRequests.map((req) => (
               <div key={req.id} className="flex items-center justify-between rounded-lg border border-border bg-background p-2.5">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className={`h-2 w-2 rounded-full shrink-0 ${
-                    req.status === "success" ? "bg-green-500" : "bg-amber-500"
-                  }`} />
+                  <div className={`h-2 w-2 rounded-full shrink-0 ${req.status === "success" ? "bg-green-500" : "bg-amber-500"}`} />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-foreground truncate">{req.type}</p>
                     <p className="text-xs text-foreground-muted">{req.time}</p>
                   </div>
                 </div>
-                {req.duration && (
-                  <p className="text-xs font-medium text-foreground-muted shrink-0 ml-2">{req.duration}ms</p>
-                )}
-                {!req.duration && (
-                  <span className="inline-block animate-spin h-3 w-3 text-primary shrink-0 ml-2">⚙</span>
-                )}
+                {req.duration && <p className="text-xs font-medium text-foreground-muted shrink-0 ml-2">{req.duration}ms</p>}
+                {!req.duration && <span className="inline-block animate-spin h-3 w-3 text-primary shrink-0 ml-2">⚙</span>}
               </div>
             ))}
           </div>
@@ -208,7 +199,9 @@ export default function DashboardPage() {
 
       <div className="mt-3 flex items-center justify-between text-xs text-foreground-muted">
         <p>Live data - Updates every 5 seconds</p>
-        <p>Providers: {data?.providers ?? 0} - Models: {data?.models ?? 0} - Docs: {data?.documents ?? 0}</p>
+        <p>
+          Providers: {data?.providers ?? 0} - Models: {data?.models ?? 0} - Docs: {data?.documents ?? 0}
+        </p>
       </div>
     </>
   );

@@ -174,7 +174,11 @@ export class ChatService {
     }
 
     const { model, provider } = await this.resolveChatModelAndProvider(userId, conversation.modelId, payload.metadata ?? {});
-    const message = this.insertMessage(conversationId, payload.role, payload.content, { ...(payload.metadata ?? {}), provider: provider.providerType, model: model.modelKey });
+    const message = this.insertMessage(conversationId, payload.role, payload.content, {
+      ...(payload.metadata ?? {}),
+      provider: provider.providerType,
+      model: model.modelKey,
+    });
 
     const history = [...this.messagesFor(conversationId).filter((m) => m.id !== message.id), message];
     await this.respondTo(userId, conversation, history, provider, model, useRag);
@@ -196,7 +200,10 @@ export class ChatService {
       .run();
 
     if (message.role === "user") {
-      this.db.delete(messages).where(and(eq(messages.conversationId, message.conversationId), ne(messages.id, messageId), gt(messages.createdAt, message.createdAt))).run();
+      this.db
+        .delete(messages)
+        .where(and(eq(messages.conversationId, message.conversationId), ne(messages.id, messageId), gt(messages.createdAt, message.createdAt)))
+        .run();
 
       const { model, provider } = await this.resolveChatModelAndProvider(userId, conversation.modelId, message.meta as Record<string, unknown>);
       const history = this.messagesFor(message.conversationId).filter((item) => item.createdAt <= message.createdAt);
@@ -350,7 +357,14 @@ export class ChatService {
   }
 
   /** Generates and persists the assistant reply for `history`, appended to `conversation`. Shared by create/add/update. */
-  private async respondTo(userId: string, conversation: ConversationRow, history: MessageRow[], provider: ProviderRow, model: AIModelRow, useRag: boolean): Promise<void> {
+  private async respondTo(
+    userId: string,
+    conversation: ConversationRow,
+    history: MessageRow[],
+    provider: ProviderRow,
+    model: AIModelRow,
+    useRag: boolean,
+  ): Promise<void> {
     const pendingNotice = this.buildPendingAttachmentNotice(userId, history);
     let assistantContent: string;
     let meta: Record<string, unknown>;
@@ -360,7 +374,13 @@ export class ChatService {
       meta = { provider: provider.providerType, model: model.modelKey, processing_blocked: true, rag_citations: [] };
     } else if (useRag) {
       const ragScope = this.collectRagSourceFilters(history);
-      const result = await this.llm.generateReplyWithRag({ userId, provider, model, messages: await this.serializeMessages(userId, history, model), sourceFilters: ragScope });
+      const result = await this.llm.generateReplyWithRag({
+        userId,
+        provider,
+        model,
+        messages: await this.serializeMessages(userId, history, model),
+        sourceFilters: ragScope,
+      });
       meta = { provider: provider.providerType, model: model.modelKey, rag_citations: result.citations };
       assistantContent = result.content;
     } else {
@@ -442,7 +462,11 @@ export class ChatService {
     return parts;
   }
 
-  private async resolveChatModelAndProvider(userId: string, modelId: string | null, metadata: Record<string, unknown>): Promise<{ model: AIModelRow; provider: ProviderRow }> {
+  private async resolveChatModelAndProvider(
+    userId: string,
+    modelId: string | null,
+    metadata: Record<string, unknown>,
+  ): Promise<{ model: AIModelRow; provider: ProviderRow }> {
     const { model, provider } = this.llm.resolveModelAndProvider(userId, modelId);
     if (!this.shouldAutoUseVisionModel(userId, metadata, model)) {
       return { model, provider };

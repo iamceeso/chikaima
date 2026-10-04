@@ -6,14 +6,7 @@ import { AudioLines, Eye, FileText, Library, Search, Trash2, Video } from "lucid
 
 import { AssetPreviewDialog } from "@/components/assets/asset-preview-dialog";
 import { Topbar } from "@/components/layout/topbar";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,9 +60,7 @@ function toLibraryAsset(asset: AudioAsset | VideoAsset | DocumentAsset, kind: Li
       kind,
       status: audioAsset.status,
       created_at: audioAsset.created_at,
-      summary: audioAsset.transcript
-        ? `${audioAsset.transcript.slice(0, 180)}${audioAsset.transcript.length > 180 ? "..." : ""}`
-        : null,
+      summary: audioAsset.transcript ? `${audioAsset.transcript.slice(0, 180)}${audioAsset.transcript.length > 180 ? "..." : ""}` : null,
       detail: "Transcript-ready audio workspace",
       mime_type: null,
     };
@@ -170,10 +161,7 @@ export default function LibraryPage() {
       if (!normalizedQuery) {
         return true;
       }
-      return [asset.name, asset.summary ?? "", asset.detail]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedQuery);
+      return [asset.name, asset.summary ?? "", asset.detail].join(" ").toLowerCase().includes(normalizedQuery);
     });
   }, [activeKind, assets, query]);
 
@@ -224,10 +212,7 @@ export default function LibraryPage() {
 
   return (
     <>
-      <Topbar
-        title="Media library"
-        description="Browse processed audio, video, and documents with search-ready summaries and transcript context."
-      />
+      <Topbar title="Media library" description="Browse processed audio, video, and documents with search-ready summaries and transcript context." />
 
       <div className="grid gap-3 lg:grid-cols-3">
         {sections.map((section) => {
@@ -284,14 +269,7 @@ export default function LibraryPage() {
               {kind === "all" ? "All assets" : kindMeta[kind].label}
             </button>
           ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleClearAll}
-            disabled={!assets.length || clearAllAssets.isPending}
-            className="shrink-0"
-          >
+          <Button type="button" variant="outline" size="sm" onClick={handleClearAll} disabled={!assets.length || clearAllAssets.isPending} className="shrink-0">
             <Trash2 className="mr-2 h-4 w-4" />
             {clearAllAssets.isPending ? "Clearing..." : "Clear all assets"}
           </Button>
@@ -300,9 +278,7 @@ export default function LibraryPage() {
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
           <div className="grid gap-3">
             {loading ? (
-              <div className="rounded-3xl border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">
-                Loading library assets...
-              </div>
+              <div className="rounded-3xl border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">Loading library assets...</div>
             ) : filteredAssets.length ? (
               filteredAssets.map((asset) => {
                 const meta = kindMeta[asset.kind];
@@ -360,9 +336,7 @@ export default function LibraryPage() {
                 );
               })
             ) : (
-              <div className="rounded-3xl border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">
-                No assets match this filter yet.
-              </div>
+              <div className="rounded-3xl border border-dashed border-border px-5 py-8 text-sm text-foreground-muted">No assets match this filter yet.</div>
             )}
           </div>
         </div>
@@ -386,13 +360,7 @@ export default function LibraryPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              className="border border-border"
-              disabled={deleteAsset.isPending}
-              onClick={() => setAssetPendingDelete(null)}
-            >
+            <Button type="button" variant="ghost" className="border border-border" disabled={deleteAsset.isPending} onClick={() => setAssetPendingDelete(null)}>
               Cancel
             </Button>
             <Button
@@ -428,18 +396,12 @@ export default function LibraryPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear all assets?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove every audio file, video, and document in your library, along with related transcripts,
-              summaries, embeddings, jobs, and stored files.
+              This will remove every audio file, video, and document in your library, along with related transcripts, summaries, embeddings, jobs, and stored
+              files.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              className="border border-border"
-              disabled={clearAllAssets.isPending}
-              onClick={() => setClearAllOpen(false)}
-            >
+            <Button type="button" variant="ghost" className="border border-border" disabled={clearAllAssets.isPending} onClick={() => setClearAllOpen(false)}>
               Cancel
             </Button>
             <Button

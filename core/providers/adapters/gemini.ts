@@ -33,10 +33,11 @@ export class GeminiAdapter implements ProviderAdapter {
     const payload = this.buildPayload(messages);
     let response: Response;
     try {
-      response = await fetch(
-        `${this.baseUrl}/models/${modelKey}:streamGenerateContent?alt=sse&key=${encodeURIComponent(this.apiKey)}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) },
-      );
+      response = await fetch(`${this.baseUrl}/models/${modelKey}:streamGenerateContent?alt=sse&key=${encodeURIComponent(this.apiKey)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
     } catch {
       throw badGateway("Could not reach the Gemini provider.");
     }

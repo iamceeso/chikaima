@@ -19,11 +19,7 @@ test("createFormResolver returns parsed values for valid input", async () => {
   });
 
   const resolver = createFormResolver<{ email: string; password: string }>(schema);
-  const result = await resolver(
-    { email: "hello@example.com", password: "password123" },
-    undefined,
-    resolverOptions,
-  );
+  const result = await resolver({ email: "hello@example.com", password: "password123" }, undefined, resolverOptions);
 
   assert.deepEqual(result.values, {
     email: "hello@example.com",

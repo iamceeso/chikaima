@@ -102,17 +102,15 @@ test("replaceChunksForSource replaces prior chunks for the same source (delete-t
     await createOpenAiProvider(user.id);
     const service = new EmbeddingsService(db);
 
-    await withMockedFetch(
-      (async () => new Response(JSON.stringify({ data: [{ embedding: [1, 0, 0] }] }), { status: 200 })) as typeof fetch,
-      () =>
-        service.replaceChunksForSource({
-          userId: user.id,
-          sourceType: "document",
-          sourceId: "doc-1",
-          assetType: "document",
-          filename: "v1.pdf",
-          chunks: [{ content: "first version", metadata: {} }],
-        }),
+    await withMockedFetch((async () => new Response(JSON.stringify({ data: [{ embedding: [1, 0, 0] }] }), { status: 200 })) as typeof fetch, () =>
+      service.replaceChunksForSource({
+        userId: user.id,
+        sourceType: "document",
+        sourceId: "doc-1",
+        assetType: "document",
+        filename: "v1.pdf",
+        chunks: [{ content: "first version", metadata: {} }],
+      }),
     );
 
     const secondResult = await withMockedFetch(
@@ -124,7 +122,10 @@ test("replaceChunksForSource replaces prior chunks for the same source (delete-t
           sourceId: "doc-1",
           assetType: "document",
           filename: "v2.pdf",
-          chunks: [{ content: "second version A", metadata: {} }, { content: "second version B", metadata: {} }],
+          chunks: [
+            { content: "second version A", metadata: {} },
+            { content: "second version B", metadata: {} },
+          ],
         }),
     );
 

@@ -31,7 +31,10 @@ async function withTempDb<T>(fn: () => T | Promise<T>): Promise<T> {
 test("getCurrentUser rejects a missing bearer token when auth is enabled", async () => {
   await withTempDb(async () => {
     const db = getDb();
-    await assert.rejects(() => getCurrentUser(db, null), (error: unknown) => error instanceof HttpError && error.statusCode === 401);
+    await assert.rejects(
+      () => getCurrentUser(db, null),
+      (error: unknown) => error instanceof HttpError && error.statusCode === 401,
+    );
   });
 });
 
@@ -75,7 +78,10 @@ test("getCurrentAdminUser requires superuser when auth is enabled", async () => 
     const resolvedAdmin = await getCurrentAdminUser(db, `Bearer ${adminToken}`);
     assert.equal(resolvedAdmin.isSuperuser, true);
 
-    await assert.rejects(() => getCurrentAdminUser(db, `Bearer ${userToken}`), (error: unknown) => error instanceof HttpError && error.statusCode === 403);
+    await assert.rejects(
+      () => getCurrentAdminUser(db, `Bearer ${userToken}`),
+      (error: unknown) => error instanceof HttpError && error.statusCode === 403,
+    );
   });
 });
 
@@ -91,6 +97,9 @@ test("getCurrentAdminUser falls back to HTTP Basic auth when workspace auth is d
     assert.equal(resolved.id, admin.id);
 
     const wrongBasic = `Basic ${Buffer.from("admin@example.com:wrong").toString("base64")}`;
-    await assert.rejects(() => getCurrentAdminUser(db, wrongBasic), (error: unknown) => error instanceof HttpError && error.statusCode === 401);
+    await assert.rejects(
+      () => getCurrentAdminUser(db, wrongBasic),
+      (error: unknown) => error instanceof HttpError && error.statusCode === 401,
+    );
   });
 });

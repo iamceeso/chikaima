@@ -186,9 +186,15 @@ export function TeamEditor({
       {/* Order: header, then (in the AI team view) the agents, then supervision settings, with presets last for an existing team. */}
       <div className="order-[-3] flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">{section === "project" ? "Project settings" : section === "team" ? "AI team" : team ? `Edit ${team.name}` : "New project"}</h2>
-          {section === "team" ? <p className="mt-0.5 text-sm text-foreground-muted">Who is on the team, what each agent may do, and how much you approve.</p> : null}
-          {section === "project" ? <p className="mt-0.5 text-sm text-foreground-muted">Where the code lives and how the project is tested, run and deployed.</p> : null}
+          <h2 className="text-lg font-semibold text-foreground">
+            {section === "project" ? "Project settings" : section === "team" ? "AI team" : team ? `Edit ${team.name}` : "New project"}
+          </h2>
+          {section === "team" ? (
+            <p className="mt-0.5 text-sm text-foreground-muted">Who is on the team, what each agent may do, and how much you approve.</p>
+          ) : null}
+          {section === "project" ? (
+            <p className="mt-0.5 text-sm text-foreground-muted">Where the code lives and how the project is tested, run and deployed.</p>
+          ) : null}
         </div>
         {embedded ? null : (
           <button type="button" aria-label="Close" onClick={() => onDone(null)} className="text-foreground-muted hover:text-foreground">
@@ -223,100 +229,135 @@ export function TeamEditor({
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         {showProject ? (
           <>
-        <div>
-          <Label htmlFor="team_name">Project name</Label>
-          <Input id="team_name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="my-saas" />
-        </div>
-        {team ? (
-          <div>
-            <Label htmlFor="team_folder">Folder</Label>
-            <Input id="team_folder" value={draft.folder} disabled />
-            <p className="mt-1 text-xs text-foreground-muted">The project&apos;s code lives here as normal files.</p>
-          </div>
-        ) : (
-          <div className="sm:col-span-2">
-            <Label>Folder</Label>
-            <p className="mb-1.5 text-xs text-foreground-muted">Use an existing folder of code, or create a new one.</p>
-            <FolderPicker access={access} value={draft.folder} onChange={(folder) => setDraft((current) => ({ ...current, folder }))} />
-          </div>
-        )}
+            <div>
+              <Label htmlFor="team_name">Project name</Label>
+              <Input id="team_name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="my-saas" />
+            </div>
+            {team ? (
+              <div>
+                <Label htmlFor="team_folder">Folder</Label>
+                <Input id="team_folder" value={draft.folder} disabled />
+                <p className="mt-1 text-xs text-foreground-muted">The project&apos;s code lives here as normal files.</p>
+              </div>
+            ) : (
+              <div className="sm:col-span-2">
+                <Label>Folder</Label>
+                <p className="mb-1.5 text-xs text-foreground-muted">Use an existing folder of code, or create a new one.</p>
+                <FolderPicker access={access} value={draft.folder} onChange={(folder) => setDraft((current) => ({ ...current, folder }))} />
+              </div>
+            )}
           </>
         ) : null}
         {showTeam ? (
           <>
-        <div className="sm:col-span-2">
-          <Label>Supervision</Label>
-          <div className="mt-1 grid gap-2 sm:grid-cols-3">
-            {(Object.keys(AUTONOMY_LABELS) as CollabAutonomy[]).map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => setDraft({ ...draft, autonomy: level })}
-                className={cn("rounded-lg border p-3 text-left", draft.autonomy === level ? "border-primary bg-background" : "border-border hover:border-primary/60")}
+            <div className="sm:col-span-2">
+              <Label>Supervision</Label>
+              <div className="mt-1 grid gap-2 sm:grid-cols-3">
+                {(Object.keys(AUTONOMY_LABELS) as CollabAutonomy[]).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setDraft({ ...draft, autonomy: level })}
+                    className={cn(
+                      "rounded-lg border p-3 text-left",
+                      draft.autonomy === level ? "border-primary bg-background" : "border-border hover:border-primary/60",
+                    )}
+                  >
+                    <p className="text-sm font-semibold text-foreground">{AUTONOMY_LABELS[level].label}</p>
+                    <p className="mt-1 text-xs text-foreground-muted">{AUTONOMY_LABELS[level].hint}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="team_policy">Review decision</Label>
+              <select
+                id="team_policy"
+                className={selectClass}
+                value={draft.decision_policy}
+                onChange={(event) => setDraft({ ...draft, decision_policy: event.target.value as CollabDecisionPolicy })}
               >
-                <p className="text-sm font-semibold text-foreground">{AUTONOMY_LABELS[level].label}</p>
-                <p className="mt-1 text-xs text-foreground-muted">{AUTONOMY_LABELS[level].hint}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="team_policy">Review decision</Label>
-          <select id="team_policy" className={selectClass} value={draft.decision_policy} onChange={(event) => setDraft({ ...draft, decision_policy: event.target.value as CollabDecisionPolicy })}>
-            {(Object.keys(POLICY_HINTS) as CollabDecisionPolicy[]).map((policy) => (
-              <option key={policy} value={policy}>
-                {policy}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-foreground-muted">{POLICY_HINTS[draft.decision_policy]}</p>
-        </div>
-        <div>
-          <Label htmlFor="team_revisions">Revisions per step</Label>
-          <Input id="team_revisions" type="number" min={0} max={5} value={draft.max_revisions} onChange={(event) => setDraft({ ...draft, max_revisions: Number.parseInt(event.target.value, 10) || 0 })} />
-          <p className="mt-1 text-xs text-foreground-muted">How often a rejected step goes back before it is abandoned.</p>
-        </div>
-        <div>
-          <Label htmlFor="team_budget">Model calls per task</Label>
-          <Input id="team_budget" type="number" min={1} max={500} value={draft.max_model_calls} onChange={(event) => setDraft({ ...draft, max_model_calls: Number.parseInt(event.target.value, 10) || 1 })} />
-          <p className="mt-1 text-xs text-foreground-muted">Hard stop, so agents can&apos;t turn into an expensive meeting.</p>
-        </div>
+                {(Object.keys(POLICY_HINTS) as CollabDecisionPolicy[]).map((policy) => (
+                  <option key={policy} value={policy}>
+                    {policy}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-foreground-muted">{POLICY_HINTS[draft.decision_policy]}</p>
+            </div>
+            <div>
+              <Label htmlFor="team_revisions">Revisions per step</Label>
+              <Input
+                id="team_revisions"
+                type="number"
+                min={0}
+                max={5}
+                value={draft.max_revisions}
+                onChange={(event) => setDraft({ ...draft, max_revisions: Number.parseInt(event.target.value, 10) || 0 })}
+              />
+              <p className="mt-1 text-xs text-foreground-muted">How often a rejected step goes back before it is abandoned.</p>
+            </div>
+            <div>
+              <Label htmlFor="team_budget">Model calls per task</Label>
+              <Input
+                id="team_budget"
+                type="number"
+                min={1}
+                max={500}
+                value={draft.max_model_calls}
+                onChange={(event) => setDraft({ ...draft, max_model_calls: Number.parseInt(event.target.value, 10) || 1 })}
+              />
+              <p className="mt-1 text-xs text-foreground-muted">Hard stop, so agents can&apos;t turn into an expensive meeting.</p>
+            </div>
           </>
         ) : null}
         {showProject ? (
           <>
-        <div>
-          <Label htmlFor="team_tests">Test command</Label>
-          <Input id="team_tests" value={draft.test_command ?? ""} onChange={(event) => setDraft({ ...draft, test_command: event.target.value })} placeholder="npm test" />
-          <p className="mt-1 text-xs text-foreground-muted">Used by agents with “Run tests”. Needs CHIKAIMA_COLLAB_EXEC on the server.</p>
-        </div>
-        <div>
-          <Label htmlFor="team_preview">Preview command</Label>
-          <Input
-            id="team_preview"
-            value={draft.preview_command ?? ""}
-            onChange={(event) => setDraft({ ...draft, preview_command: event.target.value })}
-            placeholder="npm run dev -- --port $PORT --hostname 0.0.0.0"
-          />
-          <p className="mt-1 text-xs text-foreground-muted">Starts the live preview. Must listen on $PORT.</p>
-        </div>
-        <div>
-          <Label htmlFor="team_deploy">Deploy command</Label>
-          <Input id="team_deploy" value={draft.deploy_command ?? ""} onChange={(event) => setDraft({ ...draft, deploy_command: event.target.value })} placeholder="vercel deploy --prod" />
-          <p className="mt-1 text-xs text-foreground-muted">Run from the Deploy tab. Agents may only request it; you always approve.</p>
-        </div>
-        <div className="sm:col-span-2 flex flex-wrap gap-2">
-          <Chip active={draft.git_enabled} onClick={() => setDraft({ ...draft, git_enabled: !draft.git_enabled, parallel: draft.git_enabled ? false : draft.parallel })}>
-            Git: branch per run, commit per step
-          </Chip>
-          <Chip
-            active={draft.parallel}
-            title="Different implementers work at the same time, each in its own git worktree; merged by rank."
-            onClick={() => setDraft({ ...draft, parallel: !draft.parallel, git_enabled: !draft.parallel ? true : draft.git_enabled })}
-          >
-            Parallel agents (git worktrees)
-          </Chip>
-        </div>
+            <div>
+              <Label htmlFor="team_tests">Test command</Label>
+              <Input
+                id="team_tests"
+                value={draft.test_command ?? ""}
+                onChange={(event) => setDraft({ ...draft, test_command: event.target.value })}
+                placeholder="npm test"
+              />
+              <p className="mt-1 text-xs text-foreground-muted">Used by agents with “Run tests”. Needs CHIKAIMA_COLLAB_EXEC on the server.</p>
+            </div>
+            <div>
+              <Label htmlFor="team_preview">Preview command</Label>
+              <Input
+                id="team_preview"
+                value={draft.preview_command ?? ""}
+                onChange={(event) => setDraft({ ...draft, preview_command: event.target.value })}
+                placeholder="npm run dev -- --port $PORT --hostname 0.0.0.0"
+              />
+              <p className="mt-1 text-xs text-foreground-muted">Starts the live preview. Must listen on $PORT.</p>
+            </div>
+            <div>
+              <Label htmlFor="team_deploy">Deploy command</Label>
+              <Input
+                id="team_deploy"
+                value={draft.deploy_command ?? ""}
+                onChange={(event) => setDraft({ ...draft, deploy_command: event.target.value })}
+                placeholder="vercel deploy --prod"
+              />
+              <p className="mt-1 text-xs text-foreground-muted">Run from the Deploy tab. Agents may only request it; you always approve.</p>
+            </div>
+            <div className="sm:col-span-2 flex flex-wrap gap-2">
+              <Chip
+                active={draft.git_enabled}
+                onClick={() => setDraft({ ...draft, git_enabled: !draft.git_enabled, parallel: draft.git_enabled ? false : draft.parallel })}
+              >
+                Git: branch per run, commit per step
+              </Chip>
+              <Chip
+                active={draft.parallel}
+                title="Different implementers work at the same time, each in its own git worktree; merged by rank."
+                onClick={() => setDraft({ ...draft, parallel: !draft.parallel, git_enabled: !draft.parallel ? true : draft.git_enabled })}
+              >
+                Parallel agents (git worktrees)
+              </Chip>
+            </div>
           </>
         ) : null}
       </div>
@@ -332,14 +373,19 @@ export function TeamEditor({
             onClick={() =>
               setDraft((current) => ({
                 ...current,
-                members: [...current.members, toDraftMember({ model_id: models[0]?.id ?? "", role: "reviewer", precedence: Math.max(0, ...current.members.map((m) => m.precedence)) + 1 })],
+                members: [
+                  ...current.members,
+                  toDraftMember({ model_id: models[0]?.id ?? "", role: "reviewer", precedence: Math.max(0, ...current.members.map((m) => m.precedence)) + 1 }),
+                ],
               }))
             }
           >
             <Plus className="mr-1 h-4 w-4" /> Add agent
           </Button>
         </div>
-        <p className="mt-1 text-xs text-foreground-muted">Rank #1 has the final say when agents disagree. Each agent only does what its permissions and scope allow.</p>
+        <p className="mt-1 text-xs text-foreground-muted">
+          Rank #1 has the final say when agents disagree. Each agent only does what its permissions and scope allow.
+        </p>
 
         <div className="mt-3 space-y-3">
           {draft.members
@@ -350,15 +396,31 @@ export function TeamEditor({
                 <div className="grid gap-3 sm:grid-cols-[4.5rem_1fr_1fr_8.5rem_auto]">
                   <div>
                     <Label htmlFor={`rank_${index}`}>Rank</Label>
-                    <Input id={`rank_${index}`} type="number" min={1} value={member.precedence} onChange={(event) => updateMember(index, { precedence: Number.parseInt(event.target.value, 10) || 1 })} />
+                    <Input
+                      id={`rank_${index}`}
+                      type="number"
+                      min={1}
+                      value={member.precedence}
+                      onChange={(event) => updateMember(index, { precedence: Number.parseInt(event.target.value, 10) || 1 })}
+                    />
                   </div>
                   <div>
                     <Label htmlFor={`title_${index}`}>Job title</Label>
-                    <Input id={`title_${index}`} value={member.title ?? ""} onChange={(event) => updateMember(index, { title: event.target.value })} placeholder="Database Engineer" />
+                    <Input
+                      id={`title_${index}`}
+                      value={member.title ?? ""}
+                      onChange={(event) => updateMember(index, { title: event.target.value })}
+                      placeholder="Database Engineer"
+                    />
                   </div>
                   <div>
                     <Label htmlFor={`model_${index}`}>Model</Label>
-                    <select id={`model_${index}`} className={selectClass} value={member.model_id} onChange={(event) => updateMember(index, { model_id: event.target.value })}>
+                    <select
+                      id={`model_${index}`}
+                      className={selectClass}
+                      value={member.model_id}
+                      onChange={(event) => updateMember(index, { model_id: event.target.value })}
+                    >
                       {models.map((model) => (
                         <option key={model.id} value={model.id}>
                           {model.display_name}
@@ -402,7 +464,11 @@ export function TeamEditor({
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   <span className="mr-1 text-xs font-medium text-foreground">Permissions</span>
                   {(Object.keys(PERMISSION_LABELS) as CollabPermission[]).map((permission) => (
-                    <Chip key={permission} active={member.permissions.includes(permission)} onClick={() => updateMember(index, { permissions: toggle(member.permissions, permission) })}>
+                    <Chip
+                      key={permission}
+                      active={member.permissions.includes(permission)}
+                      onClick={() => updateMember(index, { permissions: toggle(member.permissions, permission) })}
+                    >
                       {PERMISSION_LABELS[permission]}
                     </Chip>
                   ))}
@@ -411,7 +477,12 @@ export function TeamEditor({
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div>
                     <Label htmlFor={`scope_${index}`}>Allowed paths</Label>
-                    <Input id={`scope_${index}`} value={member.scopeText} onChange={(event) => updateMember(index, { scopeText: event.target.value })} placeholder="src/frontend, **/*.test.ts (empty = whole folder)" />
+                    <Input
+                      id={`scope_${index}`}
+                      value={member.scopeText}
+                      onChange={(event) => updateMember(index, { scopeText: event.target.value })}
+                      placeholder="src/frontend, **/*.test.ts (empty = whole folder)"
+                    />
                   </div>
                   <div>
                     <Label htmlFor={`reports_${index}`}>Reports to</Label>
@@ -439,7 +510,11 @@ export function TeamEditor({
                     {ranks
                       .filter((rank) => rank !== member.precedence)
                       .map((rank) => (
-                        <Chip key={rank} active={member.reviewed_by.includes(rank)} onClick={() => updateMember(index, { reviewed_by: toggle(member.reviewed_by, rank) })}>
+                        <Chip
+                          key={rank}
+                          active={member.reviewed_by.includes(rank)}
+                          onClick={() => updateMember(index, { reviewed_by: toggle(member.reviewed_by, rank) })}
+                        >
                           {labelFor(rank)}
                         </Chip>
                       ))}
@@ -450,7 +525,12 @@ export function TeamEditor({
                 <div className="mt-3 grid gap-3 sm:grid-cols-[12rem_1fr]">
                   <div>
                     <Label htmlFor={`name_${index}`}>Name</Label>
-                    <Input id={`name_${index}`} value={member.name ?? ""} onChange={(event) => updateMember(index, { name: event.target.value })} placeholder="Bob (optional)" />
+                    <Input
+                      id={`name_${index}`}
+                      value={member.name ?? ""}
+                      onChange={(event) => updateMember(index, { name: event.target.value })}
+                      placeholder="Bob (optional)"
+                    />
                   </div>
                   <div>
                     <Label htmlFor={`instructions_${index}`}>Instructions</Label>

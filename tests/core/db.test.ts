@@ -32,9 +32,9 @@ async function withTempDb<T>(fn: (dbPath: string) => T | Promise<T>): Promise<T>
 test("getDb applies all migrations and creates expected tables", async () => {
   await withTempDb(() => {
     const db = getDb();
-    const tableNames = (
-      getRawConnection().prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as { name: string }[]
-    ).map((row) => row.name);
+    const tableNames = (getRawConnection().prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as { name: string }[]).map(
+      (row) => row.name,
+    );
 
     for (const expected of ["users", "providers", "ai_models", "jobs", "asset_chunks", "workspace_configs"]) {
       assert.ok(tableNames.includes(expected), `expected table ${expected} to exist`);
@@ -130,7 +130,8 @@ test("repairCollabSchema adds collaboration columns and tables an early 0006 dra
     repairCollabSchema(connection);
     repairCollabSchema(connection);
     const columns = (table: string) => (connection.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((row) => row.name);
-    for (const column of ["autonomy", "test_command", "max_model_calls", "git_enabled", "parallel", "preview_command", "deploy_command"]) assert.ok(columns("collab_teams").includes(column), column);
+    for (const column of ["autonomy", "test_command", "max_model_calls", "git_enabled", "parallel", "preview_command", "deploy_command"])
+      assert.ok(columns("collab_teams").includes(column), column);
     for (const column of ["title", "scope", "permissions", "reports_to", "reviewed_by"]) assert.ok(columns("collab_members").includes(column), column);
     for (const column of ["base_branch", "run_branch"]) assert.ok(columns("collab_runs").includes(column), column);
     assert.ok(columns("collab_approvals").includes("resolved_at"));

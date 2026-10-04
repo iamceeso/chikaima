@@ -166,7 +166,8 @@ export const TEAM_TEMPLATES: TeamTemplate[] = [
         title: "Database Engineer",
         role: "implementer",
         precedence: 4,
-        instructions: "Own schema and migrations. Prefer backwards-compatible migrations. Never remove columns without approval. Review indexes for large tables.",
+        instructions:
+          "Own schema and migrations. Prefer backwards-compatible migrations. Never remove columns without approval. Review indexes for large tables.",
         permissions: ["edit", "run_tests"],
         scope: ["database", "migrations", "prisma", "drizzle", "db"],
         reports_to: 1,

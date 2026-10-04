@@ -34,13 +34,7 @@ export function SignOutButton({
   });
 
   return (
-    <Button
-      type="button"
-      variant={variant}
-      className={className}
-      onClick={() => mutation.mutate()}
-      disabled={mutation.isPending}
-    >
+    <Button type="button" variant={variant} className={className} onClick={() => mutation.mutate()} disabled={mutation.isPending}>
       <LogOut className="h-4 w-4" />
       <span className="ml-2">{mutation.isPending ? "Signing out..." : "Sign out"}</span>
     </Button>

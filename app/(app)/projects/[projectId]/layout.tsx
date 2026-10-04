@@ -44,7 +44,10 @@ export default function ProjectLayout() {
   if (!hasAdminAccess || !access) {
     return workspaceAuthDisabled ? (
       <div className="mx-auto max-w-md pt-16">
-        <AdminAccessGate title="Administrator access required" description="Projects run code and AI agents on this server, so only administrators can open them." />
+        <AdminAccessGate
+          title="Administrator access required"
+          description="Projects run code and AI agents on this server, so only administrators can open them."
+        />
       </div>
     ) : (
       <Centered>Only administrators can open projects, because they run code and AI agents on this server.</Centered>

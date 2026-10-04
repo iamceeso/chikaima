@@ -14,14 +14,7 @@ interface ConversationListProps {
   onDelete?: (id: string) => void;
 }
 
-export function ConversationList({
-  conversations,
-  currentId,
-  isLoading,
-  onSelect,
-  onCreate,
-  onDelete,
-}: ConversationListProps) {
+export function ConversationList({ conversations, currentId, isLoading, onSelect, onCreate, onDelete }: ConversationListProps) {
   return (
     <div className="h-full flex flex-col bg-background-secondary border-r border-border">
       <div className="p-4 border-b border-border">
@@ -43,16 +36,10 @@ export function ConversationList({
               key={conv.id}
               className={cn(
                 "group flex items-center justify-between gap-2 px-3 py-2 rounded-lg transition-colors cursor-pointer",
-                currentId === conv.id
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted text-foreground",
+                currentId === conv.id ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground",
               )}
             >
-              <button
-                onClick={() => onSelect(conv)}
-                disabled={isLoading}
-                className="flex-1 text-left truncate"
-              >
+              <button onClick={() => onSelect(conv)} disabled={isLoading} className="flex-1 text-left truncate">
                 <div className="text-sm font-medium truncate">{conv.title}</div>
                 {conv.updated_at && (
                   <div className={cn("text-xs truncate", currentId === conv.id ? "opacity-70" : "text-foreground-muted")}>

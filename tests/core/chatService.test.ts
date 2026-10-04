@@ -125,7 +125,9 @@ test("deleteConversation removes every message in it (cascade)", async () => {
     const user = new AuthService(db).register({ email: "user@example.com", fullName: "User", password: "password123" });
     await createOpenAiProvider(user.id);
     const service = new ChatService(db);
-    const conversation = await withMockedFetch(chatCompletionFetch("hi"), () => service.createConversation(user.id, { title: "Chat", initialMessage: "hello" }, false));
+    const conversation = await withMockedFetch(chatCompletionFetch("hi"), () =>
+      service.createConversation(user.id, { title: "Chat", initialMessage: "hello" }, false),
+    );
     assert.ok(db.select().from(messages).where(eq(messages.conversationId, conversation.id)).all().length > 0);
 
     service.deleteConversation(user.id, conversation.id);
@@ -141,7 +143,9 @@ test("updateMessage on a user message re-generates the reply and drops any later
     const user = new AuthService(db).register({ email: "user@example.com", fullName: "User", password: "password123" });
     await createOpenAiProvider(user.id);
     const service = new ChatService(db);
-    const conversation = await withMockedFetch(chatCompletionFetch("first reply"), () => service.createConversation(user.id, { title: "Chat", initialMessage: "first question" }, false));
+    const conversation = await withMockedFetch(chatCompletionFetch("first reply"), () =>
+      service.createConversation(user.id, { title: "Chat", initialMessage: "first question" }, false),
+    );
 
     const userMessage = db.select().from(messages).where(eq(messages.conversationId, conversation.id)).all()[0]!;
 
@@ -161,7 +165,9 @@ test("regenerateMessage on an assistant message produces a new assistant message
     const user = new AuthService(db).register({ email: "user@example.com", fullName: "User", password: "password123" });
     await createOpenAiProvider(user.id);
     const service = new ChatService(db);
-    const conversation = await withMockedFetch(chatCompletionFetch("original reply"), () => service.createConversation(user.id, { title: "Chat", initialMessage: "question" }, false));
+    const conversation = await withMockedFetch(chatCompletionFetch("original reply"), () =>
+      service.createConversation(user.id, { title: "Chat", initialMessage: "question" }, false),
+    );
     const assistantMessage = db.select().from(messages).where(eq(messages.conversationId, conversation.id)).all()[1]!;
 
     const regenerated = await withMockedFetch(chatCompletionFetch("regenerated reply"), () => service.regenerateMessage(user.id, assistantMessage.id, false));
@@ -178,7 +184,9 @@ test("a message referencing a still-processing attachment gets a pending notice 
     await createOpenAiProvider(user.id);
 
     const now = new Date().toISOString();
-    db.insert(audioAssets).values({ id: "audio-1", userId: user.id, name: "clip.mp3", filePath: join(workDir, "clip.mp3"), status: "processing", createdAt: now, updatedAt: now }).run();
+    db.insert(audioAssets)
+      .values({ id: "audio-1", userId: user.id, name: "clip.mp3", filePath: join(workDir, "clip.mp3"), status: "processing", createdAt: now, updatedAt: now })
+      .run();
 
     const service = new ChatService(db);
     let fetchCalled = false;
@@ -210,19 +218,28 @@ test("addMessage with RAG enabled includes citations from indexed chunks in the 
     await createOpenAiProvider(user.id);
 
     const now = new Date().toISOString();
-    db.insert(documents).values({ id: "doc-1", userId: user.id, name: "handbook.pdf", filePath: join(workDir, "handbook.pdf"), mimeType: "application/pdf", status: "completed", createdAt: now, updatedAt: now }).run();
+    db.insert(documents)
+      .values({
+        id: "doc-1",
+        userId: user.id,
+        name: "handbook.pdf",
+        filePath: join(workDir, "handbook.pdf"),
+        mimeType: "application/pdf",
+        status: "completed",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
 
-    await withMockedFetch(
-      (async () => new Response(JSON.stringify({ data: [{ embedding: [1, 0, 0] }] }), { status: 200 })) as typeof fetch,
-      () =>
-        new EmbeddingsService(db).replaceChunksForSource({
-          userId: user.id,
-          sourceType: "document",
-          sourceId: "doc-1",
-          assetType: "document",
-          filename: "handbook.pdf",
-          chunks: [{ content: "vacation policy is 20 days per year", metadata: { page: 3 } }],
-        }),
+    await withMockedFetch((async () => new Response(JSON.stringify({ data: [{ embedding: [1, 0, 0] }] }), { status: 200 })) as typeof fetch, () =>
+      new EmbeddingsService(db).replaceChunksForSource({
+        userId: user.id,
+        sourceType: "document",
+        sourceId: "doc-1",
+        assetType: "document",
+        filename: "handbook.pdf",
+        chunks: [{ content: "vacation policy is 20 days per year", metadata: { page: 3 } }],
+      }),
     );
 
     const service = new ChatService(db);
@@ -256,13 +273,17 @@ test("streamChat with no conversation_id creates a conversation, streams tokens,
     await createOpenAiProvider(user.id);
     const service = new ChatService(db);
 
-    const events = await withMockedFetch(sseChunkFetch(["Hello", " there"]), () =>
-      collectStreamEvents(service.streamChat(user.id, { content: "Hi" })),
-    );
+    const events = await withMockedFetch(sseChunkFetch(["Hello", " there"]), () => collectStreamEvents(service.streamChat(user.id, { content: "Hi" })));
 
     const metadataEvent = events[0]!;
     assert.equal(metadataEvent.type, "metadata");
-    assert.equal(events.filter((e) => e.type === "token").map((e) => (e as { text: string }).text).join(""), "Hello there");
+    assert.equal(
+      events
+        .filter((e) => e.type === "token")
+        .map((e) => (e as { text: string }).text)
+        .join(""),
+      "Hello there",
+    );
     assert.equal(events[events.length - 1]!.type, "done");
 
     assert.equal(metadataEvent.type, "metadata");
@@ -283,7 +304,9 @@ test("streamChat with a conversation_id appends to the existing conversation and
     const other = new AuthService(db).register({ email: "other@example.com", fullName: "Other", password: "password123" });
     await createOpenAiProvider(owner.id);
     const service = new ChatService(db);
-    const conversation = await withMockedFetch(chatCompletionFetch("first"), () => service.createConversation(owner.id, { title: "Chat", initialMessage: "first question" }, false));
+    const conversation = await withMockedFetch(chatCompletionFetch("first"), () =>
+      service.createConversation(owner.id, { title: "Chat", initialMessage: "first question" }, false),
+    );
 
     const events = await withMockedFetch(sseChunkFetch(["second reply"]), () =>
       collectStreamEvents(service.streamChat(owner.id, { content: "second question", conversationId: conversation.id })),
@@ -304,7 +327,9 @@ test("toConversationResponse maps snake_case fields for the frontend contract", 
     const user = new AuthService(db).register({ email: "user@example.com", fullName: "User", password: "password123" });
     await createOpenAiProvider(user.id);
     const service = new ChatService(db);
-    const conversation = await withMockedFetch(chatCompletionFetch("hi"), () => service.createConversation(user.id, { title: "Chat", initialMessage: "hello" }, false));
+    const conversation = await withMockedFetch(chatCompletionFetch("hi"), () =>
+      service.createConversation(user.id, { title: "Chat", initialMessage: "hello" }, false),
+    );
 
     const response = toConversationResponse(conversation, service.messagesFor(conversation.id));
     assert.equal(response.model_id, conversation.modelId);

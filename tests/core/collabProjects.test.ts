@@ -32,7 +32,10 @@ async function withEnv<T>(fn: () => T | Promise<T>): Promise<T> {
     __resetDbForTests();
     __resetConfigForTests();
     __resetSecretManagerForTests();
-    for (const [key, value] of [["CHIKAIMA_DB_PATH", previous.db], ["CHIKAIMA_COLLAB_ROOT", previous.root]] as const) {
+    for (const [key, value] of [
+      ["CHIKAIMA_DB_PATH", previous.db],
+      ["CHIKAIMA_COLLAB_ROOT", previous.root],
+    ] as const) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
@@ -43,8 +46,32 @@ async function withEnv<T>(fn: () => T | Promise<T>): Promise<T> {
 function seed(db: ChikaimaDatabase): string {
   const user = new AuthService(db).register({ email: "admin@example.com", fullName: "Admin", password: "password123" });
   const now = new Date().toISOString();
-  db.insert(providers).values({ id: "prov-1", userId: user.id, name: "OpenAI", providerType: "openai", baseUrl: null, encryptedConfig: {}, isEnabled: true, createdAt: now, updatedAt: now }).run();
-  db.insert(aiModels).values({ id: "m1", providerId: "prov-1", modelKey: "gpt", displayName: "GPT", capabilities: {}, isDefault: true, isAvailable: true, createdAt: now, updatedAt: now }).run();
+  db.insert(providers)
+    .values({
+      id: "prov-1",
+      userId: user.id,
+      name: "OpenAI",
+      providerType: "openai",
+      baseUrl: null,
+      encryptedConfig: {},
+      isEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  db.insert(aiModels)
+    .values({
+      id: "m1",
+      providerId: "prov-1",
+      modelKey: "gpt",
+      displayName: "GPT",
+      capabilities: {},
+      isDefault: true,
+      isAvailable: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
   return user.id;
 }
 
@@ -102,7 +129,10 @@ test("tasks are numbered per project, start in the backlog, and only backlog tas
     await runner.wait(run.id);
     const done = service.listTasks(userId, team.id).find((task) => task.id === first.id)!;
     assert.deepEqual([done.column, done.outcome], ["done", "completed"]);
-    assert.deepEqual(service.listTasks(userId, team.id).map((task) => task.key), ["SAAS-1"]);
+    assert.deepEqual(
+      service.listTasks(userId, team.id).map((task) => task.key),
+      ["SAAS-1"],
+    );
   });
 });
 
@@ -123,9 +153,32 @@ test("giving the team a task directly also records it as a task", async () => {
 test("describeTask places a task on the board and tracks its subtasks", () => {
   const now = new Date().toISOString();
   const task = { id: "t", teamId: "team", userId: "u", number: 12, title: "OAuth", description: "", runId: "r", createdAt: now, updatedAt: now };
-  const run = { id: "r", teamId: "team", userId: "u", task: "OAuth", status: "running", result: {}, errorMessage: null, baseBranch: "main", runBranch: "b", startedAt: now, completedAt: null, createdAt: now, updatedAt: now };
+  const run = {
+    id: "r",
+    teamId: "team",
+    userId: "u",
+    task: "OAuth",
+    status: "running",
+    result: {},
+    errorMessage: null,
+    baseBranch: "main",
+    runBranch: "b",
+    startedAt: now,
+    completedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
   let id = 0;
-  const message = (kind: string, content: string, data: Record<string, unknown>, memberId: string | null = null): CollabMessageRow => ({ id: ++id, runId: "r", userId: "u", memberId, kind, content, data, createdAt: now });
+  const message = (kind: string, content: string, data: Record<string, unknown>, memberId: string | null = null): CollabMessageRow => ({
+    id: ++id,
+    runId: "r",
+    userId: "u",
+    memberId,
+    kind,
+    content,
+    data,
+    createdAt: now,
+  });
 
   assert.equal(describeTask(task, run, [], "AUTH").column, "planned");
 
@@ -142,10 +195,18 @@ test("describeTask places a task on the board and tracks its subtasks", () => {
   ];
   const view = describeTask(task, run, messages, "AUTH");
   assert.deepEqual([view.key, view.column, view.assignee_member_id, view.activity], ["AUTH-12", "in_progress", "bo", "coding"]);
-  assert.deepEqual(view.steps.map((step) => step.state), ["done", "active", "pending"]);
+  assert.deepEqual(
+    view.steps.map((step) => step.state),
+    ["done", "active", "pending"],
+  );
   assert.deepEqual([view.files_changed, view.tests.passed], [1, 1]);
 
-  const merging = describeTask(task, { ...run, status: "awaiting_approval" }, [...messages, message("approval", "Merge?", { approval_id: "a", approval_kind: "merge", status: "pending" })], "AUTH");
+  const merging = describeTask(
+    task,
+    { ...run, status: "awaiting_approval" },
+    [...messages, message("approval", "Merge?", { approval_id: "a", approval_kind: "merge", status: "pending" })],
+    "AUTH",
+  );
   assert.deepEqual([merging.column, merging.needs_approval], ["review", true]);
   const kept = describeTask(task, { ...run, status: "completed" }, [...messages, message("system", "Not merged.", { git: "kept" })], "AUTH");
   assert.equal(kept.column, "review");
@@ -213,7 +274,11 @@ test("search finds text across project files, and compare diffs a run branch aga
     await repo.checkout(base);
 
     assert.deepEqual(await service.compare(userId, team.id, base, "chikaima/run-1"), [
-      { path: "src/auth.ts", before: "export const provider = 'google';\nexport function login() {}\n", after: "export const provider = 'github';\nexport function login() {}\n" },
+      {
+        path: "src/auth.ts",
+        before: "export const provider = 'google';\nexport function login() {}\n",
+        after: "export const provider = 'github';\nexport function login() {}\n",
+      },
     ]);
     await assert.rejects(service.compare(userId, team.id, base, "nope"), /Unknown branch/);
   });

@@ -47,14 +47,38 @@ async function withEnv<T>(fn: () => T | Promise<T>, extraEnv: Record<string, str
 function seed(db: ChikaimaDatabase): { userId: string; model: (key: string) => string } {
   const user = new AuthService(db).register({ email: "admin@example.com", fullName: "Admin", password: "password123" });
   const now = new Date().toISOString();
-  db.insert(providers).values({ id: "prov-1", userId: user.id, name: "OpenAI", providerType: "openai", baseUrl: null, encryptedConfig: {}, isEnabled: true, createdAt: now, updatedAt: now }).run();
+  db.insert(providers)
+    .values({
+      id: "prov-1",
+      userId: user.id,
+      name: "OpenAI",
+      providerType: "openai",
+      baseUrl: null,
+      encryptedConfig: {},
+      isEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
   const made = new Set<string>();
   return {
     userId: user.id,
     model: (key) => {
       const id = `model-${key}`;
       if (!made.has(id)) {
-        db.insert(aiModels).values({ id, providerId: "prov-1", modelKey: key, displayName: key, capabilities: {}, isDefault: false, isAvailable: true, createdAt: now, updatedAt: now }).run();
+        db.insert(aiModels)
+          .values({
+            id,
+            providerId: "prov-1",
+            modelKey: key,
+            displayName: key,
+            capabilities: {},
+            isDefault: false,
+            isAvailable: true,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run();
         made.add(id);
       }
       return id;
@@ -67,7 +91,12 @@ type Responder = (prompt: string, messages: ChatMessage[]) => string;
 const clientByModel = (responders: Record<string, Responder>): CollabModelClient => ({
   complete: async (modelId, messages) => responders[modelId]!(textOf(messages), messages),
 });
-const member = (model: string, role: string, precedence: number, extra: Partial<TeamMemberInput> = {}): TeamMemberInput => ({ model_id: model, role, precedence, ...extra });
+const member = (model: string, role: string, precedence: number, extra: Partial<TeamMemberInput> = {}): TeamMemberInput => ({
+  model_id: model,
+  role,
+  precedence,
+  ...extra,
+});
 const approve: Responder = () => "<verdict>approve</verdict>";
 const gitLines = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim().split("\n").filter(Boolean);
 
@@ -105,11 +134,20 @@ test("a run turns the folder into a repo, commits each step on its own branch, a
     let step = 0;
     const client = clientByModel({
       [model("lead")]: (prompt) =>
-        prompt.includes("Break the task") ? '<step assignee="2">One</step><step assignee="2">Two</step>' : prompt.includes("The run is finished") ? "Report." : "<verdict>approve</verdict>",
+        prompt.includes("Break the task")
+          ? '<step assignee="2">One</step><step assignee="2">Two</step>'
+          : prompt.includes("The run is finished")
+            ? "Report."
+            : "<verdict>approve</verdict>",
       [model("impl")]: (_prompt, messages) => (messages.length === 2 ? `<write path="step${++step}.txt">${step}\n</write><done/>` : "<done/>"),
     });
 
-    const { run: finished, root } = await run(db, userId, { name: "T", folder: "site", members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2)] }, client);
+    const { run: finished, root } = await run(
+      db,
+      userId,
+      { name: "T", folder: "site", members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2)] },
+      client,
+    );
 
     assert.equal(finished.status, "completed");
     assert.equal(finished.baseBranch, "master" === gitLines(root, "rev-parse", "--abbrev-ref", "HEAD")[0] ? "master" : finished.baseBranch);
@@ -129,10 +167,17 @@ test("when the supervisor declines the merge, the work stays on the run branch a
     const db = getDb();
     const { userId, model } = seed(db);
     const client = clientByModel({
-      [model("lead")]: (prompt) => (prompt.includes("Break the task") ? '<step assignee="2">One</step>' : prompt.includes("The run is finished") ? "Report." : "<verdict>approve</verdict>"),
+      [model("lead")]: (prompt) =>
+        prompt.includes("Break the task") ? '<step assignee="2">One</step>' : prompt.includes("The run is finished") ? "Report." : "<verdict>approve</verdict>",
       [model("impl")]: () => '<write path="a.txt">a\n</write><done/>',
     });
-    const { run: finished, root } = await run(db, userId, { name: "T", folder: "site", members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2)] }, client, ["reject"]);
+    const { run: finished, root } = await run(
+      db,
+      userId,
+      { name: "T", folder: "site", members: [member(model("lead"), "lead", 1), member(model("impl"), "implementer", 2)] },
+      client,
+      ["reject"],
+    );
 
     assert.equal(finished.status, "completed");
     assert.equal(existsSync(join(root, "a.txt")), false);
@@ -173,7 +218,13 @@ test("a rejected step is fully discarded with git, including files the agent's c
     const { run: finished, root } = await run(
       db,
       userId,
-      { name: "T", folder: "site", autonomy: "autonomous", max_revisions: 0, members: [member(model("impl"), "implementer", 1), member(model("rev"), "reviewer", 2)] },
+      {
+        name: "T",
+        folder: "site",
+        autonomy: "autonomous",
+        max_revisions: 0,
+        members: [member(model("impl"), "implementer", 1), member(model("rev"), "reviewer", 2)],
+      },
       client,
     );
     assert.equal(finished.status, "completed");
@@ -189,21 +240,28 @@ test("parallel mode runs different implementers in separate worktrees and merges
     const started: string[] = [];
     let release!: () => void;
     const bothStarted = new Promise<void>((resolve) => (release = resolve));
-    const worker = (file: string): Responder => (_prompt, messages) => {
-      if (messages.length !== 2) return "<done/>";
-      started.push(file);
-      if (started.length === 2) release();
-      return `<write path="${file}">${file}\n</write><done/>`;
-    };
+    const worker =
+      (file: string): Responder =>
+      (_prompt, messages) => {
+        if (messages.length !== 2) return "<done/>";
+        started.push(file);
+        if (started.length === 2) release();
+        return `<write path="${file}">${file}\n</write><done/>`;
+      };
     const slowClient: CollabModelClient = {
       async complete(modelId, messages) {
         const prompt = textOf(messages);
         if (modelId === model("lead")) {
-          return prompt.includes("Break the task") ? '<step assignee="2">Frontend</step><step assignee="3">Backend</step>' : prompt.includes("The run is finished") ? "Report." : "<verdict>approve</verdict>";
+          return prompt.includes("Break the task")
+            ? '<step assignee="2">Frontend</step><step assignee="3">Backend</step>'
+            : prompt.includes("The run is finished")
+              ? "Report."
+              : "<verdict>approve</verdict>";
         }
         const reply = (modelId === model("fe") ? worker("web.txt") : worker("api.txt"))(prompt, messages);
         // Each implementer waits until the other has started: only possible if they truly run at once.
-        if (messages.length === 2) await Promise.race([bothStarted, new Promise((_, reject) => setTimeout(() => reject(new Error("steps did not run in parallel")), 5_000))]);
+        if (messages.length === 2)
+          await Promise.race([bothStarted, new Promise((_, reject) => setTimeout(() => reject(new Error("steps did not run in parallel")), 5_000))]);
         return reply;
       },
     };
@@ -236,7 +294,11 @@ test("parallel steps that conflict: the lower-ranked one is redone on the merged
     const attempts: Record<string, number> = {};
     const client = clientByModel({
       [model("lead")]: (prompt) =>
-        prompt.includes("Break the task") ? '<step assignee="2">A</step><step assignee="3">B</step>' : prompt.includes("The run is finished") ? "Report." : "<verdict>approve</verdict>",
+        prompt.includes("Break the task")
+          ? '<step assignee="2">A</step><step assignee="3">B</step>'
+          : prompt.includes("The run is finished")
+            ? "Report."
+            : "<verdict>approve</verdict>",
       [model("hi")]: (_p, messages) => (messages.length === 2 ? '<write path="shared.txt">from #2\n</write><done/>' : "<done/>"),
       [model("lo")]: (_prompt, messages) => {
         if (messages.length !== 2) return "<done/>";
@@ -247,10 +309,20 @@ test("parallel steps that conflict: the lower-ranked one is redone on the merged
         return merged ? '<write path="shared.txt">from #2\nand #3\n</write><done/>' : '<write path="shared.txt">from #3\n</write><done/>';
       },
     });
-    const { run: finished, root, repo } = await run(
+    const {
+      run: finished,
+      root,
+      repo,
+    } = await run(
       db,
       userId,
-      { name: "T", folder: "site", autonomy: "autonomous", parallel: true, members: [member(model("lead"), "lead", 1), member(model("hi"), "implementer", 2), member(model("lo"), "implementer", 3)] },
+      {
+        name: "T",
+        folder: "site",
+        autonomy: "autonomous",
+        parallel: true,
+        members: [member(model("lead"), "lead", 1), member(model("hi"), "implementer", 2), member(model("lo"), "implementer", 3)],
+      },
       client,
     );
     assert.equal(finished.status, "completed", finished.errorMessage ?? "");
@@ -264,7 +336,17 @@ test("parallel mode requires git", async () => {
   await withEnv(() => {
     const db = getDb();
     const { userId, model } = seed(db);
-    assert.throws(() => new CollabService(db).createTeam(userId, { name: "T", folder: "site", git_enabled: false, parallel: true, members: [member(model("a"), "implementer", 1)] }), /Parallel work needs git/);
+    assert.throws(
+      () =>
+        new CollabService(db).createTeam(userId, {
+          name: "T",
+          folder: "site",
+          git_enabled: false,
+          parallel: true,
+          members: [member(model("a"), "implementer", 1)],
+        }),
+      /Parallel work needs git/,
+    );
   });
 });
 
@@ -368,7 +450,8 @@ test("the preview manager starts the team's dev server on an assigned port and s
 
       const deadline = Date.now() + 10_000;
       while (service.previewInfo(userId, team.id).status !== "running" && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 100));
-      for (let i = 0; i < 50 && !(await browsePreview(started.port!, "/")).startsWith("HTTP 200"); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+      for (let i = 0; i < 50 && !(await browsePreview(started.port!, "/")).startsWith("HTTP 200"); i++)
+        await new Promise((resolve) => setTimeout(resolve, 100));
       assert.match(await browsePreview(started.port!, "/"), /^HTTP 200 · Live/);
       assert.match(service.previewInfo(userId, team.id).logs, /ready on/);
 

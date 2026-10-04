@@ -71,7 +71,10 @@ test("markProgress without a stage updates progress but records no event", async
     const job = newJob(repo, user.id);
     repo.markProgress(job.id, 30);
     assert.equal(repo.get(job.id)!.progress, 30);
-    assert.deepEqual(repo.listEvents(job.id).map((event) => event.eventType), ["queued"]);
+    assert.deepEqual(
+      repo.listEvents(job.id).map((event) => event.eventType),
+      ["queued"],
+    );
   });
 });
 
@@ -164,7 +167,10 @@ test("the event bus delivers each user only their own events, and unsubscribe st
     try {
       const alicesJob = newJob(repo, alice.id);
       newJob(repo, bob.id);
-      assert.deepEqual(received.map((event) => [event.jobId, event.eventType]), [[alicesJob.id, "queued"]]);
+      assert.deepEqual(
+        received.map((event) => [event.jobId, event.eventType]),
+        [[alicesJob.id, "queued"]],
+      );
     } finally {
       unsubscribe();
     }
@@ -184,7 +190,10 @@ test("listEventsForUserAfter replays only that user's events newer than the curs
     const second = newJob(repo, alice.id);
 
     const replay = repo.listEventsForUserAfter(alice.id, cursor);
-    assert.deepEqual(replay.map((event) => event.jobId), [second.id]);
+    assert.deepEqual(
+      replay.map((event) => event.jobId),
+      [second.id],
+    );
     assert.equal(repo.listEventsForUserAfter(alice.id, 0).length, 2);
   });
 });

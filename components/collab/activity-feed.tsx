@@ -47,14 +47,17 @@ function Expandable({ label, children }: { label: React.ReactNode; children: Rea
 
 /** Approval requests still waiting on the supervisor. */
 export function pendingApprovals(messages: CollabMessage[]): CollabMessage[] {
-  const resolved = new Set(messages.filter((message) => message.kind === "approval" && message.data.status !== "pending").map((message) => String(message.data.approval_id)));
+  const resolved = new Set(
+    messages.filter((message) => message.kind === "approval" && message.data.status !== "pending").map((message) => String(message.data.approval_id)),
+  );
   return messages.filter((message) => message.kind === "approval" && message.data.status === "pending" && !resolved.has(String(message.data.approval_id)));
 }
 
 export function ApprovalCard({ access, message, who }: { access: ApiAccess; message: CollabMessage; who: string }) {
   const [note, setNote] = useState("");
   const resolve = useMutation({
-    mutationFn: (decision: "approve" | "reject") => api.resolveCollabApproval(access, message.run_id, String(message.data.approval_id), decision, note || undefined),
+    mutationFn: (decision: "approve" | "reject") =>
+      api.resolveCollabApproval(access, message.run_id, String(message.data.approval_id), decision, note || undefined),
   });
   const diff = typeof message.data.diff === "string" ? message.data.diff : null;
   const detail = message.data.files_detail as CollabFileChange[] | undefined;
@@ -77,10 +80,22 @@ export function ApprovalCard({ access, message, who }: { access: ApiAccess; mess
           ))}
         </ul>
       ) : null}
-      {detail?.length ? <div className="mt-2"><DiffView files={detail} height={360} /></div> : diff ? <DiffBlock diff={diff} /> : null}
+      {detail?.length ? (
+        <div className="mt-2">
+          <DiffView files={detail} height={360} />
+        </div>
+      ) : diff ? (
+        <DiffBlock diff={diff} />
+      ) : null}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Input className="h-9 min-w-48 flex-1" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Note for the agent (optional)" />
-        <Button type="button" variant="ghost" className="h-9 border border-border" disabled={resolve.isPending || resolve.isSuccess} onClick={() => resolve.mutate("reject")}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-9 border border-border"
+          disabled={resolve.isPending || resolve.isSuccess}
+          onClick={() => resolve.mutate("reject")}
+        >
           <X className="mr-1 h-3.5 w-3.5" /> Reject
         </Button>
         <Button type="button" className="h-9" disabled={resolve.isPending || resolve.isSuccess} onClick={() => resolve.mutate("approve")}>
@@ -123,14 +138,25 @@ export function ActivityFeed({
         const detail = message.data.files_detail as CollabFileChange[] | undefined;
         if (onOpenDiff && detail?.length) {
           return (
-            <button type="button" onClick={() => onOpenDiff(`Step ${Number(message.data.step ?? 0) + 1} changes`, detail)} className="text-left text-foreground hover:text-primary">
-              Changed {files.length} file(s){message.data.worktree ? " (in its own worktree)" : ""}: <span className="font-mono text-xs">{files.join(", ")}</span>{" "}
-              <span className="text-xs text-primary underline">Open diff</span>
+            <button
+              type="button"
+              onClick={() => onOpenDiff(`Step ${Number(message.data.step ?? 0) + 1} changes`, detail)}
+              className="text-left text-foreground hover:text-primary"
+            >
+              Changed {files.length} file(s){message.data.worktree ? " (in its own worktree)" : ""}:{" "}
+              <span className="font-mono text-xs">{files.join(", ")}</span> <span className="text-xs text-primary underline">Open diff</span>
             </button>
           );
         }
         return (
-          <Expandable label={<span>Changed {files.length} file(s){message.data.worktree ? " (in its own worktree)" : ""}: <span className="font-mono text-xs">{files.join(", ")}</span></span>}>
+          <Expandable
+            label={
+              <span>
+                Changed {files.length} file(s){message.data.worktree ? " (in its own worktree)" : ""}:{" "}
+                <span className="font-mono text-xs">{files.join(", ")}</span>
+              </span>
+            }
+          >
             <div className="mt-2">{detail?.length ? <DiffView files={detail} /> : <DiffBlock diff={message.content} />}</div>
           </Expandable>
         );
@@ -156,7 +182,15 @@ export function ActivityFeed({
         return (
           <span>
             <span className={cn("font-semibold", vote === "approve" ? "text-emerald-600" : vote === "reject" ? "text-red-600" : "text-foreground-muted")}>
-              {message.data.stage === "test" ? (vote === "approve" ? "Tests passed" : "Tests failed") : vote === "approve" ? "Approved" : vote === "reject" ? "Found issues" : "No verdict"}
+              {message.data.stage === "test"
+                ? vote === "approve"
+                  ? "Tests passed"
+                  : "Tests failed"
+                : vote === "approve"
+                  ? "Approved"
+                  : vote === "reject"
+                    ? "Found issues"
+                    : "No verdict"}
             </span>
             {message.content ? <span className="whitespace-pre-wrap text-foreground"> — {message.content}</span> : null}
           </span>
@@ -214,7 +248,9 @@ export function ActivityFeed({
           .filter((message) => !(message.kind === "approval" && message.data.status === "pending"))
           .map((message) => (
             <li key={message.id} className="grid grid-cols-[3.75rem_7.5rem_1fr] gap-2 text-sm">
-              <span className="pt-0.5 text-[11px] tabular-nums text-muted">{new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              <span className="pt-0.5 text-[11px] tabular-nums text-muted">
+                {new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
               <span className="truncate pt-0.5 text-xs font-semibold text-foreground">{nameOf(message.member_id)}</span>
               <div className="min-w-0 wrap-break-word text-sm">{body(message)}</div>
             </li>
