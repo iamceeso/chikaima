@@ -89,7 +89,8 @@ function member(model: string, role: string, precedence: number, extra: Partial<
 }
 
 async function runTeam(db: ChikaimaDatabase, userId: string, input: TeamInput, client: CollabModelClient, options: OrchestratorOptions = {}, beforeRun?: (runId: string) => void) {
-  const { team } = new CollabService(db).createTeam(userId, input);
+  // Git behaviour has its own tests (collabGit.test.ts).
+  const { team } = new CollabService(db).createTeam(userId, { git_enabled: false, ...input });
   const repo = new CollabRepository(db);
   const run = repo.createRun({ teamId: team.id, userId, task: "Task" });
   beforeRun?.(run.id);
@@ -436,7 +437,7 @@ test("team validation checks reporting lines, reviewers, permissions and scope",
     assert.throws(() => service.createTeam(userId, impl({ reports_to: 9 })), /reports to #9/);
     assert.throws(() => service.createTeam(userId, impl({ reports_to: 1 })), /reports to #1/);
     assert.throws(() => service.createTeam(userId, impl({ reviewed_by: [1] })), /reviewed by #1/);
-    assert.throws(() => service.createTeam(userId, impl({ permissions: ["deploy"] })), /Unknown permission/);
+    assert.throws(() => service.createTeam(userId, impl({ permissions: ["teleport"] })), /Unknown permission/);
     assert.throws(() => service.createTeam(userId, impl({ scope: ["../etc"] })), /inside the team folder/);
     assert.throws(() => service.createTeam(userId, { ...impl({}), autonomy: "yolo" }), /autonomy/);
     assert.throws(() => service.createTeam(userId, { ...impl({}), max_model_calls: 0 }), /max_model_calls/);

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 function requireEnv(name: string): string {
@@ -6,6 +7,19 @@ function requireEnv(name: string): string {
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return value;
+}
+
+const CHROME_CANDIDATES = [
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Chromium.app/Contents/MacOS/Chromium",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+];
+
+function detectChrome(): string {
+  return CHROME_CANDIDATES.find((candidate) => existsSync(candidate)) ?? "";
 }
 
 function intEnv(name: string, fallback: number): number {
@@ -45,8 +59,30 @@ export interface ChikaimaConfig {
   backgroundModelRouting: "economy" | "default";
   /** Directory that every collaboration team folder must live inside; models can never read or write outside it. */
   collabRoot: string;
-  /** Whether collaboration agents may run shell commands (tests or, with permission, anything). Off unless explicitly enabled. */
-  collabAllowCommands: boolean;
+  /**
+   * Where agent and terminal commands run: "off" (default; no commands at all),
+   * "host" (as the Chikaima process user, not confined to the folder), or
+   * "docker" (one resource-limited container per project, with only its
+   * folder mounted).
+   */
+  collabExec: "off" | "host" | "docker";
+  /** Image for project containers when collabExec is "docker". */
+  collabDockerImage: string;
+  collabDockerMemory: string;
+  collabDockerCpus: string;
+  /**
+   * The collaboration root as the Docker daemon sees it. Only differs from
+   * collabRoot when Chikaima itself runs in a container and talks to the
+   * host's Docker socket, since bind mounts use host paths.
+   */
+  collabHostRoot: string;
+  /** Host ports handed out to project previews, inclusive. */
+  collabPreviewPortStart: number;
+  collabPreviewPortEnd: number;
+  /** Hostname the server uses to reach previews (for agents' browse/screenshot tools). */
+  collabPreviewHost: string;
+  /** Chrome/Chromium binary for preview screenshots; empty disables screenshots. */
+  chromePath: string;
 }
 
 function build(): ChikaimaConfig {
@@ -81,6 +117,11 @@ function build(): ChikaimaConfig {
     throw new Error(`CHIKAIMA_BACKGROUND_MODEL_ROUTING must be "economy" or "default", got: ${backgroundModelRouting}`);
   }
 
+  const collabExec = (process.env.CHIKAIMA_COLLAB_EXEC?.trim() || "off").toLowerCase();
+  if (collabExec !== "off" && collabExec !== "host" && collabExec !== "docker") {
+    throw new Error(`CHIKAIMA_COLLAB_EXEC must be "off", "host" or "docker", got: ${collabExec}`);
+  }
+
   return {
     appName: process.env.CHIKAIMA_APP_NAME ?? "Chikaima",
     appEnv,
@@ -102,7 +143,15 @@ function build(): ChikaimaConfig {
       process.env.CHIKAIMA_PROVIDER_CATALOG_PATH?.trim() || (dbPath === ":memory:" ? "./data/providers.json" : join(dirname(dbPath), "providers.json")),
     backgroundModelRouting,
     collabRoot: process.env.CHIKAIMA_COLLAB_ROOT?.trim() || "./data/workspaces",
-    collabAllowCommands: ["1", "true", "yes"].includes((process.env.CHIKAIMA_COLLAB_ALLOW_COMMANDS ?? "").trim().toLowerCase()),
+    collabExec,
+    collabDockerImage: process.env.CHIKAIMA_COLLAB_DOCKER_IMAGE?.trim() || "node:22-bookworm",
+    collabDockerMemory: process.env.CHIKAIMA_COLLAB_DOCKER_MEMORY?.trim() || "2g",
+    collabDockerCpus: process.env.CHIKAIMA_COLLAB_DOCKER_CPUS?.trim() || "2",
+    collabHostRoot: process.env.CHIKAIMA_COLLAB_HOST_ROOT?.trim() || "",
+    collabPreviewPortStart: intEnv("CHIKAIMA_COLLAB_PREVIEW_PORT_START", 4100),
+    collabPreviewPortEnd: intEnv("CHIKAIMA_COLLAB_PREVIEW_PORT_END", 4199),
+    collabPreviewHost: process.env.CHIKAIMA_COLLAB_PREVIEW_HOST?.trim() || "127.0.0.1",
+    chromePath: process.env.CHIKAIMA_CHROME_PATH?.trim() ?? detectChrome(),
   };
 }
 

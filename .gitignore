@@ -59,3 +59,5 @@ data/*.sqlite3
 # AI collaboration folders mounted by docker-compose
 /workspaces/
 /data/workspaces/
+
+design.md

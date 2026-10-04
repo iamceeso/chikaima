@@ -226,6 +226,8 @@ async function setupTeam(policy = "majority", maxRevisions = 2) {
   const { team } = new CollabService(db).createTeam(user.id, {
     name: "Builders",
     folder: "site",
+    // Git behaviour has its own tests (collabGit.test.ts); keep these focused on the review loop.
+    git_enabled: false,
     decision_policy: policy,
     max_revisions: maxRevisions,
     members: [
@@ -369,6 +371,7 @@ test("startRun refuses a second concurrent run on the same folder, then runs in 
     const other = new CollabService(db).createTeam(user.id, {
       name: "Second team",
       folder: "site",
+      git_enabled: false,
       members: [{ model_id: "model-impl", role: "implementer", precedence: 1 }],
     }).team;
 
