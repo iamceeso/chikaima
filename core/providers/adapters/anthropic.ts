@@ -1,12 +1,14 @@
 import { badGateway } from "../../errors.js";
 import { extractStreamErrorDetail, iterSseJsonEvents } from "../sse.js";
-import { extractSystemPrompt, mergeConsecutiveMessages, textFromContent, type ChatMessage, type MessageContent, type ProviderAdapter } from "../types.js";
+import { extractSystemPrompt, mergeConsecutiveMessages, textFromContent, type ChatMessage, type GenerateOptions, type MessageContent, type ProviderAdapter } from "../types.js";
 
 interface AnthropicBlock {
   type: "text" | "image";
   text?: string;
   source?: { type: "base64"; media_type: string; data: string };
 }
+
+const DEFAULT_MAX_TOKENS = 1024;
 
 export class AnthropicAdapter implements ProviderAdapter {
   private readonly apiKey: string;
@@ -17,8 +19,8 @@ export class AnthropicAdapter implements ProviderAdapter {
     this.baseUrl = (options.baseUrl || "https://api.anthropic.com").replace(/\/+$/, "");
   }
 
-  async generateReply(modelKey: string, messages: ChatMessage[]): Promise<string> {
-    const response = await this.post(modelKey, messages, false);
+  async generateReply(modelKey: string, messages: ChatMessage[], options: GenerateOptions = {}): Promise<string> {
+    const response = await this.post(modelKey, messages, false, options.maxTokens);
     if (!response.ok) {
       throw badGateway(await extractStreamErrorDetail(response, "Anthropic request failed."));
     }
@@ -48,11 +50,11 @@ export class AnthropicAdapter implements ProviderAdapter {
     }
   }
 
-  private async post(modelKey: string, messages: ChatMessage[], stream: boolean): Promise<Response> {
+  private async post(modelKey: string, messages: ChatMessage[], stream: boolean, maxTokens = DEFAULT_MAX_TOKENS): Promise<Response> {
     const { systemPrompt, conversationMessages } = extractSystemPrompt(mergeConsecutiveMessages(messages));
     const payload: Record<string, unknown> = {
       model: modelKey,
-      max_tokens: 1024,
+      max_tokens: maxTokens,
       messages: conversationMessages.map((message) => ({
         role: message.role,
         content: this.buildContentBlocks(message.content),

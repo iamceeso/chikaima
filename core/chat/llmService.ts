@@ -7,7 +7,7 @@ import { aiModels, providers } from "../db/schema.js";
 import { badGateway, badRequest } from "../errors.js";
 import { isEconomyModel, sortModels } from "../providers/catalog.js";
 import { AdapterFactory } from "../providers/factory.js";
-import type { ChatMessage } from "../providers/types.js";
+import type { ChatMessage, GenerateOptions } from "../providers/types.js";
 import { AssetSearchService } from "../rag/assetSearchService.js";
 
 export type AIModelRow = typeof aiModels.$inferSelect;
@@ -92,9 +92,9 @@ export class LLMService {
     return [{ model: economy, provider: primary.provider }, primary];
   }
 
-  async generateReply(provider: ProviderRow, model: AIModelRow, messages: ChatMessage[]): Promise<string> {
+  async generateReply(provider: ProviderRow, model: AIModelRow, messages: ChatMessage[], options?: GenerateOptions): Promise<string> {
     const adapter = this.buildAdapter(provider);
-    const content = await adapter.generateReply(model.modelKey, messages);
+    const content = await adapter.generateReply(model.modelKey, messages, options);
     if (!content) {
       throw badGateway("The AI provider returned an empty response.");
     }

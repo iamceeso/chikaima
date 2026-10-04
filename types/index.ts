@@ -192,3 +192,116 @@ export interface DashboardSummary {
   jobs: number;
   system_health: string;
 }
+
+export type CollabRole = "lead" | "implementer" | "reviewer" | "tester";
+export type CollabDecisionPolicy = "majority" | "unanimous" | "precedence";
+export type CollabAutonomy = "supervised" | "semi" | "autonomous";
+export type CollabPermission = "edit" | "delete" | "run_tests" | "run_commands" | "review";
+export type CollabRunStatus = "queued" | "running" | "awaiting_approval" | "cancelling" | "completed" | "failed" | "cancelled";
+
+export interface CollabMember {
+  id: string;
+  model_id: string;
+  name: string;
+  title: string;
+  role: CollabRole;
+  instructions: string;
+  precedence: number;
+  scope: string[];
+  permissions: CollabPermission[];
+  reports_to: number | null;
+  reviewed_by: number[];
+}
+
+export interface CollabTeam {
+  id: string;
+  name: string;
+  folder: string;
+  decision_policy: CollabDecisionPolicy;
+  max_revisions: number;
+  autonomy: CollabAutonomy;
+  test_command: string | null;
+  max_model_calls: number;
+  members: CollabMember[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollabMemberInput {
+  model_id: string;
+  name?: string;
+  title?: string;
+  role: CollabRole;
+  instructions?: string;
+  precedence: number;
+  scope?: string[];
+  permissions?: CollabPermission[];
+  reports_to?: number | null;
+  reviewed_by?: number[];
+}
+
+export interface CollabTeamInput {
+  name: string;
+  folder: string;
+  decision_policy: CollabDecisionPolicy;
+  max_revisions: number;
+  autonomy: CollabAutonomy;
+  test_command: string | null;
+  max_model_calls: number;
+  members: CollabMemberInput[];
+}
+
+export interface CollabTemplate {
+  id: string;
+  name: string;
+  description: string;
+  autonomy: CollabAutonomy;
+  decision_policy: CollabDecisionPolicy;
+  test_command: string | null;
+  members: Array<Required<Omit<CollabMemberInput, "model_id" | "name">>>;
+}
+
+export interface CollabApproval {
+  id: string;
+  run_id: string;
+  member_id: string | null;
+  kind: "command" | "delete" | "sensitive_file" | "step";
+  summary: string;
+  payload: Record<string, unknown>;
+  status: "pending" | "approved" | "rejected";
+  note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface CollabFileEntry {
+  path: string;
+  type: "file" | "dir";
+}
+
+export interface CollabRun {
+  id: string;
+  team_id: string;
+  task: string;
+  status: CollabRunStatus;
+  result: Record<string, unknown>;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface CollabMessage {
+  id: number;
+  run_id: string;
+  member_id: string | null;
+  kind: "system" | "plan" | "message" | "action" | "command" | "change" | "review" | "decision" | "approval" | "summary" | "error";
+  content: string;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface CollabRunDetail extends CollabRun {
+  messages: CollabMessage[];
+  approvals: CollabApproval[];
+}

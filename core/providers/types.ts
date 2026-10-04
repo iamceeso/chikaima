@@ -7,8 +7,13 @@ export interface ChatMessage {
   content: MessageContent;
 }
 
+export interface GenerateOptions {
+  /** Upper bound on output tokens, for adapters whose API requires one. Others use the model's own limit. */
+  maxTokens?: number;
+}
+
 export interface ProviderAdapter {
-  generateReply(modelKey: string, messages: ChatMessage[]): Promise<string>;
+  generateReply(modelKey: string, messages: ChatMessage[], options?: GenerateOptions): Promise<string>;
   streamReply(modelKey: string, messages: ChatMessage[]): AsyncIterable<string>;
 }
 

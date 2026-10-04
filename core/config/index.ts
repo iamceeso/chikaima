@@ -43,6 +43,10 @@ export interface ChikaimaConfig {
   providerCatalogPath: string;
   /** "economy" routes background summarization to a cheaper model on the default provider when one exists; "default" always uses the default model. */
   backgroundModelRouting: "economy" | "default";
+  /** Directory that every collaboration team folder must live inside; models can never read or write outside it. */
+  collabRoot: string;
+  /** Whether collaboration agents may run shell commands (tests or, with permission, anything). Off unless explicitly enabled. */
+  collabAllowCommands: boolean;
 }
 
 function build(): ChikaimaConfig {
@@ -97,6 +101,8 @@ function build(): ChikaimaConfig {
     providerCatalogPath:
       process.env.CHIKAIMA_PROVIDER_CATALOG_PATH?.trim() || (dbPath === ":memory:" ? "./data/providers.json" : join(dirname(dbPath), "providers.json")),
     backgroundModelRouting,
+    collabRoot: process.env.CHIKAIMA_COLLAB_ROOT?.trim() || "./data/workspaces",
+    collabAllowCommands: ["1", "true", "yes"].includes((process.env.CHIKAIMA_COLLAB_ALLOW_COMMANDS ?? "").trim().toLowerCase()),
   };
 }
 
