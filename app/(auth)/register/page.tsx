@@ -21,7 +21,7 @@ export default function RegisterPage() {
           className="mx-auto select-none pointer-events-none"
         />
         <p className="text-base leading-relaxed text-foreground-muted max-w-md">
-          Start with uploads, transcription, summaries, and provider flexibility while keeping the stack self-hosted.
+          Build software with your AI engineering team: a browser workspace, agents on any model provider, and you as the final reviewer. Self-hosted.
         </p>
       </section>
       <section className="flex flex-1 items-center justify-center px-6 py-6">

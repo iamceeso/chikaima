@@ -94,7 +94,7 @@ export function RegisterForm() {
       return api.login({ email: values.email, password: values.password });
     },
     onSuccess: async (tokens) => {
-      const next = searchParams.get("next") || "/library";
+      const next = searchParams.get("next") || "/projects";
       router.prefetch(next);
 
       if (tokens) {
@@ -235,7 +235,7 @@ export function LoginForm() {
     mutationFn: api.login,
     onSuccess: async (tokens) => {
       setSession(tokens);
-      const next = searchParams.get("next") || "/library";
+      const next = searchParams.get("next") || "/projects";
       router.prefetch(next);
       const profilePromise = api.getProfile(tokens.access_token).then((user) => {
         setUser(user);
@@ -255,7 +255,7 @@ export function LoginForm() {
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Chikaima</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">Welcome back</h1>
-        <p className="mt-2 text-sm text-foreground-muted">Sign in to manage providers, media jobs, and extracted knowledge.</p>
+        <p className="mt-2 text-sm text-foreground-muted">Sign in to your projects and AI engineering team.</p>
       </div>
       {workspaceQuery.data?.first_user_registration_required ? (
         <div className="mt-8 rounded-2xl border border-border bg-background-secondary p-4">
@@ -273,7 +273,7 @@ export function LoginForm() {
           <p className="mt-2 text-sm text-foreground-muted">
             This workspace currently allows direct access without signing in.
           </p>
-          <Link href="/library" className="mt-4 inline-flex text-sm text-foreground underline decoration-primary/30 underline-offset-4">
+          <Link href="/projects" className="mt-4 inline-flex text-sm text-foreground underline decoration-primary/30 underline-offset-4">
             Open workspace
           </Link>
         </div>

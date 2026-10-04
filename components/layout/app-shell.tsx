@@ -13,8 +13,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // The AI team workspace is a full-screen IDE with its own navigation.
-  if (pathname.startsWith("/collaborate")) {
+  // A project's workspace is a full-screen IDE with its own navigation.
+  if (/^\/projects\/(?!new(\/|$))[^/]+/.test(pathname)) {
     return <div className="h-screen w-full overflow-hidden bg-background text-foreground">{children}</div>;
   }
 

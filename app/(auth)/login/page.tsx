@@ -23,8 +23,8 @@ export default function LoginPage() {
           className="mx-auto select-none pointer-events-none"
         />
         <p className="text-base leading-relaxed text-foreground-muted max-w-md">
-          Connect transcription and reasoning providers, then turn recordings
-          and documents into searchable knowledge.
+          Open a project, assemble specialised AI agents, and build, test and
+          review software together directly from your browser.
         </p>
       </section>
       <section className="flex flex-1 items-center justify-center px-6 py-10">

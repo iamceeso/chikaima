@@ -6,20 +6,15 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ChevronDown,
-  ChevronRight,
   Code2,
   Cog,
   FolderGit2,
-  FolderKanban,
   KanbanSquare,
-  LayoutDashboard,
-  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
   Sparkles,
   Users,
-  Wrench,
 } from "lucide-react";
 
 import { useAdminAccess } from "@/hooks/use-admin-access";
@@ -32,13 +27,6 @@ const settingsItems = [
   { href: "/settings/models", label: "Models", icon: Sparkles, adminOnly: false },
   { href: "/settings/workspace", label: "General", icon: Cog, adminOnly: false },
   { href: "/settings/users", label: "Users", icon: Users, adminOnly: true },
-];
-
-/** The previous media/document tools. Still available; no longer the product's headline. */
-const classicItems = [
-  { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/library", label: "Library", icon: LayoutDashboard },
-  { href: "/processing", label: "Processing", icon: FolderKanban },
 ];
 
 function NavLink({
@@ -95,7 +83,6 @@ export function Sidebar({
   const { access, hasAdminAccess } = useAdminAccess();
   const lastProject = useLastProject();
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));
-  const [classicOpen, setClassicOpen] = useState(classicItems.some((item) => pathname.startsWith(item.href)));
   const narrow = collapsed && !mobile;
 
   const projectsQuery = useQuery({
@@ -192,22 +179,6 @@ export function Sidebar({
         <div className="flex-1" />
       )}
 
-      {!narrow ? (
-        <div className="mt-2 border-t border-border pt-2">
-          <button type="button" onClick={() => setClassicOpen((value) => !value)} className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[11px] text-muted hover:text-foreground" aria-expanded={classicOpen}>
-            <Wrench className="h-3.5 w-3.5" />
-            <span className="flex-1">Classic tools</span>
-            <ChevronRight className={cn("h-3 w-3 transition-transform", classicOpen && "rotate-90")} />
-          </button>
-          {classicOpen ? (
-            <div className="space-y-0.5 pl-3 pt-0.5">
-              {classicItems.map((item) => (
-                <NavLink key={item.href} {...item} active={pathname.startsWith(item.href)} collapsed={false} onClick={onClose} />
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
     </aside>
   );
 }

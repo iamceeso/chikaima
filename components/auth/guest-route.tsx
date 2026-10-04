@@ -30,7 +30,7 @@ export function GuestRoute({ children }: { children: React.ReactNode }) {
     }
 
     if (!authRequired && !firstUserRequired) {
-      router.replace("/library");
+      router.replace("/projects");
       return;
     }
 
@@ -44,7 +44,7 @@ export function GuestRoute({ children }: { children: React.ReactNode }) {
     }
 
     if (tokens?.access_token && (!authRequired || profileQuery.isSuccess)) {
-      const next = searchParams.get("next") || "/library";
+      const next = searchParams.get("next") || "/projects";
       router.replace(next);
     }
   }, [

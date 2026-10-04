@@ -18,7 +18,7 @@ const monoFont = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Chikaima",
-  description: "Unified AI workspace for self-hosted and cloud models.",
+  description: "Build software with your AI engineering team: a self-hosted browser development workspace.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
