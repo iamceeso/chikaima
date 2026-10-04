@@ -16,14 +16,28 @@ services:
       CHIKAIMA_VIDEO_UPLOAD_MAX_MEGABYTES: "2048"
       CHIKAIMA_OLLAMA_BASE_URL: http://host.docker.internal:11434
       CHIKAIMA_COLLAB_ROOT: /app/workspaces
+      # Where AI team commands (tests, terminal, preview, deploy) run: off | host | docker.
+      # docker (recommended) needs the socket mount below; the project containers are siblings
+      # of this one, so they mount the folder by its path on the host.
+      CHIKAIMA_COLLAB_EXEC: "off"
+      CHIKAIMA_COLLAB_HOST_ROOT: ${PWD}/workspaces
+      # Previews are published on the host; this container reaches them through the host gateway.
+      CHIKAIMA_COLLAB_PREVIEW_HOST: host.docker.internal
     ports:
       - "3000:3000"
+      # Only with CHIKAIMA_COLLAB_EXEC=host, where previews run inside this container
+      # (in docker mode each project container publishes its own preview port):
+      # - "4100-4119:4100-4119"
     restart: unless-stopped
     volumes:
       - chikaima_data:/app/data
       - chikaima_storage:/app/storage
       # Folders AI collaboration teams can edit. Change the left side to a directory on your machine.
       - ./workspaces:/app/workspaces
+      # Uncomment with CHIKAIMA_COLLAB_EXEC=docker:
+      # - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   chikaima_data:

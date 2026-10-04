@@ -116,8 +116,20 @@ export class DockerExecutor implements Executor {
       throw serviceUnavailable(`Docker is not available: ${inspect.output.split("\n")[0]}`);
     }
 
-    this.hostPort = await allocatePort(this.teamId);
-    const created = await docker(
+    // The port is only checked from this process; on the Docker host it may already be taken, so try a few.
+    let created: CommandResult | null = null;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      this.hostPort = await allocatePort(this.teamId);
+      created = await this.create(config);
+      if (created.exitCode === 0 || !/port is already allocated|address already in use/i.test(created.output)) break;
+      await docker(["rm", "-f", this.container], { timeoutMs: 30_000 });
+      markPortTaken(this.teamId);
+    }
+    if (created?.exitCode !== 0) throw serviceUnavailable(`Could not create the project container: ${created?.output ?? "unknown error"}`);
+  }
+
+  private create(config: ReturnType<typeof getConfig>): Promise<CommandResult> {
+    return docker(
       [
         "run",
         "-d",
@@ -133,6 +145,8 @@ export class DockerExecutor implements Executor {
         "1024",
         "--security-opt",
         "no-new-privileges",
+        // Run as Chikaima's own user so files agents create in the mounted folder aren't root-owned on Linux hosts.
+        ...(typeof process.getuid === "function" && process.getuid() !== 0 ? ["--user", `${process.getuid()}:${process.getgid?.() ?? process.getuid()}`, "-e", "HOME=/tmp"] : []),
         "-v",
         `${this.hostPath(this.folderRoot)}:/workspace`,
         "-v",
@@ -147,7 +161,6 @@ export class DockerExecutor implements Executor {
       ],
       { timeoutMs: 600_000 },
     );
-    if (created.exitCode !== 0) throw serviceUnavailable(`Could not create the project container: ${created.output}`);
   }
 
   async run(command: string, cwd: string, options: RunOptions = {}): Promise<CommandResult> {
@@ -217,6 +230,14 @@ async function allocatePort(teamId: string): Promise<number> {
 
 function releasePort(teamId: string): void {
   allocatedPorts().delete(teamId);
+}
+
+/** Records the team's current port as unusable (taken on the Docker host) so the next allocation skips it. */
+function markPortTaken(teamId: string): void {
+  const ports = allocatedPorts();
+  const port = ports.get(teamId);
+  ports.delete(teamId);
+  if (port !== undefined) ports.set(`taken:${port}`, port);
 }
 
 // --- executor registry ----------------------------------------------------------
