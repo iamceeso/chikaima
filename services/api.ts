@@ -5,7 +5,10 @@ import type {
   AudioAsset,
   AuthTokens,
   CollabApproval,
+  CollabFileChange,
   CollabFileEntry,
+  CollabGitOverview,
+  CollabPreview,
   CollabMessage,
   CollabRun,
   CollabRunDetail,
@@ -380,6 +383,52 @@ export const api = {
     request<{ path: string; content: string }>(`/collab/teams/${teamId}/files/content?path=${encodeURIComponent(path)}`, { ...access, cache: "no-store" }),
   saveCollabFile: (access: ApiAccess, teamId: string, path: string, content: string) =>
     request<{ path: string }>(`/collab/teams/${teamId}/files/content`, { method: "PUT", ...access, body: JSON.stringify({ path, content }) }),
+  getCollabGit: (access: ApiAccess, teamId: string) => request<CollabGitOverview>(`/collab/teams/${teamId}/git`, { ...access, cache: "no-store" }),
+  collabGitAction: (access: ApiAccess, teamId: string, payload: { action: "init" | "commit" | "checkout" | "merge" | "discard"; message?: string; branch?: string }) =>
+    request<{ ok?: boolean; commit?: string }>(`/collab/teams/${teamId}/git`, { method: "POST", ...access, body: JSON.stringify(payload) }),
+  getCollabCommitFiles: (access: ApiAccess, teamId: string, hash: string) => request<CollabFileChange[]>(`/collab/teams/${teamId}/git/commits/${hash}`, access),
+  getCollabPreview: (access: ApiAccess, teamId: string) => request<CollabPreview>(`/collab/teams/${teamId}/preview`, { ...access, cache: "no-store" }),
+  startCollabPreview: (access: ApiAccess, teamId: string) => request<CollabPreview>(`/collab/teams/${teamId}/preview`, { method: "POST", ...access }),
+  stopCollabPreview: (access: ApiAccess, teamId: string) => request<void>(`/collab/teams/${teamId}/preview`, { method: "DELETE", ...access }),
+  /**
+   * Runs a terminal command (or, with `deploy`, the team's deploy command)
+   * and hands output to `onOutput` as it streams. No request timeout:
+   * commands can legitimately run for minutes; abort `signal` to kill one.
+   */
+  streamCollabCommand: async (
+    access: ApiAccess,
+    teamId: string,
+    kind: "terminal" | "deploy",
+    onOutput: (chunk: string) => void,
+    options: { command?: string; signal?: AbortSignal } = {},
+  ) => {
+    const headers = new Headers({ "Content-Type": "application/json" });
+    if (access.authHeader) headers.set("Authorization", access.authHeader);
+    else if (access.token) headers.set("Authorization", `Bearer ${access.token}`);
+    const response = await fetch(`${env.apiBaseUrl}/collab/teams/${teamId}/${kind}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(kind === "terminal" ? { command: options.command } : {}),
+      cache: "no-store",
+      signal: options.signal,
+    });
+    if (!response.ok || !response.body) {
+      let detail = await response.text();
+      try {
+        detail = (JSON.parse(detail) as { detail?: string }).detail ?? detail;
+      } catch {
+        // plain-text error
+      }
+      throw new Error(detail || "Command failed to start");
+    }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (value) onOutput(decoder.decode(value, { stream: !done }));
+      if (done) break;
+    }
+  },
   /**
    * Holds open a run's transcript stream until `signal` aborts or the server
    * closes it: replays messages after `after`, then delivers new ones live.

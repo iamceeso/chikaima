@@ -196,7 +196,7 @@ export interface DashboardSummary {
 export type CollabRole = "lead" | "implementer" | "reviewer" | "tester";
 export type CollabDecisionPolicy = "majority" | "unanimous" | "precedence";
 export type CollabAutonomy = "supervised" | "semi" | "autonomous";
-export type CollabPermission = "edit" | "delete" | "run_tests" | "run_commands" | "review";
+export type CollabPermission = "edit" | "delete" | "run_tests" | "run_commands" | "review" | "browser" | "deploy";
 export type CollabRunStatus = "queued" | "running" | "awaiting_approval" | "cancelling" | "completed" | "failed" | "cancelled";
 
 export interface CollabMember {
@@ -222,6 +222,10 @@ export interface CollabTeam {
   autonomy: CollabAutonomy;
   test_command: string | null;
   max_model_calls: number;
+  git_enabled: boolean;
+  parallel: boolean;
+  preview_command: string | null;
+  deploy_command: string | null;
   members: CollabMember[];
   created_at: string;
   updated_at: string;
@@ -248,6 +252,10 @@ export interface CollabTeamInput {
   autonomy: CollabAutonomy;
   test_command: string | null;
   max_model_calls: number;
+  git_enabled: boolean;
+  parallel: boolean;
+  preview_command: string | null;
+  deploy_command: string | null;
   members: CollabMemberInput[];
 }
 
@@ -265,13 +273,45 @@ export interface CollabApproval {
   id: string;
   run_id: string;
   member_id: string | null;
-  kind: "command" | "delete" | "sensitive_file" | "step";
+  kind: "command" | "delete" | "sensitive_file" | "step" | "merge" | "deploy";
   summary: string;
   payload: Record<string, unknown>;
   status: "pending" | "approved" | "rejected";
   note: string | null;
   created_at: string;
   resolved_at: string | null;
+}
+
+export interface CollabFileChange {
+  path: string;
+  before: string | null;
+  after: string | null;
+}
+
+export interface CollabGitCommit {
+  hash: string;
+  shortHash: string;
+  subject: string;
+  author: string;
+  date: string;
+}
+
+export interface CollabGitOverview {
+  is_repo: boolean;
+  branch: string | null;
+  branches: string[];
+  changes: Array<{ path: string; code: string }>;
+  commits: CollabGitCommit[];
+}
+
+export interface CollabPreview {
+  status: "stopped" | "starting" | "running" | "exited";
+  command: string | null;
+  port: number | null;
+  exitCode: number | null;
+  startedAt: string | null;
+  logs: string;
+  configured?: boolean;
 }
 
 export interface CollabFileEntry {
@@ -286,6 +326,8 @@ export interface CollabRun {
   status: CollabRunStatus;
   result: Record<string, unknown>;
   error_message: string | null;
+  base_branch: string | null;
+  run_branch: string | null;
   started_at: string | null;
   completed_at: string | null;
   created_at: string;

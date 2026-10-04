@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { api, type ApiAccess } from "@/services/api";
 
+import { CodeEditor } from "./code-editor";
+
 /**
  * File explorer and editor for the team folder. The files are ordinary
  * files on disk; this view reads and writes them through the API. Saving is
@@ -114,19 +116,16 @@ export function WorkspaceFiles({ access, teamId, agentsWorking, refreshKey }: { 
         </div>
         {save.error ?? fileQuery.error ? <p className="mt-1 px-1 text-xs text-destructive">{(save.error ?? fileQuery.error)!.message}</p> : null}
         {openPath ? (
-          <textarea
-            aria-label={`Contents of ${openPath}`}
-            spellCheck={false}
-            value={content}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.metaKey || event.ctrlKey) && event.key === "s") {
-                event.preventDefault();
+          <div className="mt-2 h-120 overflow-hidden rounded-xl border border-border">
+            <CodeEditor
+              path={openPath}
+              value={content}
+              onChange={setDraft}
+              onSave={() => {
                 if (dirty && !agentsWorking) save.mutate();
-              }
-            }}
-            className="mt-2 min-h-120 flex-1 resize-none rounded-xl border border-border bg-background p-3 font-mono text-[12px] leading-relaxed text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+              }}
+            />
+          </div>
         ) : (
           <div className="mt-2 flex min-h-120 flex-1 items-center justify-center rounded-xl border border-dashed border-border text-sm text-foreground-muted">
             Pick a file to view or edit it.

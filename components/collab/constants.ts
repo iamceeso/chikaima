@@ -11,7 +11,7 @@ export const DEFAULT_PERMISSIONS: Record<CollabRole, CollabPermission[]> = {
   lead: ["review"],
   implementer: ["edit", "delete", "run_tests"],
   reviewer: ["review", "run_tests"],
-  tester: ["edit", "run_tests", "review"],
+  tester: ["edit", "run_tests", "review", "browser"],
 };
 
 export const PERMISSION_LABELS: Record<CollabPermission, string> = {
@@ -20,6 +20,8 @@ export const PERMISSION_LABELS: Record<CollabPermission, string> = {
   run_tests: "Run tests",
   run_commands: "Run commands",
   review: "Review",
+  browser: "Use the preview",
+  deploy: "Request deploys",
 };
 
 export const POLICY_HINTS: Record<CollabDecisionPolicy, string> = {

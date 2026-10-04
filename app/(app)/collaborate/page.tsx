@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, Pencil, Play, Plus, Square, Trash2, Users } from "lucide-react";
+import { Activity, Eye, GitBranch, LoaderCircle, Pencil, Play, Plus, Rocket, Square, SquareTerminal, Trash2, Users } from "lucide-react";
 
 import { ActivityFeed } from "@/components/collab/activity-feed";
 import { ACTIVE_STATUSES, AUTONOMY_LABELS } from "@/components/collab/constants";
 import { TeamEditor } from "@/components/collab/team-editor";
 import { TeamRoster } from "@/components/collab/team-roster";
+import { DeployPanel, GitPanel, PreviewPanel, TerminalPanel } from "@/components/collab/tool-panels";
 import { WorkspaceFiles } from "@/components/collab/workspace-files";
 import { Topbar } from "@/components/layout/topbar";
 import { AdminAccessGate } from "@/components/settings/admin-access-gate";
@@ -18,6 +19,15 @@ import { useAdminAccess } from "@/hooks/use-admin-access";
 import { cn } from "@/lib/utils";
 import { api, type ApiAccess } from "@/services/api";
 import type { CollabMessage, CollabRunStatus, CollabTeam } from "@/types";
+
+const TABS = [
+  { id: "activity", label: "Agent activity", icon: Activity },
+  { id: "terminal", label: "Terminal", icon: SquareTerminal },
+  { id: "preview", label: "Preview", icon: Eye },
+  { id: "git", label: "Git", icon: GitBranch },
+  { id: "deploy", label: "Deploy", icon: Rocket },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
 
 interface RunStreamState {
   runId: string | null;
@@ -66,6 +76,7 @@ function TeamWorkspace({ access, team, onEdit }: { access: ApiAccess; team: Coll
   const queryClient = useQueryClient();
   const [task, setTask] = useState("");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabId>("activity");
 
   const runsQuery = useQuery({ queryKey: ["collab-runs", team.id], queryFn: () => api.getCollabRuns(access, team.id) });
   const runs = useMemo(() => runsQuery.data ?? [], [runsQuery.data]);
@@ -98,7 +109,7 @@ function TeamWorkspace({ access, team, onEdit }: { access: ApiAccess; team: Coll
             <h2 className="truncate text-lg font-semibold text-foreground">{team.name}</h2>
             <p className="text-xs text-foreground-muted">
               <code className="rounded bg-background px-1.5 py-0.5">{team.folder}</code> · {AUTONOMY_LABELS[team.autonomy]?.label ?? team.autonomy} · {team.decision_policy} review ·{" "}
-              {team.max_model_calls} calls max
+              {team.max_model_calls} calls max{team.git_enabled ? " · git" : ""}{team.parallel ? " · parallel" : ""}
             </p>
           </div>
           <div className="flex min-w-0 items-center gap-2 text-xs">
@@ -164,8 +175,26 @@ function TeamWorkspace({ access, team, onEdit }: { access: ApiAccess; team: Coll
         </div>
         {start.error ? <p className="mt-2 text-sm text-destructive">{start.error.message}</p> : null}
 
-        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Agent activity</span>
+        <div className="mt-5 flex flex-wrap gap-1 border-t border-border pt-4" role="tablist">
+          {TABS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === entry.id}
+              onClick={() => setTab(entry.id)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium",
+                tab === entry.id ? "bg-background text-foreground" : "text-foreground-muted hover:text-foreground",
+              )}
+            >
+              <entry.icon className="h-3.5 w-3.5" /> {entry.label}
+              {entry.id === "activity" && status === "awaiting_approval" ? <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> : null}
+            </button>
+          ))}
+        </div>
+
+        <div className={cn("mt-3 flex flex-wrap items-center gap-2", tab !== "activity" && "hidden")}>
           {runs.slice(0, 8).map((run) => (
             <button
               key={run.id}
@@ -181,11 +210,22 @@ function TeamWorkspace({ access, team, onEdit }: { access: ApiAccess; team: Coll
           ))}
         </div>
         <div className="mt-4">
-          {currentRunId ? (
-            <ActivityFeed access={access} team={team} messages={messages} />
-          ) : (
-            <p className="text-sm text-foreground-muted">No runs yet. The lead will plan the task and delegate it, and every change is reviewed before it is kept.</p>
-          )}
+          {tab === "activity" ? (
+            currentRunId ? (
+              <ActivityFeed access={access} team={team} messages={messages} />
+            ) : (
+              <p className="text-sm text-foreground-muted">No runs yet. The lead will plan the task and delegate it, and every change is reviewed before it is kept.</p>
+            )
+          ) : null}
+          {/* Kept mounted while hidden so a running command or open preview survives switching tabs. */}
+          <div className={tab === "terminal" ? "" : "hidden"}>
+            <TerminalPanel access={access} team={team} disabled={runActive} />
+          </div>
+          {tab === "preview" ? <PreviewPanel access={access} team={team} /> : null}
+          {tab === "git" ? <GitPanel access={access} team={team} disabled={runActive} /> : null}
+          <div className={tab === "deploy" ? "" : "hidden"}>
+            <DeployPanel access={access} team={team} disabled={runActive} />
+          </div>
         </div>
       </Card>
     </div>
