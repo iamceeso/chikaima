@@ -218,3 +218,32 @@ test("search finds text across project files, and compare diffs a run branch aga
     await assert.rejects(service.compare(userId, team.id, base, "nope"), /Unknown branch/);
   });
 });
+
+test("folders can be given as full paths inside the projects root, and the picker lists them", async () => {
+  await withEnv(async () => {
+    const db = getDb();
+    const userId = seed(db);
+    const { normalizeTeamFolder } = await import("../../core/collab/workspace.js");
+    const root = Workspace.open("existing-app").root.replace(/\/existing-app$/, "");
+    mkdirSync(join(root, "clients", "acme"), { recursive: true });
+    await new GitRepo(join(root, "existing-app")).ensureRepo();
+
+    assert.equal(normalizeTeamFolder(join(root, "clients", "acme")), "clients/acme");
+    assert.throws(() => normalizeTeamFolder("/etc/passwd"), /inside the projects root/);
+    assert.throws(() => normalizeTeamFolder(root), /inside the projects root/);
+
+    const { team } = new CollabService(db).createTeam(userId, { ...project("Existing", join(root, "existing-app")) });
+    assert.equal(team.folder, "existing-app");
+
+    const listing = new ProjectService(db).folders(userId, "");
+    assert.equal(listing.root, root);
+    assert.deepEqual(
+      listing.folders.map((folder) => [folder.path, folder.isGit, folder.projectId]),
+      [
+        ["clients", false, null],
+        ["existing-app", true, team.id],
+      ],
+    );
+    assert.deepEqual(new ProjectService(db).folders(userId, "clients").parent, "");
+  });
+});

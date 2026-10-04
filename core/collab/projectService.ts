@@ -281,7 +281,7 @@ export class ProjectService {
   }
 
   /** Folders under the projects root for the folder picker, marking any that already belong to one of your projects. */
-  folders(userId: string, path: string): FolderListing & { folders: Array<FolderListing["folders"][number] & { projectId: string | null }> } {
+  folders(userId: string, path: string): Omit<FolderListing, "folders"> & { folders: Array<FolderListing["folders"][number] & { projectId: string | null }> } {
     const listing = listFolders(path);
     const byFolder = new Map(this.teams.listTeams(userId).map(({ team }) => [team.folder, team.id]));
     return { ...listing, folders: listing.folders.map((folder) => ({ ...folder, projectId: byFolder.get(folder.path) ?? null })) };

@@ -182,8 +182,9 @@ export function TeamEditor({
   const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
 
   return (
-    <Card className={cn(embedded ? "border-0 bg-transparent p-0 shadow-none" : "rounded-xl bg-surface p-6")}>
-      <div className="flex items-center justify-between">
+    <Card className={cn("flex flex-col", embedded ? "border-0 bg-transparent p-0 shadow-none" : "rounded-xl bg-surface p-6")}>
+      {/* Order: header, then (in the AI team view) the agents, then supervision settings, with presets last for an existing team. */}
+      <div className="order-[-3] flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">{section === "project" ? "Project settings" : section === "team" ? "AI team" : team ? `Edit ${team.name}` : "New project"}</h2>
           {section === "team" ? <p className="mt-0.5 text-sm text-foreground-muted">Who is on the team, what each agent may do, and how much you approve.</p> : null}
@@ -197,17 +198,18 @@ export function TeamEditor({
       </div>
 
       {showTeam && templatesQuery.data?.length ? (
-        <div className="mt-4">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-            <LayoutTemplate className="h-3.5 w-3.5" /> {team ? "Replace the team with a preset" : "Team preset"}
-          </p>
+        <details className={cn("mt-4", team ? "order-1 rounded-lg border border-border px-3 py-2" : "")} open={!team}>
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+            <LayoutTemplate className="h-3.5 w-3.5" /> {team ? "Replace the team with a preset…" : "Team preset"}
+          </summary>
+          {team ? <p className="mt-1.5 text-xs text-foreground-muted">Replaces every agent below. Nothing changes until you save.</p> : null}
           <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {templatesQuery.data.map((template) => (
               <button
                 key={template.id}
                 type="button"
                 onClick={() => setDraft((current) => fromTemplate(template, models, current))}
-                className="rounded-lg border border-border bg-background p-3 text-left hover:border-primary"
+                className="flex flex-col items-start rounded-lg border border-border bg-background p-3 text-left hover:border-primary"
               >
                 <p className="text-sm font-semibold text-foreground">{template.name}</p>
                 <p className="mt-1 text-xs text-foreground-muted">{template.description}</p>
@@ -215,7 +217,7 @@ export function TeamEditor({
               </button>
             ))}
           </div>
-        </div>
+        </details>
       ) : null}
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -243,7 +245,7 @@ export function TeamEditor({
         {showTeam ? (
           <>
         <div className="sm:col-span-2">
-          <Label>Autonomy</Label>
+          <Label>Supervision</Label>
           <div className="mt-1 grid gap-2 sm:grid-cols-3">
             {(Object.keys(AUTONOMY_LABELS) as CollabAutonomy[]).map((level) => (
               <button
@@ -319,7 +321,7 @@ export function TeamEditor({
         ) : null}
       </div>
 
-      <div className={cn("mt-6", !showTeam && "hidden")}>
+      <div className={cn("mt-6", !showTeam && "hidden", section === "team" && "order-[-2] mt-5")}>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Agents</h3>
           <Button
@@ -466,8 +468,8 @@ export function TeamEditor({
         </div>
       </div>
 
-      {save.error ? <p className="mt-4 text-sm text-destructive">{save.error.message}</p> : null}
-      <div className="mt-5 flex justify-end gap-2">
+      {save.error ? <p className="order-2 mt-4 text-sm text-destructive">{save.error.message}</p> : null}
+      <div className="order-2 mt-5 flex justify-end gap-2">
         {embedded ? null : (
           <Button type="button" variant="ghost" className="border border-border" onClick={() => onDone(null)}>
             Cancel
