@@ -7,19 +7,22 @@ import type { ChikaimaDatabase } from "../db/client.js";
 import { aiModels, conversations, providers } from "../db/schema.js";
 import { notFound } from "../errors.js";
 import {
-  CURATED_PROVIDER_MODELS,
   dedupeModels,
   geminiCapabilities,
   isDeprecatedModel,
+  isEconomyModel,
   joinApiUrl,
   openaiCapabilities,
+  providerSupportTier,
   resolveBaseUrl,
   shouldIncludeOpenaiModel,
   shouldIncludeOpenrouterModel,
   sortModels,
   titleizeModelName,
   type CuratedModel,
+  type ProviderSupportTier,
 } from "./catalog.js";
+import { getCuratedModels, mergeUserModels } from "./userCatalog.js";
 import { ProviderRepository, type ProviderRow } from "./repository.js";
 
 export type ProviderType = "openai" | "anthropic" | "gemini" | "ollama" | "openrouter" | "litellm" | "local";
@@ -46,6 +49,7 @@ export interface ProviderResponse {
   provider_type: string;
   base_url: string | null;
   is_enabled: boolean;
+  support_tier: ProviderSupportTier;
   masked_secret: string | null;
   created_at: string;
   updated_at: string;
@@ -62,6 +66,7 @@ export interface AIModelResponse {
   is_default: boolean;
   is_available: boolean;
   is_deprecated: boolean;
+  is_economy: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -80,6 +85,7 @@ export function toProviderResponse(provider: ProviderRow): ProviderResponse {
     provider_type: provider.providerType,
     base_url: provider.baseUrl,
     is_enabled: provider.isEnabled,
+    support_tier: providerSupportTier(provider.providerType),
     masked_secret: maskSecret(typeof config?.api_key === "string" ? config.api_key : null),
     created_at: provider.createdAt,
     updated_at: provider.updatedAt,
@@ -98,6 +104,7 @@ export function buildModelResponse(model: AIModelRow, provider: ProviderRow): AI
     is_default: model.isDefault,
     is_available: model.isAvailable,
     is_deprecated: isDeprecatedModel(provider.providerType, model.modelKey),
+    is_economy: isEconomyModel(model.modelKey, model.capabilities as Record<string, boolean>),
     created_at: model.createdAt,
     updated_at: model.updatedAt,
   };
@@ -212,7 +219,8 @@ export class ProviderService {
   }
 
   private replaceProviderModels(provider: ProviderRow, models: CuratedModel[]): void {
-    const syncedModels = sortModels(provider.providerType, dedupeModels(models).length > 0 ? dedupeModels(models) : CURATED_PROVIDER_MODELS[provider.providerType] ?? []);
+    const listed = dedupeModels(models);
+    const syncedModels = sortModels(provider.providerType, listed.length > 0 ? mergeUserModels(provider.providerType, listed) : getCuratedModels(provider.providerType));
 
     const existingModels = this.db.select().from(aiModels).where(eq(aiModels.providerId, provider.id)).all();
     const existingByKey = new Map(existingModels.map((model) => [model.modelKey, model]));
@@ -294,13 +302,13 @@ export class ProviderService {
       case "local":
         return this.fetchOpenaiModels(provider, resolvedApiKey);
       default:
-        return CURATED_PROVIDER_MODELS[provider.providerType] ?? [];
+        return getCuratedModels(provider.providerType);
     }
   }
 
   private async fetchOpenaiModels(provider: ProviderRow, apiKey?: string): Promise<CuratedModel[]> {
-    const fallbackKey = provider.providerType in CURATED_PROVIDER_MODELS ? provider.providerType : "openai";
-    const fallback = CURATED_PROVIDER_MODELS[provider.providerType === "openai" ? "openai" : fallbackKey] ?? [];
+    const curated = getCuratedModels(provider.providerType);
+    const fallback = curated.length > 0 ? curated : getCuratedModels("openai");
 
     if (!apiKey && provider.providerType !== "local") {
       return fallback;
@@ -331,7 +339,7 @@ export class ProviderService {
   }
 
   private async fetchAnthropicModels(provider: ProviderRow, apiKey?: string): Promise<CuratedModel[]> {
-    const fallback = CURATED_PROVIDER_MODELS.anthropic ?? [];
+    const fallback = getCuratedModels("anthropic");
     if (!apiKey) return fallback;
     const baseUrl = resolveBaseUrl(provider.providerType, provider.baseUrl);
     if (!baseUrl) return fallback;
@@ -361,7 +369,7 @@ export class ProviderService {
   }
 
   private async fetchGeminiModels(provider: ProviderRow, apiKey?: string): Promise<CuratedModel[]> {
-    const fallback = CURATED_PROVIDER_MODELS.gemini ?? [];
+    const fallback = getCuratedModels("gemini");
     if (!apiKey) return fallback;
     const baseUrl = resolveBaseUrl(provider.providerType, provider.baseUrl);
     if (!baseUrl) return fallback;
@@ -400,7 +408,7 @@ export class ProviderService {
   }
 
   private async fetchOllamaModels(provider: ProviderRow): Promise<CuratedModel[]> {
-    const fallback = CURATED_PROVIDER_MODELS.ollama ?? [];
+    const fallback = getCuratedModels("ollama");
     const baseUrl = resolveBaseUrl(provider.providerType, provider.baseUrl);
     if (!baseUrl) return fallback;
 

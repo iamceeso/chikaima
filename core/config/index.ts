@@ -1,3 +1,5 @@
+import { dirname, join } from "node:path";
+
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
@@ -37,6 +39,10 @@ export interface ChikaimaConfig {
   embeddingDimension: number;
   ragTopK: number;
   ollamaBaseUrl: string;
+  /** Optional JSON file of extra/overriding provider models; see core/providers/userCatalog.ts. */
+  providerCatalogPath: string;
+  /** "economy" routes background summarization to a cheaper model on the default provider when one exists; "default" always uses the default model. */
+  backgroundModelRouting: "economy" | "default";
 }
 
 function build(): ChikaimaConfig {
@@ -65,11 +71,17 @@ function build(): ChikaimaConfig {
     throw new Error("JWT and provider secret keys must be at least 16 characters.");
   }
 
+  const dbPath = process.env.CHIKAIMA_DB_PATH?.trim() || "./data/chikaima.db";
+  const backgroundModelRouting = (process.env.CHIKAIMA_BACKGROUND_MODEL_ROUTING?.trim() || "economy").toLowerCase();
+  if (backgroundModelRouting !== "economy" && backgroundModelRouting !== "default") {
+    throw new Error(`CHIKAIMA_BACKGROUND_MODEL_ROUTING must be "economy" or "default", got: ${backgroundModelRouting}`);
+  }
+
   return {
     appName: process.env.CHIKAIMA_APP_NAME ?? "Chikaima",
     appEnv,
     isProduction,
-    dbPath: process.env.CHIKAIMA_DB_PATH?.trim() || "./data/chikaima.db",
+    dbPath,
     jwtSecretKey,
     jwtRefreshSecretKey,
     accessTokenExpireMinutes: intEnv("CHIKAIMA_ACCESS_TOKEN_EXPIRE_MINUTES", 30),
@@ -82,6 +94,9 @@ function build(): ChikaimaConfig {
     embeddingDimension: intEnv("CHIKAIMA_EMBEDDING_DIMENSION", 384),
     ragTopK: intEnv("CHIKAIMA_RAG_TOP_K", 3),
     ollamaBaseUrl: process.env.CHIKAIMA_OLLAMA_BASE_URL?.trim() || "http://localhost:11434",
+    providerCatalogPath:
+      process.env.CHIKAIMA_PROVIDER_CATALOG_PATH?.trim() || (dbPath === ":memory:" ? "./data/providers.json" : join(dirname(dbPath), "providers.json")),
+    backgroundModelRouting,
   };
 }
 

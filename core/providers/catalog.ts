@@ -20,6 +20,9 @@ export const CURATED_PROVIDER_MODELS: Record<string, CuratedModel[]> = {
     { key: "o3-mini", name: "o3-mini", capabilities: { chat: true } },
   ],
   anthropic: [
+    { key: "claude-opus-5-5", name: "Claude Opus 5.5", capabilities: { chat: true, vision: true } },
+    { key: "claude-sonnet-5-5", name: "Claude Sonnet 5.5", capabilities: { chat: true, vision: true } },
+    { key: "claude-haiku-4-5-20251001", name: "Claude Haiku 4.5", capabilities: { chat: true, vision: true } },
     { key: "claude-sonnet-4-5-20250929", name: "Claude Sonnet 4.5", capabilities: { chat: true, vision: true } },
     { key: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", capabilities: { chat: true, vision: true } },
     { key: "claude-opus-4-1-20250805", name: "Claude Opus 4.1", capabilities: { chat: true, vision: true } },
@@ -96,12 +99,15 @@ export const MODEL_PRIORITY: Record<string, Record<string, number>> = {
     "o3-mini": 11,
   },
   anthropic: {
-    "claude-sonnet-4-5-20250929": 0,
-    "claude-sonnet-4-20250514": 1,
-    "claude-opus-4-1-20250805": 2,
-    "claude-opus-4-20250514": 3,
-    "claude-3-7-sonnet-20250219": 4,
-    "claude-3-5-haiku-20241022": 5,
+    "claude-sonnet-5-5": 0,
+    "claude-opus-5-5": 1,
+    "claude-haiku-4-5-20251001": 2,
+    "claude-sonnet-4-5-20250929": 3,
+    "claude-sonnet-4-20250514": 4,
+    "claude-opus-4-1-20250805": 5,
+    "claude-opus-4-20250514": 6,
+    "claude-3-7-sonnet-20250219": 7,
+    "claude-3-5-haiku-20241022": 8,
   },
   gemini: {
     "gemini-2.5-pro": 0,
@@ -117,6 +123,42 @@ export const DEPRECATED_MODEL_KEYS: Record<string, Set<string>> = {
   openai: new Set(["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4-turbo-preview", "gpt-4.5-preview", "o1-preview", "o1-mini", "codex-mini-latest"]),
   anthropic: new Set(["claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20240620", "claude-3-5-sonnet-20241022", "claude-3-opus-20240229"]),
 };
+
+export type ProviderSupportTier = "verified" | "partial" | "unverified";
+
+/**
+ * How well each provider type is actually exercised, so being in the
+ * catalog isn't mistaken for being tested end-to-end. "verified": a
+ * dedicated adapter with unit coverage. "partial": reached through the
+ * OpenAI-compatible adapter, whose behaviour depends on the upstream
+ * gateway or server honouring that API.
+ */
+export const PROVIDER_SUPPORT_TIERS: Record<string, ProviderSupportTier> = {
+  openai: "verified",
+  anthropic: "verified",
+  gemini: "verified",
+  ollama: "verified",
+  openrouter: "partial",
+  litellm: "partial",
+  local: "partial",
+};
+
+export function providerSupportTier(providerType: string): ProviderSupportTier {
+  return PROVIDER_SUPPORT_TIERS[providerType] ?? "unverified";
+}
+
+const ECONOMY_MODEL_PATTERN = /(^|[-_./:])(mini|nano|haiku|flash|flash-lite|lite|small)([-_./:]|$)/i;
+
+/**
+ * Whether a model is a cheaper tier suitable for routine background work
+ * (summaries, key points). An explicit `economy` capability wins; otherwise
+ * it's inferred from the name, so models synced before this flag existed,
+ * or listed live by a provider API, are classified too.
+ */
+export function isEconomyModel(modelKey: string, capabilities?: Record<string, boolean> | null): boolean {
+  if (capabilities && typeof capabilities.economy === "boolean") return capabilities.economy;
+  return ECONOMY_MODEL_PATTERN.test(modelKey);
+}
 
 export function isDeprecatedModel(providerType: string | null | undefined, modelKey: string): boolean {
   if (!providerType) return false;

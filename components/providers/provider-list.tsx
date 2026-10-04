@@ -28,6 +28,12 @@ const providerLabels: Record<Provider["provider_type"], string> = {
   local: "Local model host",
 };
 
+const supportTierDescriptions: Record<NonNullable<Provider["support_tier"]>, string> = {
+  verified: "Dedicated adapter with automated test coverage.",
+  partial: "Uses the OpenAI-compatible adapter; behaviour depends on the upstream server.",
+  unverified: "Not covered by tests.",
+};
+
 export function ProviderList() {
   const token = useAuthStore((state) => state.tokens?.access_token);
   const queryClient = useQueryClient();
@@ -92,6 +98,14 @@ export function ProviderList() {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-stretch gap-2 lg:justify-end">
+                  {provider.support_tier ? (
+                    <span
+                      title={supportTierDescriptions[provider.support_tier]}
+                      className="rounded-full border border-border bg-surface-raised px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted"
+                    >
+                      {provider.support_tier}
+                    </span>
+                  ) : null}
                   <span className="rounded-full border border-border bg-surface-raised px-3 py-1 text-xs uppercase tracking-[0.18em] text-foreground-muted">
                     {provider.is_enabled ? "enabled" : "disabled"}
                   </span>
