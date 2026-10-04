@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { api, type ApiAccess } from "@/services/api";
-import type { CollabMessage, CollabTeam } from "@/types";
+import type { CollabFileChange, CollabMessage, CollabTeam } from "@/types";
+
+import { DiffView } from "./code-editor";
 
 function DiffBlock({ diff }: { diff: string }) {
   return (
@@ -49,7 +51,9 @@ function ApprovalCard({ access, message, who }: { access: ApiAccess; message: Co
     mutationFn: (decision: "approve" | "reject") => api.resolveCollabApproval(access, message.run_id, String(message.data.approval_id), decision, note || undefined),
   });
   const diff = typeof message.data.diff === "string" ? message.data.diff : null;
+  const detail = message.data.files_detail as CollabFileChange[] | undefined;
   const command = typeof message.data.command === "string" ? message.data.command : null;
+  const commits = message.data.commits as Array<{ hash: string; subject: string }> | undefined;
 
   return (
     <div className="rounded-2xl border border-amber-500/50 bg-amber-500/5 p-4">
@@ -58,7 +62,16 @@ function ApprovalCard({ access, message, who }: { access: ApiAccess; message: Co
       </p>
       <p className="mt-1 text-sm text-foreground">{message.content}</p>
       {command ? <pre className="mt-2 rounded-lg bg-background p-2 font-mono text-xs">$ {command}</pre> : null}
-      {diff ? <DiffBlock diff={diff} /> : null}
+      {commits?.length ? (
+        <ul className="mt-2 space-y-0.5 font-mono text-xs">
+          {commits.map((commit) => (
+            <li key={commit.hash}>
+              <span className="text-primary">{commit.hash}</span> {commit.subject}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {detail?.length ? <div className="mt-2"><DiffView files={detail} height={360} /></div> : diff ? <DiffBlock diff={diff} /> : null}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Input className="h-9 min-w-[12rem] flex-1" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Note for the agent (optional)" />
         <Button type="button" variant="ghost" className="h-9 border border-border" disabled={resolve.isPending || resolve.isSuccess} onClick={() => resolve.mutate("reject")}>
@@ -89,7 +102,12 @@ export function ActivityFeed({ access, team, messages }: { access: ApiAccess; te
     switch (message.kind) {
       case "change": {
         const files = (message.data.files as string[] | undefined) ?? [];
-        return <Expandable label={<span>Changed {files.length} file(s): <span className="font-mono text-xs">{files.join(", ")}</span></span>}><DiffBlock diff={message.content} /></Expandable>;
+        const detail = message.data.files_detail as CollabFileChange[] | undefined;
+        return (
+          <Expandable label={<span>Changed {files.length} file(s){message.data.worktree ? " (in its own worktree)" : ""}: <span className="font-mono text-xs">{files.join(", ")}</span></span>}>
+            <div className="mt-2">{detail?.length ? <DiffView files={detail} /> : <DiffBlock diff={message.content} />}</div>
+          </Expandable>
+        );
       }
       case "command": {
         const exit = message.data.exit_code as number | null;
@@ -97,6 +115,7 @@ export function ActivityFeed({ access, team, messages }: { access: ApiAccess; te
           <Expandable
             label={
               <span>
+                {message.data.stage === "deploy" ? <span className="font-semibold">Deploy </span> : null}
                 <span className="font-mono text-xs">$ {String(message.data.command)}</span>{" "}
                 <span className={exit === 0 ? "text-emerald-600" : "text-red-600"}>{message.data.timed_out ? "timed out" : `exit ${exit}`}</span>
               </span>
@@ -143,8 +162,16 @@ export function ActivityFeed({ access, team, messages }: { access: ApiAccess; te
         return <span className="text-destructive">{message.content}</span>;
       case "approval":
         return <span className="text-amber-700 dark:text-amber-400">{message.content}</span>;
-      case "system":
       case "action":
+        return typeof message.data.image === "string" ? (
+          <Expandable label={<span className="text-foreground-muted">{message.content}</span>}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- inline base64 screenshot, nothing for next/image to optimise */}
+            <img src={`data:image/png;base64,${message.data.image}`} alt={message.content} className="mt-2 max-h-96 rounded-lg border border-border" />
+          </Expandable>
+        ) : (
+          <span className="text-foreground-muted">{message.content}</span>
+        );
+      case "system":
         return <span className="text-foreground-muted">{message.content}</span>;
       default:
         return <span className="whitespace-pre-wrap text-foreground">{message.content}</span>;

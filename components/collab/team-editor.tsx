@@ -48,6 +48,10 @@ function blankDraft(models: AIModel[]): Draft {
     autonomy: "semi",
     test_command: null,
     max_model_calls: 80,
+    git_enabled: true,
+    parallel: false,
+    preview_command: null,
+    deploy_command: null,
     members: [
       toDraftMember({ model_id: model(0), title: "Lead Engineer", role: "lead", precedence: 1 }),
       toDraftMember({ model_id: model(1), title: "Coder", role: "implementer", precedence: 2, reports_to: 1 }),
@@ -77,6 +81,10 @@ function fromTeam(team: CollabTeam): Draft {
     autonomy: team.autonomy,
     test_command: team.test_command,
     max_model_calls: team.max_model_calls,
+    git_enabled: team.git_enabled,
+    parallel: team.parallel,
+    preview_command: team.preview_command,
+    deploy_command: team.deploy_command,
     members: team.members.map((member) =>
       toDraftMember({
         model_id: member.model_id,
@@ -98,6 +106,8 @@ function toInput(draft: Draft): CollabTeamInput {
   return {
     ...draft,
     test_command: draft.test_command?.trim() || null,
+    preview_command: draft.preview_command?.trim() || null,
+    deploy_command: draft.deploy_command?.trim() || null,
     members: draft.members.map(({ scopeText, ...member }) => ({
       ...member,
       scope: scopeText
@@ -219,6 +229,33 @@ export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess
           <Label htmlFor="team_tests">Test command</Label>
           <Input id="team_tests" value={draft.test_command ?? ""} onChange={(event) => setDraft({ ...draft, test_command: event.target.value })} placeholder="npm test" />
           <p className="mt-1 text-xs text-foreground-muted">Used by agents with “Run tests”. Needs CHIKAIMA_COLLAB_ALLOW_COMMANDS on the server.</p>
+        </div>
+        <div>
+          <Label htmlFor="team_preview">Preview command</Label>
+          <Input
+            id="team_preview"
+            value={draft.preview_command ?? ""}
+            onChange={(event) => setDraft({ ...draft, preview_command: event.target.value })}
+            placeholder="npm run dev -- --port $PORT --hostname 0.0.0.0"
+          />
+          <p className="mt-1 text-xs text-foreground-muted">Starts the live preview. Must listen on $PORT.</p>
+        </div>
+        <div>
+          <Label htmlFor="team_deploy">Deploy command</Label>
+          <Input id="team_deploy" value={draft.deploy_command ?? ""} onChange={(event) => setDraft({ ...draft, deploy_command: event.target.value })} placeholder="vercel deploy --prod" />
+          <p className="mt-1 text-xs text-foreground-muted">Run from the Deploy tab. Agents may only request it; you always approve.</p>
+        </div>
+        <div className="sm:col-span-2 flex flex-wrap gap-2">
+          <Chip active={draft.git_enabled} onClick={() => setDraft({ ...draft, git_enabled: !draft.git_enabled, parallel: draft.git_enabled ? false : draft.parallel })}>
+            Git: branch per run, commit per step
+          </Chip>
+          <Chip
+            active={draft.parallel}
+            title="Different implementers work at the same time, each in its own git worktree; merged by rank."
+            onClick={() => setDraft({ ...draft, parallel: !draft.parallel, git_enabled: !draft.parallel ? true : draft.git_enabled })}
+          >
+            Parallel agents (git worktrees)
+          </Chip>
         </div>
         <div>
           <Label htmlFor="team_revisions">Revisions per step</Label>
