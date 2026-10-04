@@ -232,6 +232,14 @@ export const collabTeams = sqliteTable("collab_teams", {
   testCommand: text("test_command"),
   /** Hard cap on model calls per run, so agents can't loop indefinitely on the user's API budget. */
   maxModelCalls: integer("max_model_calls").notNull().default(80),
+  /** Work on a branch per run and commit each approved step (the folder becomes a git repository if it isn't one). */
+  gitEnabled: integer("git_enabled", { mode: "boolean" }).notNull().default(false),
+  /** Run different implementers' steps at the same time, each in its own git worktree. Requires git. */
+  parallel: integer("parallel", { mode: "boolean" }).notNull().default(false),
+  /** Starts the project's dev server for the live preview; gets the port in $PORT (e.g. "npm run dev -- --port $PORT --host 0.0.0.0"). */
+  previewCommand: text("preview_command"),
+  /** Ships the project (e.g. "vercel deploy --prod"); always needs the supervisor's approval. */
+  deployCommand: text("deploy_command"),
   ...timestamps,
 });
 
@@ -273,6 +281,9 @@ export const collabRuns = sqliteTable("collab_runs", {
   status: text("status").notNull().default("queued"),
   result: text("result", { mode: "json" }).notNull().default("{}"),
   errorMessage: text("error_message"),
+  /** The branch the run started from and the branch its steps were committed to, when the team uses git. */
+  baseBranch: text("base_branch"),
+  runBranch: text("run_branch"),
   startedAt: text("started_at"),
   completedAt: text("completed_at"),
   ...timestamps,

@@ -50,6 +50,13 @@
       "when": 1791131191773,
       "tag": "0006_collaboration",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791132417825,
+      "tag": "0007_git_preview_deploy",
+      "breakpoints": true
     }
   ]
 }

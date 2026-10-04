@@ -172,7 +172,7 @@ function TeamWorkspace({ access, team, onEdit }: { access: ApiAccess; team: Coll
               type="button"
               onClick={() => setSelectedRunId(run.id)}
               className={cn(
-                "max-w-[14rem] truncate rounded-xl border px-2.5 py-1 text-left text-[11px]",
+                "max-w-56 truncate rounded-xl border px-2.5 py-1 text-left text-[11px]",
                 run.id === currentRunId ? "border-primary bg-background text-foreground" : "border-border text-foreground-muted hover:text-foreground",
               )}
             >

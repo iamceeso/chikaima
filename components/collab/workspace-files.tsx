@@ -50,8 +50,8 @@ export function WorkspaceFiles({ access, teamId, agentsWorking, refreshKey }: { 
   const dirty = draft !== null && draft !== fileQuery.data?.content;
 
   return (
-    <div className="grid min-h-[28rem] gap-3 lg:grid-cols-[14rem_1fr]">
-      <Card className="flex max-h-[34rem] flex-col rounded-[1.25rem] bg-surface p-3">
+    <div className="grid min-h-112 gap-3 lg:grid-cols-[14rem_1fr]">
+      <Card className="flex max-h-136 flex-col rounded-[1.25rem] bg-surface p-3">
         <div className="flex items-center justify-between px-1">
           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Files</span>
           <button type="button" aria-label="Refresh files" onClick={() => void filesQuery.refetch()} className="text-foreground-muted hover:text-foreground">
@@ -125,10 +125,10 @@ export function WorkspaceFiles({ access, teamId, agentsWorking, refreshKey }: { 
                 if (dirty && !agentsWorking) save.mutate();
               }
             }}
-            className="mt-2 min-h-[30rem] flex-1 resize-none rounded-xl border border-border bg-background p-3 font-mono text-[12px] leading-relaxed text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="mt-2 min-h-120 flex-1 resize-none rounded-xl border border-border bg-background p-3 font-mono text-[12px] leading-relaxed text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
         ) : (
-          <div className="mt-2 flex min-h-[30rem] flex-1 items-center justify-center rounded-xl border border-dashed border-border text-sm text-foreground-muted">
+          <div className="mt-2 flex min-h-120 flex-1 items-center justify-center rounded-xl border border-dashed border-border text-sm text-foreground-muted">
             Pick a file to view or edit it.
           </div>
         )}
