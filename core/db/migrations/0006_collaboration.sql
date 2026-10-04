@@ -1,4 +1,4 @@
-CREATE TABLE `collab_approvals` (
+CREATE TABLE IF NOT EXISTS `collab_approvals` (
 	`id` text PRIMARY KEY NOT NULL,
 	`run_id` text NOT NULL,
 	`user_id` text NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE `collab_approvals` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE `collab_members` (
+CREATE TABLE IF NOT EXISTS `collab_members` (
 	`id` text PRIMARY KEY NOT NULL,
 	`team_id` text NOT NULL,
 	`model_id` text NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE `collab_members` (
 	FOREIGN KEY (`model_id`) REFERENCES `ai_models`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE `collab_messages` (
+CREATE TABLE IF NOT EXISTS `collab_messages` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`run_id` text NOT NULL,
 	`user_id` text NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE `collab_messages` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE `collab_runs` (
+CREATE TABLE IF NOT EXISTS `collab_runs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`team_id` text NOT NULL,
 	`user_id` text NOT NULL,
@@ -62,7 +62,7 @@ CREATE TABLE `collab_runs` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE `collab_teams` (
+CREATE TABLE IF NOT EXISTS `collab_teams` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
 	`name` text NOT NULL,

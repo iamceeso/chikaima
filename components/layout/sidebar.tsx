@@ -97,7 +97,7 @@ export function Sidebar({
 
   const primary = [
     { href: "/projects", label: "Projects", icon: FolderGit2, active: pathname === "/projects" || pathname === "/projects/new" },
-    { href: base ?? "/projects", label: "Workspace", icon: Code2, active: Boolean(base) && pathname === base, disabled: !base },
+    { href: base ?? "/workspace", label: "Workspace", icon: Code2, active: pathname === "/workspace" || (Boolean(base) && pathname === base) },
     { href: base ? `${base}/team` : "/projects", label: "AI Team", icon: Users, active: Boolean(base) && pathname === `${base}/team`, disabled: !base },
     { href: base ? `${base}/tasks` : "/projects", label: "Tasks", icon: KanbanSquare, active: Boolean(base) && pathname === `${base}/tasks`, disabled: !base },
   ];

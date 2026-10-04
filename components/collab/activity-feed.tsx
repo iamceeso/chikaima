@@ -79,7 +79,7 @@ export function ApprovalCard({ access, message, who }: { access: ApiAccess; mess
       ) : null}
       {detail?.length ? <div className="mt-2"><DiffView files={detail} height={360} /></div> : diff ? <DiffBlock diff={diff} /> : null}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Input className="h-9 min-w-[12rem] flex-1" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Note for the agent (optional)" />
+        <Input className="h-9 min-w-48 flex-1" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Note for the agent (optional)" />
         <Button type="button" variant="ghost" className="h-9 border border-border" disabled={resolve.isPending || resolve.isSuccess} onClick={() => resolve.mutate("reject")}>
           <X className="mr-1 h-3.5 w-3.5" /> Reject
         </Button>
@@ -216,7 +216,7 @@ export function ActivityFeed({
             <li key={message.id} className="grid grid-cols-[3.75rem_7.5rem_1fr] gap-2 text-sm">
               <span className="pt-0.5 text-[11px] tabular-nums text-muted">{new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
               <span className="truncate pt-0.5 text-xs font-semibold text-foreground">{nameOf(message.member_id)}</span>
-              <div className="min-w-0 break-words text-sm">{body(message)}</div>
+              <div className="min-w-0 wrap-break-word text-sm">{body(message)}</div>
             </li>
           ))}
       </ol>

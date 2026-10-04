@@ -1,315 +1,190 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, FolderOpen, LoaderCircle, MicOff, Video, Waves } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { Code2, Files, FolderGit2, GitBranch, KanbanSquare, Moon, PanelRight, Plus, Search, Settings2, Sparkles, SunMedium, Users } from "lucide-react";
 
-import { Topbar } from "@/components/layout/topbar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { libraryQueryKey } from "@/lib/library";
+import { AdminAccessGate } from "@/components/settings/admin-access-gate";
+import { useAdminAccess } from "@/hooks/use-admin-access";
+import { useTheme } from "@/hooks/use-theme";
+import { useLastProject } from "@/lib/last-project";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
-import { useAuthStore } from "@/store/auth-store";
-import type { VideoAsset } from "@/types";
 
-type QueueStatus = "queued" | "uploading" | "uploaded" | "failed";
-
-type VideoQueueItem = {
-  id: string;
-  file: File;
-  relativePath: string;
-  status: QueueStatus;
-  error?: string;
-  uploadedId?: string;
-};
-
-type DirectoryCapableInput = HTMLInputElement & {
-  webkitdirectory?: boolean;
-};
-
-const VIDEO_EXTENSIONS = new Set(["mp4", "mov", "mkv", "webm", "m4v"]);
-
-function isVideoFile(file: File) {
-  if (file.type.startsWith("video/")) {
-    return true;
-  }
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-  return VIDEO_EXTENSIONS.has(extension);
-}
-
-function formatTimestamp(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+function EmptyPanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex h-full flex-col bg-surface">
+      <div className="border-b border-border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-muted">{title}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">{children}</div>
+    </div>
+  );
 }
 
 export default function WorkspacePage() {
-  const token = useAuthStore((state) => state.tokens?.access_token);
-  const queryClient = useQueryClient();
-  const folderInputRef = useRef<DirectoryCapableInput | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [queue, setQueue] = useState<VideoQueueItem[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const { access, hasAdminAccess, workspaceAuthDisabled } = useAdminAccess();
+  const lastProject = useLastProject();
+  const { theme, setTheme } = useTheme();
+  const projectsQuery = useQuery({ queryKey: ["collab-projects"], queryFn: () => api.getProjects(access!), enabled: Boolean(access), staleTime: 30_000 });
+  const projects = projectsQuery.data ?? [];
+  const recent = projects.find((project) => project.id === lastProject) ?? projects[0] ?? null;
 
-  const videosQuery = useQuery({
-    queryKey: ["videos"],
-    queryFn: () => (token ? api.getVideos(token) : Promise.resolve([] as VideoAsset[])),
-  });
-
-  useEffect(() => {
-    const input = folderInputRef.current;
-    if (!input) {
-      return;
-    }
-    input.setAttribute("webkitdirectory", "");
-    input.setAttribute("directory", "");
-  }, []);
-
-  const queuedCount = queue.filter((item) => item.status === "queued").length;
-  const uploadedCount = queue.filter((item) => item.status === "uploaded").length;
-  const failedCount = queue.filter((item) => item.status === "failed").length;
-
-  const addFilesToQueue = (files: FileList | null) => {
-    const selection = Array.from(files ?? []).filter(isVideoFile);
-    if (!selection.length) {
-      setNotice("No supported video files were found in that selection.");
-      return;
-    }
-
-    setNotice(`Added ${selection.length} video${selection.length === 1 ? "" : "s"} to the workspace queue.`);
-    setQueue((current) => [
-      ...current,
-      ...selection.map((file, index) => ({
-        id: `${file.name}-${file.size}-${file.lastModified}-${current.length + index}`,
-        file,
-        relativePath: "webkitRelativePath" in file && file.webkitRelativePath ? file.webkitRelativePath : file.name,
-        status: "queued" as const,
-      })),
-    ]);
-  };
-
-  const openFolderPicker = () => folderInputRef.current?.click();
-  const openFilePicker = () => fileInputRef.current?.click();
-
-  const startUpload = async () => {
-    if (!token || isUploading || !queuedCount) {
-      return;
-    }
-
-    setIsUploading(true);
-    setNotice("Uploading videos one after another and queueing analysis jobs.");
-
-    try {
-      for (const item of queue) {
-        if (item.status !== "queued") {
-          continue;
-        }
-
-        setQueue((current) => current.map((entry) => (entry.id === item.id ? { ...entry, status: "uploading", error: undefined } : entry)));
-
-        try {
-          const uploaded = await api.uploadVideo(token, item.file);
-          setQueue((current) =>
-            current.map((entry) =>
-              entry.id === item.id ? { ...entry, status: "uploaded", uploadedId: uploaded.id } : entry,
-            ),
-          );
-          await queryClient.invalidateQueries({ queryKey: ["videos"] });
-          await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-          await queryClient.invalidateQueries({ queryKey: libraryQueryKey });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Upload failed";
-          setQueue((current) => current.map((entry) => (entry.id === item.id ? { ...entry, status: "failed", error: message } : entry)));
-        }
-      }
-      setNotice("Video upload pass finished. Each file has been queued for Whisper transcription.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  if (!hasAdminAccess || !access) {
+    return workspaceAuthDisabled ? (
+      <div className="mx-auto max-w-md pt-16">
+        <AdminAccessGate title="Administrator access required" description="The workspace can run code and AI agents on this server, so only administrators can open it." />
+      </div>
+    ) : (
+      <div className="flex h-screen items-center justify-center bg-background p-6 text-sm text-foreground-muted">Only administrators can open the workspace.</div>
+    );
+  }
 
   return (
-    <>
-        <Topbar
-          title="Video workspace"
-          description="Open a local folder of videos, send them through the queue one by one, and let Chikaima transcribe them with its built-in Whisper pipeline."
-        />
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
+      <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border bg-surface px-3 text-xs">
+        <Link href="/workspace" className="flex items-center gap-1.5" title="Workspace">
+          <Image src="/chikaima-logo.png" alt="Chikaima" width={18} height={18} className="h-4.5 w-4.5 object-contain" />
+          <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] sm:inline">Chikaima</span>
+        </Link>
+        <span className="text-muted">/</span>
+        <span className="text-[13px] font-semibold">Workspace</span>
+        {recent ? (
+          <Link href={`/projects/${recent.id}`} className="ml-2 hidden rounded-md px-2 py-1 text-foreground-muted hover:bg-surface-strong hover:text-foreground sm:inline-flex">
+            Open {recent.name}
+          </Link>
+        ) : null}
+        <div className="ml-auto flex items-center gap-1">
+          <Link href="/projects/new" className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 font-medium text-primary-foreground">
+            <Plus className="h-3.5 w-3.5" /> Set up schema
+          </Link>
+          <button type="button" title="Toggle theme" aria-label="Toggle theme" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+            {theme === "dark" ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          <button type="button" title="AI team panel" aria-label="AI team panel" className="rounded p-1.5 text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+            <PanelRight className="h-4 w-4" />
+          </button>
+        </div>
+      </header>
 
-      <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card className="rounded-[2rem] border border-border bg-surface px-6 py-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Local Folder Intake</p>
-              <h2 className="mt-3 text-2xl font-semibold text-foreground">Batch-run a folder of videos from your computer</h2>
-              <p className="mt-3 text-sm leading-7 text-foreground-muted">
-                Pick a folder in the browser, Chikaima filters out the video files, uploads them one at a time, and creates
-                analysis jobs automatically. Videos with speech go through Whisper transcription, and the per-file upload limit is controlled by backend configuration.
-              </p>
-            </div>
+      <div className="flex min-h-0 flex-1">
+        <nav className="flex w-12 shrink-0 flex-col items-center gap-0.5 border-r border-border bg-surface py-2" aria-label="Workspace">
+          {[
+            { label: "Explorer", icon: Files, active: true },
+            { label: "Search", icon: Search },
+            { label: "Source control", icon: GitBranch },
+          ].map((item) => (
+            <button key={item.label} type="button" title={item.label} aria-label={item.label} className={cn("relative flex h-10 w-10 items-center justify-center rounded-md", item.active ? "text-foreground before:absolute before:-left-1 before:h-6 before:w-0.5 before:rounded before:bg-primary" : "text-foreground-muted hover:text-foreground")}>
+              <item.icon className="h-5 w-5" />
+            </button>
+          ))}
+          <div className="my-1 h-px w-6 bg-border" />
+          <Link href="/projects/new" title="Working schema" aria-label="Working schema" className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+            <Settings2 className="h-5 w-5" />
+          </Link>
+          <Link href={recent ? `/projects/${recent.id}/team` : "/projects/new"} title="AI Team" aria-label="AI Team" className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+            <Users className="h-5 w-5" />
+          </Link>
+          <Link href={recent ? `/projects/${recent.id}/tasks` : "/projects/new"} title="Tasks" aria-label="Tasks" className="flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+            <KanbanSquare className="h-5 w-5" />
+          </Link>
+          <Link href="/projects" title="Schemas" aria-label="Schemas" className="mt-auto flex h-10 w-10 items-center justify-center rounded-md text-foreground-muted hover:text-foreground">
+            <FolderGit2 className="h-5 w-5" />
+          </Link>
+        </nav>
 
-            <div className="grid min-w-60 gap-3 rounded-[1.75rem] bg-background-secondary/70 p-4">
-              <Button className="justify-start gap-2 rounded-2xl" onClick={openFolderPicker}>
-                <FolderOpen className="h-4 w-4" />
-                Choose folder
-              </Button>
-              <Button variant="outline" className="justify-start gap-2 rounded-2xl" onClick={openFilePicker}>
-                <Video className="h-4 w-4" />
-                Choose files
-              </Button>
-              <Button
-                variant="secondary"
-                className="justify-start gap-2 rounded-2xl"
-                onClick={startUpload}
-                disabled={!queuedCount || isUploading || !token}
-              >
-                {isUploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Waves className="h-4 w-4" />}
-                {isUploading ? "Uploading queue..." : "Start analysis queue"}
-              </Button>
-            </div>
-          </div>
-
-          <input
-            ref={folderInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(event) => {
-              addFilesToQueue(event.target.files);
-              event.target.value = "";
-            }}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="video/*,.mp4,.mov,.mkv,.webm,.m4v"
-            multiple
-            className="hidden"
-            onChange={(event) => {
-              addFilesToQueue(event.target.files);
-              event.target.value = "";
-            }}
-          />
-
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-            {[
-              { label: "Queued", value: queuedCount, tone: "text-foreground" },
-              { label: "Uploaded", value: uploadedCount, tone: "text-primary" },
-              { label: "Needs retry", value: failedCount, tone: "text-amber-600 dark:text-amber-400" },
-            ].map((item) => (
-              <div key={item.label} className="rounded-[1.5rem] border border-border bg-background px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground-muted">{item.label}</p>
-                <p className={cn("mt-2 text-3xl font-semibold", item.tone)}>{item.value}</p>
+        <aside className="hidden w-[260px] shrink-0 border-r border-border bg-surface md:block">
+          <EmptyPanel title="Explorer">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 rounded-md bg-surface-strong px-2 py-1.5 text-[12.5px] font-medium">
+                <Code2 className="h-4 w-4 text-primary" />
+                Workspace
               </div>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-[1.5rem] border border-dashed border-border bg-background px-4 py-4 text-sm text-foreground-muted">
-            {notice ?? "Start by choosing a folder or a set of videos from your local machine."}
-          </div>
-        </Card>
-
-        <Card className="rounded-[2rem] border border-border bg-surface px-6 py-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-              <MicOff className="h-5 w-5" />
+              {projectsQuery.isLoading ? <p className="px-2 py-2 text-xs text-foreground-muted">Loading schemas...</p> : null}
+              {projects.length ? (
+                <div className="pt-1">
+                  {projects.slice(0, 8).map((project) => (
+                    <Link key={project.id} href={`/projects/${project.id}`} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] text-foreground-muted hover:bg-surface-strong hover:text-foreground">
+                      <FolderGit2 className="h-3.5 w-3.5" />
+                      <span className="truncate">{project.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="px-2 py-2 text-xs leading-5 text-foreground-muted">No working schema has been set up yet.</p>
+              )}
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">What happens per video</h2>
-              <div className="mt-3 space-y-3 text-sm leading-7 text-foreground-muted">
-                <p>1. The selected local video file is uploaded into Chikaima storage.</p>
-                <p>2. A Celery job transcribes that file with the local Whisper pipeline.</p>
-                <p>3. Returned transcript text is saved and indexed.</p>
-                <p>4. Summaries and follow-on analysis are generated from the transcript.</p>
+          </EmptyPanel>
+        </aside>
+
+        <main className="flex min-w-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 bg-background">
+            <div className="flex h-9 items-center border-b border-border bg-surface">
+              <div className="flex h-full items-center border-r border-border bg-background px-3 text-xs font-medium">
+                <Code2 className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                workspace.ts
               </div>
             </div>
+            <div className="flex h-[calc(100%-2.25rem)] items-center justify-center p-6">
+              <div className="w-full max-w-xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-md border border-border bg-surface text-primary">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold tracking-tight">Workspace ready</h1>
+                    <p className="mt-1 text-sm text-foreground-muted">Set up a working schema when you are ready to connect code, agents, tasks, and runtime commands.</p>
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Link href="/projects/new" className="rounded-md border border-border bg-surface p-4 text-sm hover:border-primary/60">
+                    <span className="font-medium text-foreground">Set up working schema</span>
+                    <span className="mt-1 block text-xs leading-5 text-foreground-muted">Choose a folder, repository, team preset, model, and supervision level.</span>
+                  </Link>
+                  <Link href={recent ? `/projects/${recent.id}` : "/projects"} className="rounded-md border border-border bg-surface p-4 text-sm hover:border-primary/60">
+                    <span className="font-medium text-foreground">{recent ? "Open recent workspace" : "Browse schemas"}</span>
+                    <span className="mt-1 block text-xs leading-5 text-foreground-muted">{recent ? recent.name : "Review existing working schemas once they exist."}</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
-        </Card>
+          <div className="h-48 shrink-0 border-t border-border bg-surface">
+            <div className="flex h-8 items-center gap-3 border-b border-border px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground-muted">
+              <span className="text-foreground">Terminal</span>
+              <span>Activity</span>
+              <span>Preview</span>
+            </div>
+            <div className="p-3 font-mono text-xs text-foreground-muted">
+              <p>$ workspace idle</p>
+              <p className="mt-1">Open or create a working schema to attach files and run agents.</p>
+            </div>
+          </div>
+        </main>
+
+        <aside className="hidden w-[330px] shrink-0 border-l border-border bg-surface lg:block">
+          <EmptyPanel title="Setup">
+            <div className="space-y-3 text-sm">
+              <p className="text-foreground-muted">Projects are now setup records for working schemas. The workspace itself stays available before and after you create one.</p>
+              <Link href="/projects/new" className="flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
+                <Plus className="h-4 w-4" />
+                Set up schema
+              </Link>
+              {recent ? (
+                <Link href={`/projects/${recent.id}`} className="flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-strong">
+                  <Code2 className="h-4 w-4" />
+                  Open {recent.name}
+                </Link>
+              ) : null}
+            </div>
+          </EmptyPanel>
+        </aside>
       </div>
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="rounded-[2rem] border border-border bg-surface px-5 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Folder queue</h2>
-              <p className="mt-1 text-sm text-foreground-muted">Videos are kept in order and uploaded sequentially so you can monitor each item.</p>
-            </div>
-            <Button variant="ghost" className="rounded-2xl" onClick={() => setQueue([])} disabled={isUploading || !queue.length}>
-              Clear queue
-            </Button>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {queue.length ? (
-              queue.map((item) => (
-                <div key={item.id} className="rounded-[1.5rem] border border-border bg-background px-4 py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{item.file.name}</p>
-                      <p className="mt-1 truncate text-xs text-foreground-muted">{item.relativePath}</p>
-                    </div>
-                    <span
-                      className={cn(
-                        "rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]",
-                        item.status === "uploaded" && "border-primary/20 bg-primary/10 text-primary",
-                        item.status === "uploading" && "border-border bg-surface text-foreground",
-                        item.status === "queued" && "border-border bg-surface text-foreground-muted",
-                        item.status === "failed" && "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300",
-                      )}
-                    >
-                      {item.status}
-                    </span>
-                  </div>
-                  {item.error ? <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">{item.error}</p> : null}
-                </div>
-              ))
-            ) : (
-              <div className="rounded-[1.5rem] border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-foreground-muted">
-                No videos queued yet.
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <Card className="rounded-[2rem] border border-border bg-surface px-5 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Recent videos</h2>
-              <p className="mt-1 text-sm text-foreground-muted">Latest items already inside the library and processing pipeline.</p>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {videosQuery.data?.length ? (
-              videosQuery.data.slice(0, 8).map((video) => (
-                <div key={video.id} className="rounded-[1.5rem] border border-border bg-background px-4 py-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{video.name}</p>
-                      <p className="mt-1 text-xs text-foreground-muted">{formatTimestamp(video.created_at)}</p>
-                    </div>
-                    <span className="rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
-                      {video.status}
-                    </span>
-                  </div>
-                  {video.summary ? <p className="mt-3 text-xs leading-6 text-foreground-muted">{video.summary}</p> : null}
-                </div>
-              ))
-            ) : (
-              <div className="rounded-[1.5rem] border border-dashed border-border bg-background px-4 py-8 text-center text-sm text-foreground-muted">
-                No processed videos yet.
-              </div>
-            )}
-          </div>
-        </Card>
-      </div>
-    </>
+      <footer className="flex h-6 shrink-0 items-center gap-4 bg-surface-strong px-3 text-[11px] text-foreground-muted">
+        <span>workspace</span>
+        <span>{projects.length} schemas</span>
+        <span className="ml-auto">idle</span>
+      </footer>
+    </div>
   );
 }

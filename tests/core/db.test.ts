@@ -8,7 +8,7 @@ import { __resetConfigForTests } from "../../core/config/index.js";
 import { getDb, getRawConnection, __resetDbForTests } from "../../core/db/client.js";
 import { users } from "../../core/db/schema.js";
 
-async function withTempDb<T>(fn: () => T | Promise<T>): Promise<T> {
+async function withTempDb<T>(fn: (dbPath: string) => T | Promise<T>): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), "chikaima-db-test-"));
   const dbPath = join(dir, "test.db");
   const previous = process.env.CHIKAIMA_DB_PATH;
@@ -16,7 +16,7 @@ async function withTempDb<T>(fn: () => T | Promise<T>): Promise<T> {
   __resetConfigForTests();
   __resetDbForTests();
   try {
-    return await fn();
+    return await fn(dbPath);
   } finally {
     __resetDbForTests();
     __resetConfigForTests();
@@ -73,6 +73,48 @@ test("sqlite-vec extension is loaded and the vector virtual table exists", async
   });
 });
 
+test("getDb recovers when an earlier collaboration migration partially created a table", async () => {
+  await withTempDb(async (dbPath) => {
+    const Database = (await import("better-sqlite3")).default;
+    const connection = new Database(dbPath);
+    try {
+      connection.exec(`
+        CREATE TABLE collab_teams (
+          id text PRIMARY KEY NOT NULL,
+          user_id text NOT NULL,
+          name text NOT NULL,
+          folder text NOT NULL,
+          decision_policy text DEFAULT 'majority' NOT NULL,
+          max_revisions integer DEFAULT 2 NOT NULL,
+          created_at text NOT NULL,
+          updated_at text NOT NULL
+        );
+        CREATE TABLE collab_members (
+          id text PRIMARY KEY NOT NULL,
+          team_id text NOT NULL,
+          model_id text NOT NULL,
+          name text NOT NULL,
+          role text NOT NULL,
+          instructions text DEFAULT '' NOT NULL,
+          precedence integer NOT NULL,
+          created_at text NOT NULL,
+          updated_at text NOT NULL
+        );
+      `);
+    } finally {
+      connection.close();
+    }
+
+    getDb();
+    const raw = getRawConnection();
+    const columns = (table: string) => (raw.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((row) => row.name);
+    assert.ok(columns("collab_teams").includes("autonomy"));
+    assert.ok(columns("collab_teams").includes("preview_command"));
+    assert.ok(columns("collab_members").includes("permissions"));
+    assert.ok(columns("collab_runs").includes("base_branch"));
+  });
+});
+
 test("repairCollabSchema adds collaboration columns and tables an early 0006 draft lacked, and is idempotent", async () => {
   const Database = (await import("better-sqlite3")).default;
   const { repairCollabSchema } = await import("../../core/db/client.js");
@@ -88,8 +130,9 @@ test("repairCollabSchema adds collaboration columns and tables an early 0006 dra
     repairCollabSchema(connection);
     repairCollabSchema(connection);
     const columns = (table: string) => (connection.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((row) => row.name);
-    for (const column of ["autonomy", "test_command", "max_model_calls"]) assert.ok(columns("collab_teams").includes(column), column);
+    for (const column of ["autonomy", "test_command", "max_model_calls", "git_enabled", "parallel", "preview_command", "deploy_command"]) assert.ok(columns("collab_teams").includes(column), column);
     for (const column of ["title", "scope", "permissions", "reports_to", "reviewed_by"]) assert.ok(columns("collab_members").includes(column), column);
+    for (const column of ["base_branch", "run_branch"]) assert.ok(columns("collab_runs").includes(column), column);
     assert.ok(columns("collab_approvals").includes("resolved_at"));
     assert.deepEqual(connection.prepare("SELECT autonomy, max_model_calls FROM collab_teams").get(), { autonomy: "semi", max_model_calls: 80 });
   } finally {

@@ -129,7 +129,7 @@ function AgentDetail({ view, team, models }: { view: AgentView; team: CollabTeam
       </dl>
       {view.steps.length ? (
         <div>
-          <p className="font-semibold uppercase tracking-[0.1em] text-muted">Assigned</p>
+          <p className="font-semibold uppercase tracking-widest text-muted">Assigned</p>
           <ul className="mt-0.5 space-y-0.5">
             {view.steps.map((step) => (
               <li key={step.index} className="text-foreground">
@@ -141,13 +141,13 @@ function AgentDetail({ view, team, models }: { view: AgentView; team: CollabTeam
       ) : null}
       {view.files.length ? (
         <div>
-          <p className="font-semibold uppercase tracking-[0.1em] text-muted">Files changed</p>
+          <p className="font-semibold uppercase tracking-widest text-muted">Files changed</p>
           <p className="mt-0.5 font-mono text-foreground">{view.files.join(", ")}</p>
         </div>
       ) : null}
       {view.recent.length ? (
         <div>
-          <p className="font-semibold uppercase tracking-[0.1em] text-muted">Recent actions</p>
+          <p className="font-semibold uppercase tracking-widest text-muted">Recent actions</p>
           <ul className="mt-0.5 space-y-0.5 text-foreground-muted">
             {view.recent.map((message) => (
               <li key={message.id} className="line-clamp-2">

@@ -77,9 +77,9 @@ export default function ProjectsPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <section className="border-b border-border pb-8 pt-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Build software with your AI engineering team</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Set up working schemas</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-foreground-muted">
-          Open a project, assemble specialised AI agents, and build, test and review software together directly from your browser.
+          Projects define the folder, repository, AI team, model access, and commands that power a workspace.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Button asChild href="/projects/new">
@@ -90,7 +90,7 @@ export default function ProjectsPage() {
           </Button>
           {recent ? (
             <Button asChild href={`/projects/${recent.id}`} variant="ghost">
-              Open recent: {recent.name}
+              Open workspace: {recent.name}
             </Button>
           ) : null}
         </div>
@@ -98,15 +98,15 @@ export default function ProjectsPage() {
 
       <section className="py-6">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground-muted">Projects</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground-muted">Working schemas</h2>
           {projects.length ? <span className="text-xs text-muted">{projects.length}</span> : null}
         </div>
         {projectsQuery.isLoading ? <p className="text-sm text-foreground-muted">Loading projects…</p> : null}
         {projectsQuery.error ? <p className="text-sm text-destructive">{projectsQuery.error.message}</p> : null}
         {!projectsQuery.isLoading && projects.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
-            <p className="text-sm font-medium text-foreground">No projects yet</p>
-            <p className="mt-1 text-sm text-foreground-muted">Create a blank project or import a git repository, then give your AI team its first task.</p>
+            <p className="text-sm font-medium text-foreground">No working schemas yet</p>
+            <p className="mt-1 text-sm text-foreground-muted">The workspace is still available. Set up a schema when you are ready to attach code and agents.</p>
           </div>
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

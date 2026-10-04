@@ -356,7 +356,7 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
         {view === "code" && side ? (
           <>
             <aside
-              className="fixed bottom-6 left-12 top-10 z-30 min-h-0 w-[min(300px,80vw)] border-r border-border bg-surface shadow-2xl md:static md:z-auto md:w-[var(--side-width)] md:shrink-0 md:border-r-0 md:shadow-none"
+              className="fixed bottom-6 left-12 top-10 z-30 min-h-0 w-[min(300px,80vw)] border-r border-border bg-surface shadow-2xl md:static md:z-auto md:w-(--side-width) md:shrink-0 md:border-r-0 md:shadow-none"
               style={{ "--side-width": `${sideWidth}px` } as React.CSSProperties}
             >
               {side === "explorer" ? (
@@ -435,7 +435,7 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
               <ResizeHandle axis="x" onPointerDown={dragRight} />
             </div>
             <aside
-              className="fixed bottom-6 right-0 top-10 z-30 min-h-0 w-[min(360px,90vw)] border-l border-border shadow-2xl lg:static lg:z-auto lg:w-[var(--right-width)] lg:shrink-0 lg:border-l-0 lg:shadow-none"
+              className="fixed bottom-6 right-0 top-10 z-30 min-h-0 w-[min(360px,90vw)] border-l border-border shadow-2xl lg:static lg:z-auto lg:w-(--right-width) lg:shrink-0 lg:border-l-0 lg:shadow-none"
               style={{ "--right-width": `${rightWidth}px` } as React.CSSProperties}
             >
               <AgentPanel

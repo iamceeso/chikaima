@@ -49,19 +49,26 @@ export function getDb(): ChikaimaDatabase {
 }
 
 /**
- * Columns that an early development draft of migration 0006 didn't create.
- * A database that applied that draft is recorded as being past 0006, so the
- * migrator never adds them; this fills the gap idempotently on startup.
+ * Columns that early development drafts of collaboration migrations didn't
+ * create. A database that applied one of those drafts is recorded as being
+ * past the migration, so the migrator never adds them; this fills the gap
+ * idempotently on startup.
  */
 const COLLAB_COLUMNS: Array<[table: string, column: string, ddl: string]> = [
   ["collab_teams", "autonomy", "text DEFAULT 'semi' NOT NULL"],
   ["collab_teams", "test_command", "text"],
   ["collab_teams", "max_model_calls", "integer DEFAULT 80 NOT NULL"],
+  ["collab_teams", "git_enabled", "integer DEFAULT false NOT NULL"],
+  ["collab_teams", "parallel", "integer DEFAULT false NOT NULL"],
+  ["collab_teams", "preview_command", "text"],
+  ["collab_teams", "deploy_command", "text"],
   ["collab_members", "title", "text DEFAULT '' NOT NULL"],
   ["collab_members", "scope", "text DEFAULT '[]' NOT NULL"],
   ["collab_members", "permissions", "text DEFAULT '[]' NOT NULL"],
   ["collab_members", "reports_to", "integer"],
   ["collab_members", "reviewed_by", "text DEFAULT '[]' NOT NULL"],
+  ["collab_runs", "base_branch", "text"],
+  ["collab_runs", "run_branch", "text"],
 ];
 
 export function repairCollabSchema(connection: Database.Database): void {
