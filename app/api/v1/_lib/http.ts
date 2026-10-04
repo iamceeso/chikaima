@@ -4,6 +4,7 @@ import { getCurrentAdminUser, getCurrentUser } from "@/core/auth/deps.js";
 import type { UserRow } from "@/core/auth/repository.js";
 import { getDb, type ChikaimaDatabase } from "@/core/db/client.js";
 import { HttpError, badRequest } from "@/core/errors.js";
+import { getCollabRunner } from "@/core/collab/runner.js";
 import { getJobWorker } from "@/core/jobs/worker.js";
 
 /**
@@ -26,6 +27,8 @@ export function db(): ChikaimaDatabase {
   if (!workerStarted) {
     workerStarted = true;
     getJobWorker(database);
+    // Also fails collaboration runs a previous process left active, before any route can read them.
+    getCollabRunner(database);
   }
   return database;
 }

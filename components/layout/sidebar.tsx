@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   Trash2,
+  Users,
 } from "lucide-react";
 
 import {
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/chat", label: "New Chat", icon: MessageSquarePlus },
   { href: "/library", label: "Library", icon: LayoutDashboard },
   { href: "/processing", label: "Processing", icon: FolderKanban },
+  { href: "/collaborate", label: "AI Team", icon: Users },
 ];
 
 const settingsItems = [

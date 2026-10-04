@@ -4,6 +4,15 @@ import type {
   AssetResourceType,
   AudioAsset,
   AuthTokens,
+  CollabApproval,
+  CollabFileEntry,
+  CollabMessage,
+  CollabRun,
+  CollabRunDetail,
+  CollabRunStatus,
+  CollabTeam,
+  CollabTeamInput,
+  CollabTemplate,
   Conversation,
   DashboardSummary,
   DocumentAsset,
@@ -349,6 +358,77 @@ export const api = {
       if (done) {
         break;
       }
+    }
+  },
+  getCollabTeams: (access: ApiAccess) => request<CollabTeam[]>("/collab/teams", access),
+  createCollabTeam: (access: ApiAccess, payload: CollabTeamInput) =>
+    request<CollabTeam>("/collab/teams", { method: "POST", ...access, body: JSON.stringify(payload) }),
+  updateCollabTeam: (access: ApiAccess, teamId: string, payload: CollabTeamInput) =>
+    request<CollabTeam>(`/collab/teams/${teamId}`, { method: "PUT", ...access, body: JSON.stringify(payload) }),
+  deleteCollabTeam: (access: ApiAccess, teamId: string) => request<void>(`/collab/teams/${teamId}`, { method: "DELETE", ...access }),
+  getCollabRuns: (access: ApiAccess, teamId: string) => request<CollabRun[]>(`/collab/teams/${teamId}/runs`, access),
+  startCollabRun: (access: ApiAccess, teamId: string, task: string) =>
+    request<CollabRun>(`/collab/teams/${teamId}/runs`, { method: "POST", ...access, body: JSON.stringify({ task }) }),
+  getCollabRun: (access: ApiAccess, runId: string) => request<CollabRunDetail>(`/collab/runs/${runId}`, access),
+  cancelCollabRun: (access: ApiAccess, runId: string) => request<CollabRun>(`/collab/runs/${runId}/cancel`, { method: "POST", ...access }),
+  resolveCollabApproval: (access: ApiAccess, runId: string, approvalId: string, decision: "approve" | "reject", note?: string) =>
+    request<CollabApproval>(`/collab/runs/${runId}/approvals/${approvalId}`, { method: "POST", ...access, body: JSON.stringify({ decision, note }) }),
+  getCollabTemplates: (access: ApiAccess) => request<CollabTemplate[]>("/collab/templates", access),
+  getCollabFiles: (access: ApiAccess, teamId: string) =>
+    request<{ entries: CollabFileEntry[]; truncated: boolean }>(`/collab/teams/${teamId}/files`, { ...access, cache: "no-store" }),
+  getCollabFile: (access: ApiAccess, teamId: string, path: string) =>
+    request<{ path: string; content: string }>(`/collab/teams/${teamId}/files/content?path=${encodeURIComponent(path)}`, { ...access, cache: "no-store" }),
+  saveCollabFile: (access: ApiAccess, teamId: string, path: string, content: string) =>
+    request<{ path: string }>(`/collab/teams/${teamId}/files/content`, { method: "PUT", ...access, body: JSON.stringify({ path, content }) }),
+  /**
+   * Holds open a run's transcript stream until `signal` aborts or the server
+   * closes it: replays messages after `after`, then delivers new ones live.
+   */
+  streamCollabRun: async (
+    access: ApiAccess,
+    runId: string,
+    handlers: { onMessage: (message: CollabMessage) => void; onStatus?: (status: CollabRunStatus, errorMessage: string | null) => void },
+    options: { after?: number | null; signal?: AbortSignal } = {},
+  ) => {
+    const headers = new Headers();
+    if (access.authHeader) headers.set("Authorization", access.authHeader);
+    else if (access.token) headers.set("Authorization", `Bearer ${access.token}`);
+    const query = options.after != null ? `?after=${options.after}` : "";
+    const response = await fetch(`${env.apiBaseUrl}/collab/runs/${runId}/stream${query}`, { headers, cache: "no-store", signal: options.signal });
+    if (!response.ok || !response.body) {
+      throw new Error((await response.text()) || "Run stream failed");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+
+      let boundaryIndex = buffer.indexOf("\n\n");
+      while (boundaryIndex !== -1) {
+        const rawEvent = buffer.slice(0, boundaryIndex);
+        buffer = buffer.slice(boundaryIndex + 2);
+        boundaryIndex = buffer.indexOf("\n\n");
+
+        let eventName = "message";
+        const dataLines: string[] = [];
+        for (const line of rawEvent.split("\n")) {
+          if (line.startsWith("event:")) eventName = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+        }
+        if (dataLines.length === 0) continue;
+        try {
+          const payload = JSON.parse(dataLines.join("\n"));
+          if (eventName === "collab_message") handlers.onMessage(payload as CollabMessage);
+          else if (eventName === "run_status") handlers.onStatus?.(payload.status as CollabRunStatus, payload.error_message ?? null);
+        } catch {
+          // skip a malformed frame rather than dropping the whole stream
+        }
+      }
+
+      if (done) break;
     }
   },
   getJobs: (token: string) => request<Job[]>("/jobs", { token }),
