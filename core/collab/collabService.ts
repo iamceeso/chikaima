@@ -21,6 +21,13 @@ import { disposeExecutor } from "./sandbox.js";
 import { normalizeTeamFolder, Workspace } from "./workspace.js";
 
 const MAX_MEMBERS = 8;
+const MAX_TITLE_CHARS = 120;
+
+/** A task's title: its first line, shortened. */
+export function taskTitle(text: string): string {
+  const first = text.trim().split("\n")[0]!.trim();
+  return first.length > MAX_TITLE_CHARS ? `${first.slice(0, MAX_TITLE_CHARS - 1)}…` : first;
+}
 const MAX_REVISIONS = 5;
 const MAX_MODEL_CALLS = 500;
 const MAX_TASK_CHARS = 20_000;
@@ -100,15 +107,26 @@ export class CollabService {
     return this.repo.listRuns(teamId);
   }
 
-  /** Queues a run and starts it in the background. Only one run may edit a given folder at a time, across all teams. */
-  startRun(userId: string, teamId: string, task: string): CollabRunRow {
+  /**
+   * Queues a run and starts it in the background. Only one run may edit a
+   * given folder at a time, across all teams. Every run belongs to an
+   * engineering task: pass `taskId` to start (or retry) a backlog task,
+   * otherwise a task is created from the text.
+   */
+  startRun(userId: string, teamId: string, task: string, taskId?: string): CollabRunRow {
     const { team } = this.getTeam(userId, teamId);
     const trimmed = (task ?? "").trim();
     if (!trimmed) throw badRequest("Describe the task for the team.");
     if (trimmed.length > MAX_TASK_CHARS) throw badRequest(`Task is too long (over ${MAX_TASK_CHARS} characters).`);
+    if (taskId) {
+      const existing = this.repo.getTask(taskId);
+      if (!existing || existing.teamId !== teamId) throw notFound("Task not found.");
+    }
     if (this.folderBusy(team.folder)) throw conflict(`Another run is already working in "${team.folder}".`);
 
     const run = this.repo.createRun({ teamId, userId, task: trimmed });
+    if (taskId) this.repo.linkTaskRun(taskId, run.id);
+    else this.repo.createTask({ teamId, userId, title: taskTitle(trimmed), description: trimmed, runId: run.id });
     getCollabRunner(this.db).launch(run);
     return run;
   }

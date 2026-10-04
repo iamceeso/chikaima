@@ -294,6 +294,54 @@ export interface CollabGitCommit {
   subject: string;
   author: string;
   date: string;
+  files: number;
+  additions: number;
+  deletions: number;
+}
+
+/** A project: a folder of code, its AI team (the team record) and what the dashboard shows about it. */
+export interface CollabProject extends CollabTeam {
+  branch: string | null;
+  remote: string | null;
+  stack: string[];
+  last_activity: string;
+  runtime: "stopped" | "starting" | "running" | "exited";
+  active_run: { id: string; status: CollabRunStatus; task: string } | null;
+  open_tasks: number;
+}
+
+export type CollabTaskColumn = "backlog" | "planned" | "in_progress" | "review" | "done";
+
+export interface CollabTask {
+  id: string;
+  number: number;
+  key: string;
+  title: string;
+  description: string;
+  column: CollabTaskColumn;
+  run_id: string | null;
+  run_status: CollabRunStatus | null;
+  outcome: "completed" | "failed" | "cancelled" | null;
+  needs_approval: boolean;
+  assignee_member_id: string | null;
+  activity: string | null;
+  steps: Array<{ index: number; assignee: number; instruction: string; state: "done" | "active" | "pending" | "rejected" | "skipped" }>;
+  files_changed: number;
+  tests: { passed: number; failed: number };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollabFolderListing {
+  root: string;
+  path: string;
+  parent: string | null;
+  folders: Array<{ name: string; path: string; isGit: boolean; projectId: string | null }>;
+}
+
+export interface CollabSearchResult {
+  matches: Array<{ path: string; line: number; text: string }>;
+  truncated: boolean;
 }
 
 export interface CollabGitOverview {

@@ -57,6 +57,13 @@
       "when": 1791132417825,
       "tag": "0007_git_preview_deploy",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791135233033,
+      "tag": "0008_collab_tasks",
+      "breakpoints": true
     }
   ]
 }

@@ -32,13 +32,23 @@ function isWithin(root: string, target: string): boolean {
  * and returns it normalised. Rejects anything that would escape the root.
  */
 export function normalizeTeamFolder(folder: string): string {
-  const trimmed = folder.trim().replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+$/, "");
-  if (!trimmed || isAbsolute(trimmed) || /^[a-zA-Z]:/.test(trimmed)) {
-    throw badRequest("Folder must be a path relative to the collaboration root.");
+  let trimmed = folder.trim().replace(/\\/g, "/").replace(/\/+$/, "");
+  // A full path is fine as long as it points inside the projects root: keep the part below the root.
+  if (isAbsolute(trimmed) || /^[a-zA-Z]:/.test(trimmed)) {
+    const root = collabRoot();
+    const absolute = resolve(trimmed);
+    if (!isWithin(root, absolute) || absolute === root) {
+      throw badRequest(`Choose a folder inside the projects root (${root}). To work on code elsewhere, set CHIKAIMA_COLLAB_ROOT to a parent folder such as ~/Projects.`);
+    }
+    trimmed = relative(root, absolute).split(sep).join("/");
+  }
+  trimmed = trimmed.replace(/^\.\/+/, "");
+  if (!trimmed) {
+    throw badRequest("Choose a folder for the project.");
   }
   const normalized = normalize(trimmed).replace(/\\/g, "/");
   if (normalized === "." || normalized.split("/").some((segment) => segment === ".." || segment === ".git")) {
-    throw badRequest("Folder must stay inside the collaboration root.");
+    throw badRequest("The folder must stay inside the projects root.");
   }
   if (normalized.split("/")[0] === ".chikaima") {
     throw badRequest("The .chikaima directory is reserved.");
@@ -268,4 +278,37 @@ export function unifiedDiff(change: FileChange): string {
     index = end;
   }
   return hunks.length > 0 ? `${header}\n${hunks.join("\n")}` : header;
+}
+
+export interface FolderListing {
+  /** The projects root as an absolute path on the server. */
+  root: string;
+  /** The listed folder, relative to the root ("" for the root itself). */
+  path: string;
+  parent: string | null;
+  folders: Array<{ name: string; path: string; isGit: boolean }>;
+}
+
+/** Subfolders of a folder inside the projects root, for the folder picker. Hidden folders and dependency directories are skipped. */
+export function listFolders(path = ""): FolderListing {
+  const root = collabRoot();
+  const relativePath = path.trim() ? normalizeTeamFolder(path) : "";
+  const absolute = resolve(root, relativePath);
+  if (!existsSync(absolute) || !statSync(absolute).isDirectory()) throw badRequest(`Not a folder: ${relativePath || "/"}`);
+  const real = realpathSync(absolute);
+  if (!isWithin(root, real)) throw badRequest("The folder must stay inside the projects root.");
+
+  const folders = readdirSync(real, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith(".") && !IGNORED_DIRS.has(entry.name))
+    .map((entry) => {
+      const child = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+      return { name: entry.name, path: child, isGit: existsSync(join(real, entry.name, ".git")) };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return {
+    root,
+    path: relativePath,
+    parent: relativePath ? (relativePath.includes("/") ? relativePath.slice(0, relativePath.lastIndexOf("/")) : "") : null,
+    folders,
+  };
 }

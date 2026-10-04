@@ -4,13 +4,14 @@ import { EventEmitter } from "node:events";
 import { and, asc, desc, eq, gt, inArray } from "drizzle-orm";
 
 import type { ChikaimaDatabase } from "../db/client.js";
-import { collabApprovals, collabMembers, collabMessages, collabRuns, collabTeams } from "../db/schema.js";
+import { collabApprovals, collabMembers, collabMessages, collabRuns, collabTasks, collabTeams } from "../db/schema.js";
 
 export type CollabTeamRow = typeof collabTeams.$inferSelect;
 export type CollabMemberRow = typeof collabMembers.$inferSelect;
 export type CollabRunRow = typeof collabRuns.$inferSelect;
 export type CollabMessageRow = typeof collabMessages.$inferSelect;
 export type CollabApprovalRow = typeof collabApprovals.$inferSelect;
+export type CollabTaskRow = typeof collabTasks.$inferSelect;
 
 export type CollabRunStatus = "queued" | "running" | "awaiting_approval" | "cancelling" | "completed" | "failed" | "cancelled";
 export type CollabMessageKind =
@@ -278,5 +279,47 @@ export class CollabRepository {
       .returning()
       .all();
     return updated.length > 0;
+  }
+
+  // --- engineering tasks -------------------------------------------------------
+
+  createTask(params: { teamId: string; userId: string; title: string; description: string; runId?: string | null }): CollabTaskRow {
+    const now = new Date().toISOString();
+    return this.db.transaction((tx) => {
+      const last = tx.select({ number: collabTasks.number }).from(collabTasks).where(eq(collabTasks.teamId, params.teamId)).orderBy(desc(collabTasks.number)).limit(1).get();
+      const row: CollabTaskRow = {
+        id: randomUUID(),
+        teamId: params.teamId,
+        userId: params.userId,
+        number: (last?.number ?? 0) + 1,
+        title: params.title,
+        description: params.description,
+        runId: params.runId ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      tx.insert(collabTasks).values(row).run();
+      return row;
+    });
+  }
+
+  getTask(taskId: string): CollabTaskRow | undefined {
+    return this.db.select().from(collabTasks).where(eq(collabTasks.id, taskId)).get();
+  }
+
+  listTasks(teamId: string, limit = 100): CollabTaskRow[] {
+    return this.db.select().from(collabTasks).where(eq(collabTasks.teamId, teamId)).orderBy(desc(collabTasks.number)).limit(limit).all();
+  }
+
+  taskForRun(runId: string): CollabTaskRow | undefined {
+    return this.db.select().from(collabTasks).where(eq(collabTasks.runId, runId)).get();
+  }
+
+  linkTaskRun(taskId: string, runId: string): void {
+    this.db.update(collabTasks).set({ runId, updatedAt: new Date().toISOString() }).where(eq(collabTasks.id, taskId)).run();
+  }
+
+  deleteTask(taskId: string): void {
+    this.db.delete(collabTasks).where(eq(collabTasks.id, taskId)).run();
   }
 }

@@ -324,3 +324,25 @@ export const collabApprovals = sqliteTable("collab_approvals", {
   createdAt: text("created_at").notNull(),
   resolvedAt: text("resolved_at"),
 });
+
+/**
+ * An engineering task on a project. Created by the supervisor (backlog) or
+ * implicitly when a task is given straight to the team; starting it creates
+ * a run, which the lead plans into steps. `number` is per project (shown as
+ * e.g. SAAS-12).
+ */
+export const collabTasks = sqliteTable("collab_tasks", {
+  id: text("id").primaryKey(),
+  teamId: text("team_id")
+    .notNull()
+    .references(() => collabTeams.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  number: integer("number").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  /** The task's latest run; null while it is in the backlog. */
+  runId: text("run_id"),
+  ...timestamps,
+});

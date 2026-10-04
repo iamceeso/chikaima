@@ -7,8 +7,12 @@ import type {
   CollabApproval,
   CollabFileChange,
   CollabFileEntry,
+  CollabFolderListing,
   CollabGitOverview,
   CollabPreview,
+  CollabProject,
+  CollabSearchResult,
+  CollabTask,
   CollabMessage,
   CollabRun,
   CollabRunDetail,
@@ -39,6 +43,8 @@ export type ApiAccess = {
 type RequestOptions = RequestInit & {
   token?: string | null;
   authHeader?: string | null;
+  /** Overrides the default request timeout, for slow operations such as cloning a repository. */
+  timeoutMs?: number;
 };
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -72,7 +78,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs ?? REQUEST_TIMEOUT_MS);
 
   let response: Response;
   try {
@@ -377,6 +383,20 @@ export const api = {
   resolveCollabApproval: (access: ApiAccess, runId: string, approvalId: string, decision: "approve" | "reject", note?: string) =>
     request<CollabApproval>(`/collab/runs/${runId}/approvals/${approvalId}`, { method: "POST", ...access, body: JSON.stringify({ decision, note }) }),
   getCollabTemplates: (access: ApiAccess) => request<CollabTemplate[]>("/collab/templates", access),
+  getProjectFolders: (access: ApiAccess, path: string) =>
+    request<CollabFolderListing>(`/collab/folders?path=${encodeURIComponent(path)}`, { ...access, cache: "no-store" }),
+  getProjects: (access: ApiAccess) => request<CollabProject[]>("/collab/projects", { ...access, cache: "no-store" }),
+  importProject: (access: ApiAccess, payload: CollabTeamInput & { repo_url: string }) =>
+    request<CollabTeam>("/collab/projects/import", { method: "POST", ...access, body: JSON.stringify(payload), timeoutMs: 6 * 60_000 }),
+  getTasks: (access: ApiAccess, teamId: string) => request<CollabTask[]>(`/collab/teams/${teamId}/tasks`, { ...access, cache: "no-store" }),
+  createTask: (access: ApiAccess, teamId: string, payload: { title: string; description?: string }) =>
+    request<CollabTask>(`/collab/teams/${teamId}/tasks`, { method: "POST", ...access, body: JSON.stringify(payload) }),
+  startTask: (access: ApiAccess, teamId: string, taskId: string) => request<CollabRun>(`/collab/teams/${teamId}/tasks/${taskId}`, { method: "POST", ...access }),
+  deleteTask: (access: ApiAccess, teamId: string, taskId: string) => request<void>(`/collab/teams/${teamId}/tasks/${taskId}`, { method: "DELETE", ...access }),
+  searchProject: (access: ApiAccess, teamId: string, query: string) =>
+    request<CollabSearchResult>(`/collab/teams/${teamId}/search?q=${encodeURIComponent(query)}`, { ...access, cache: "no-store" }),
+  compareBranches: (access: ApiAccess, teamId: string, base: string, head: string) =>
+    request<CollabFileChange[]>(`/collab/teams/${teamId}/git/compare?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`, { ...access, cache: "no-store" }),
   getCollabFiles: (access: ApiAccess, teamId: string) =>
     request<{ entries: CollabFileEntry[]; truncated: boolean }>(`/collab/teams/${teamId}/files`, { ...access, cache: "no-store" }),
   getCollabFile: (access: ApiAccess, teamId: string, path: string) =>
