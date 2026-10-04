@@ -50,6 +50,9 @@ export interface GitCommit {
   subject: string;
   author: string;
   date: string;
+  files: number;
+  additions: number;
+  deletions: number;
 }
 
 /**
@@ -123,16 +126,55 @@ export class GitRepo {
     return this.head();
   }
 
+  /** Recent commits with their size (files changed, lines added/removed). */
   async log(limit = 30, ref = "HEAD"): Promise<GitCommit[]> {
-    const out = await git(this.root, ["log", `-${limit}`, "--format=%H%x1f%h%x1f%s%x1f%an%x1f%aI", ref]);
+    const out = await git(this.root, ["log", `-${limit}`, "--numstat", "--format=%x1e%H%x1f%h%x1f%s%x1f%an%x1f%aI", ref]);
     if (out.code !== 0) return [];
     return out.stdout
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        const [hash, shortHash, subject, author, date] = line.split("\x1f");
-        return { hash: hash!, shortHash: shortHash!, subject: subject!, author: author!, date: date! };
+      .split("\x1e")
+      .filter((chunk) => chunk.trim())
+      .map((chunk) => {
+        const [header, ...stats] = chunk.split("\n");
+        const [hash, shortHash, subject, author, date] = header!.split("\x1f");
+        let files = 0;
+        let additions = 0;
+        let deletions = 0;
+        for (const line of stats) {
+          const match = /^(\d+|-)\t(\d+|-)\t/.exec(line);
+          if (!match) continue;
+          files++;
+          additions += match[1] === "-" ? 0 : Number(match[1]);
+          deletions += match[2] === "-" ? 0 : Number(match[2]);
+        }
+        return { hash: hash!, shortHash: shortHash!, subject: subject!, author: author!, date: date!, files, additions, deletions };
       });
+  }
+
+  /** The `origin` remote's URL, if the project came from a repository. */
+  async remoteUrl(): Promise<string | null> {
+    const out = await git(this.root, ["remote", "get-url", "origin"]);
+    return out.code === 0 ? out.stdout.trim() || null : null;
+  }
+
+  /**
+   * Files that differ between two refs (`base...head`: what `head` added since
+   * they diverged), with content on each side for the side-by-side review.
+   */
+  async compare(base: string, head: string, maxBytes = 512 * 1024): Promise<Array<{ path: string; before: string | null; after: string | null }>> {
+    const refs = await this.branches();
+    for (const ref of [base, head]) if (!refs.includes(ref)) throw badRequest(`Unknown branch: ${ref}`);
+    const mergeBase = (await ok(this.root, ["merge-base", base, head])).trim();
+    const names = (await ok(this.root, ["diff", "--name-only", "-z", "--no-renames", mergeBase, head])).split("\0").filter(Boolean);
+    const files: Array<{ path: string; before: string | null; after: string | null }> = [];
+    let budget = maxBytes;
+    for (const path of names) {
+      const before = await this.fileAt(mergeBase, path);
+      const after = await this.fileAt(head, path);
+      budget -= (before?.length ?? 0) + (after?.length ?? 0);
+      if (budget < 0) break;
+      files.push({ path, before, after });
+    }
+    return files;
   }
 
   /** Files changed by one commit, with their content before and after, for the side-by-side diff view. */
