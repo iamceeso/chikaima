@@ -1,53 +1,83 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import {
   ChevronDown,
   ChevronRight,
+  Code2,
   Cog,
+  FolderGit2,
   FolderKanban,
+  KanbanSquare,
   LayoutDashboard,
-  MessageSquarePlus,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
   Sparkles,
-  Trash2,
   Users,
+  Wrench,
 } from "lucide-react";
 
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useAdminAccess } from "@/hooks/use-admin-access";
-import { Button } from "@/components/ui/button";
+import { useLastProject } from "@/lib/last-project";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
-import { useAuthStore } from "@/store/auth-store";
-import type { Conversation } from "@/types";
-import { useChatStore } from "@/store/chat-store";
-
-const navItems = [
-  { href: "/chat", label: "New Chat", icon: MessageSquarePlus },
-  { href: "/library", label: "Library", icon: LayoutDashboard },
-  { href: "/processing", label: "Processing", icon: FolderKanban },
-  { href: "/collaborate", label: "AI Team", icon: Users },
-];
 
 const settingsItems = [
-  { href: "/settings/workspace", label: "Workspace", icon: Cog, adminOnly: false },
-  { href: "/settings/models", label: "Models", icon: Sparkles, adminOnly: false },
   { href: "/settings/providers", label: "Providers", icon: Settings, adminOnly: false },
-  { href: "/settings/users", label: "Users", icon: FolderKanban, adminOnly: true },
+  { href: "/settings/models", label: "Models", icon: Sparkles, adminOnly: false },
+  { href: "/settings/workspace", label: "General", icon: Cog, adminOnly: false },
+  { href: "/settings/users", label: "Users", icon: Users, adminOnly: true },
 ];
+
+/** The previous media/document tools. Still available; no longer the product's headline. */
+const classicItems = [
+  { href: "/chat", label: "Chat", icon: MessageSquare },
+  { href: "/library", label: "Library", icon: LayoutDashboard },
+  { href: "/processing", label: "Processing", icon: FolderKanban },
+];
+
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  collapsed,
+  disabled,
+  hint,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  icon: typeof Code2;
+  active: boolean;
+  collapsed: boolean;
+  disabled?: boolean;
+  hint?: string;
+  onClick?: () => void;
+}) {
+  const className = cn(
+    "group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[12.5px] transition-colors",
+    collapsed && "justify-center px-1.5",
+    active ? "bg-surface text-foreground" : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
+    disabled && "pointer-events-none opacity-45",
+  );
+  const body = (
+    <>
+      <Icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
+      {collapsed ? null : <span className="truncate font-medium">{label}</span>}
+    </>
+  );
+  return (
+    <Link href={href} onClick={onClick} className={className} title={collapsed ? label : hint} aria-current={active ? "page" : undefined}>
+      {body}
+    </Link>
+  );
+}
 
 export function Sidebar({
   pathname,
@@ -62,322 +92,122 @@ export function Sidebar({
   onClose?: () => void;
   onToggleCollapse?: () => void;
 }) {
-  const token = useAuthStore((state) => state.tokens?.access_token);
-  const { hasAdminAccess } = useAdminAccess();
-  const activeConversationId = useChatStore((state) => state.activeConversationId);
-  const openFreshChat = useChatStore((state) => state.openFreshChat);
-  const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
-  const queryClient = useQueryClient();
-  const [conversationPendingDelete, setConversationPendingDelete] = useState<Conversation | null>(null);
-  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
-  const conversationsQuery = useQuery({
-    queryKey: ["conversations"],
-    queryFn: () => {
-      if (!token) {
-        return Promise.resolve([]);
-      }
-      return api.getConversations(token);
-    },
-  });
-  const selectedConversationId = activeConversationId ?? conversationsQuery.data?.[0]?.id;
+  const { access, hasAdminAccess } = useAdminAccess();
+  const lastProject = useLastProject();
   const [settingsOpen, setSettingsOpen] = useState(pathname.startsWith("/settings"));
-  const deleteConversation = useMutation({
-    mutationFn: async (conversationId: string) => {
-      if (!token) {
-        throw new Error("Please sign in first.");
-      }
-      await api.deleteConversation(token, conversationId);
-    },
-    onMutate: async (conversationId: string) => {
-      await queryClient.cancelQueries({ queryKey: ["conversations"] });
-      const previousConversations = queryClient.getQueryData<Conversation[]>(["conversations"]) ?? [];
-      setDeletingConversationId(conversationId);
+  const [classicOpen, setClassicOpen] = useState(classicItems.some((item) => pathname.startsWith(item.href)));
+  const narrow = collapsed && !mobile;
 
-      queryClient.setQueryData<Conversation[]>(["conversations"], (current = []) =>
-        current.filter((conversation) => conversation.id !== conversationId),
-      );
-
-      if (selectedConversationId === conversationId) {
-        openFreshChat();
-      }
-
-      setConversationPendingDelete(null);
-      return { previousConversations };
-    },
-    onError: (_error, _conversationId, context) => {
-      if (context?.previousConversations) {
-        queryClient.setQueryData(["conversations"], context.previousConversations);
-      }
-      setDeletingConversationId(null);
-    },
-    onSettled: async () => {
-      setDeletingConversationId(null);
-      deleteConversation.reset();
-      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    },
+  const projectsQuery = useQuery({
+    queryKey: ["collab-projects"],
+    queryFn: () => api.getProjects(access!),
+    enabled: Boolean(access),
+    staleTime: 30_000,
   });
+  const projects = projectsQuery.data ?? [];
+  const current = projects.find((project) => project.id === lastProject) ?? null;
+  const base = current ? `/projects/${current.id}` : null;
+
+  const primary = [
+    { href: "/projects", label: "Projects", icon: FolderGit2, active: pathname === "/projects" || pathname === "/projects/new" },
+    { href: base ?? "/projects", label: "Workspace", icon: Code2, active: Boolean(base) && pathname === base, disabled: !base },
+    { href: base ? `${base}/team` : "/projects", label: "AI Team", icon: Users, active: Boolean(base) && pathname === `${base}/team`, disabled: !base },
+    { href: base ? `${base}/tasks` : "/projects", label: "Tasks", icon: KanbanSquare, active: Boolean(base) && pathname === `${base}/tasks`, disabled: !base },
+  ];
 
   return (
-    <aside
-      className={cn(
-        "flex h-full w-full flex-col rounded-none border border-border bg-background-secondary/55 p-3 transition-all xl:h-screen xl:p-4",
-        collapsed && !mobile ? "xl:w-22" : "xl:w-67",
-      )}
-    >
-      <div
-        className={cn(
-          "mb-4 flex items-center rounded-2xl px-2 py-1.5",
-          collapsed && !mobile ? "justify-center" : "gap-3",
-        )}
-      >
-        {!collapsed || mobile ? (
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <Image
-              src="/chikaima-logo.png"
-              alt="Chikaima logo"
-              width={32}
-              height={32}
-              className="h-8 w-8 shrink-0 object-contain"
-              priority
-            />
-            <p className="truncate text-xs font-semibold uppercase tracking-[0.24em] text-foreground">CHIKAIMA</p>
-          </div>
-        ) : (
-          <div className="flex flex-1 justify-center">
-            <Image
-              src="/chikaima-logo.png"
-              alt="Chikaima logo"
-              width={28}
-              height={28}
-              className="h-7 w-7 object-contain"
-              priority
-            />
-          </div>
-        )}
-        {onToggleCollapse ? (
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="hidden h-9 w-9 items-center justify-center rounded-xl bg-surface text-foreground-muted transition hover:bg-surface/70 hover:text-foreground xl:flex"
-            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
-          >
-            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+    <aside className={cn("flex h-full w-full flex-col border-r border-border bg-background-secondary/55 p-2.5 transition-all xl:h-screen", narrow ? "xl:w-16" : "xl:w-60")}>
+      <div className={cn("mb-3 flex items-center px-1.5 py-1", narrow ? "justify-center" : "gap-2")}>
+        <Link href="/projects" className="flex min-w-0 flex-1 items-center gap-2" onClick={onClose}>
+          <Image src="/chikaima-logo.png" alt="Chikaima logo" width={24} height={24} className="h-6 w-6 shrink-0 object-contain" priority />
+          {narrow ? null : <span className="truncate text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground">Chikaima</span>}
+        </Link>
+        {onToggleCollapse && !narrow ? (
+          <button type="button" onClick={onToggleCollapse} className="hidden h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-surface hover:text-foreground xl:flex" aria-label="Collapse menu">
+            <PanelLeftClose className="h-4 w-4" />
           </button>
         ) : null}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col">
-      <nav className="space-y-1">
-        {navItems.map((item) => {
-          const active = pathname === item.href;
-          const Icon = item.icon;
+      {onToggleCollapse && narrow ? (
+        <button type="button" onClick={onToggleCollapse} className="mx-auto mb-2 hidden h-7 w-7 items-center justify-center rounded-md text-foreground-muted hover:bg-surface hover:text-foreground xl:flex" aria-label="Expand menu">
+          <PanelLeftOpen className="h-4 w-4" />
+        </button>
+      ) : null}
 
-          return (
+      <nav className="space-y-0.5" aria-label="Primary">
+        {primary.map((item) => (
+          <NavLink key={item.label} {...item} collapsed={narrow} hint={item.disabled ? "Open a project first" : current ? `${item.label} · ${current.name}` : undefined} onClick={onClose} />
+        ))}
+      </nav>
+
+      {!narrow && current ? <p className="mt-1.5 truncate px-2 text-[11px] text-muted">Current project: {current.name}</p> : null}
+
+      <div className="mt-4 space-y-0.5">
+        <button
+          type="button"
+          onClick={() => setSettingsOpen((value) => !value)}
+          className={cn("flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[12.5px] text-foreground-muted hover:bg-surface/70 hover:text-foreground", narrow && "justify-center px-1.5")}
+          aria-expanded={settingsOpen}
+        >
+          <Settings className="h-4 w-4 shrink-0" />
+          {narrow ? null : (
+            <>
+              <span className="flex-1 font-medium">Settings</span>
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", settingsOpen && "rotate-180")} />
+            </>
+          )}
+        </button>
+        {settingsOpen && !narrow ? (
+          <div className="space-y-0.5 pl-4">
+            {settingsItems
+              .filter((item) => !item.adminOnly || hasAdminAccess)
+              .map((item) => (
+                <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} active={pathname === item.href} collapsed={false} onClick={onClose} />
+              ))}
+          </div>
+        ) : null}
+      </div>
+
+      {!narrow ? (
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto border-t border-border pt-3">
+          <p className="mb-1.5 px-2 text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted">Recent projects</p>
+          {projects.slice(0, 8).map((project) => (
             <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => {
-                if (item.href === "/chat") {
-                  openFreshChat();
-                }
-                setSettingsOpen(false);
-                onClose?.();
-              }}
+              key={project.id}
+              href={`/projects/${project.id}`}
+              onClick={onClose}
               className={cn(
-                "group flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[11px] transition-colors duration-150",
-                collapsed && !mobile ? "justify-center px-1.5" : "",
-                active
-                  ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
-                  : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
+                "flex items-center gap-2 rounded-md px-2 py-1.5 text-[12.5px] hover:bg-surface/70",
+                pathname.startsWith(`/projects/${project.id}`) ? "bg-surface text-foreground" : "text-foreground-muted hover:text-foreground",
               )}
             >
-              <div
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-lg border border-transparent transition-colors",
-                  active
-                    ? "bg-background-secondary text-foreground dark:bg-surface-strong"
-                    : "bg-transparent text-foreground-muted group-hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-              </div>
-              {!collapsed || mobile ? (
-                <div className="flex flex-1 items-center justify-between">
-                  <span className={cn("font-medium", active ? "text-foreground" : "")}>{item.label}</span>
-                  {active ? <ChevronRight className="h-3.5 w-3.5 text-muted" /> : null}
-                </div>
-              ) : null}
+              <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", project.active_run ? "bg-emerald-500" : project.runtime === "running" ? "bg-sky-500" : "bg-border")} />
+              <span className="min-w-0 flex-1 truncate">{project.name}</span>
+              {project.branch ? <span className="shrink-0 font-mono text-[10.5px] text-muted">{project.branch}</span> : null}
             </Link>
-          );
-        })}
+          ))}
+          {hasAdminAccess && projects.length === 0 && !projectsQuery.isLoading ? <p className="px-2 text-xs text-muted">No projects yet.</p> : null}
+        </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
-        <div className="pt-1">
-          <button
-            type="button"
-              onClick={() => setSettingsOpen((value) => !value)}
-              className={cn(
-                "group flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left text-[11px] transition-colors duration-150",
-                collapsed && !mobile ? "justify-center px-1.5" : "",
-                settingsOpen
-                  ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
-                : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
-            )}
-          >
-            <div
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-lg border border-transparent transition-colors",
-                settingsOpen
-                  ? "bg-background-secondary text-foreground dark:bg-surface-strong"
-                  : "bg-transparent text-foreground-muted group-hover:text-foreground",
-              )}
-            >
-              <Settings className="h-4 w-4" />
-            </div>
-            {!collapsed || mobile ? (
-              <div className="flex flex-1 items-center justify-between">
-                <span className={cn("font-medium", settingsOpen ? "text-foreground" : "")}>Settings</span>
-                <ChevronDown className={cn("h-3.5 w-3.5 text-muted transition-transform", settingsOpen ? "rotate-180" : "")} />
-              </div>
-            ) : null}
+      {!narrow ? (
+        <div className="mt-2 border-t border-border pt-2">
+          <button type="button" onClick={() => setClassicOpen((value) => !value)} className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[11px] text-muted hover:text-foreground" aria-expanded={classicOpen}>
+            <Wrench className="h-3.5 w-3.5" />
+            <span className="flex-1">Classic tools</span>
+            <ChevronRight className={cn("h-3 w-3 transition-transform", classicOpen && "rotate-90")} />
           </button>
-
-          {(!collapsed || mobile) && settingsOpen ? (
-            <div className="mt-2 space-y-1 pl-4">
-              {settingsItems
-                .filter((item) => !item.adminOnly || hasAdminAccess)
-                .map((item) => {
-                  const active = pathname === item.href;
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                        href={item.href}
-                        onClick={() => {
-                          onClose?.();
-                        }}
-                        className={cn(
-                        "flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[11px] transition-colors duration-150",
-                        active
-                          ? "bg-background text-foreground"
-                          : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      <span className="font-medium">
-                        {item.label}
-                      </span>
-                    </Link>
-                  );
-                })}
+          {classicOpen ? (
+            <div className="space-y-0.5 pl-3 pt-0.5">
+              {classicItems.map((item) => (
+                <NavLink key={item.href} {...item} active={pathname.startsWith(item.href)} collapsed={false} onClick={onClose} />
+              ))}
             </div>
           ) : null}
         </div>
-      </nav>
-
-      {!collapsed || mobile ? (
-        <div className="mt-auto min-h-0 border-t border-border pt-4">
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">Recents</div>
-          <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
-            {conversationsQuery.data?.map((item) => {
-              const active = pathname === "/chat" && selectedConversationId === item.id;
-              return (
-                <div
-                  key={item.id}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setConversationPendingDelete(item);
-                  }}
-                  className={cn(
-                    "group flex items-start gap-2 rounded-2xl px-3 py-2 transition-colors duration-150",
-                    active
-                      ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(20,32,25,0.04)] dark:shadow-none"
-                      : "text-foreground-muted hover:bg-surface/70 hover:text-foreground",
-                  )}
-                >
-                  <Link
-                    href="/chat"
-                    onClick={() => {
-                      setActiveConversationId(item.id);
-                      onClose?.();
-                    }}
-                    className="min-w-0 flex-1"
-                  >
-                    <p className="truncate text-xs font-medium">{item.title}</p>
-                    <p className="mt-1 truncate text-xs text-muted">
-                      {item.messages?.at(-1)?.content ?? "No messages yet"}
-                    </p>
-                  </Link>
-                  <button
-                    type="button"
-                    aria-label={`Delete ${item.title}`}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      setConversationPendingDelete(item);
-                    }}
-                    className={cn(
-                      "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity",
-                      active
-                        ? "text-foreground-muted hover:bg-background"
-                        : "text-foreground-muted hover:bg-background/80 group-hover:opacity-100",
-                    )}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              );
-            })}
-            {!conversationsQuery.data?.length ? (
-              <div className="rounded-2xl border border-dashed border-border px-3 py-4 text-xs text-foreground-muted">
-                No chats yet
-              </div>
-            ) : null}
-          </div>
-        </div>
       ) : null}
-
-      <AlertDialog
-        open={Boolean(conversationPendingDelete)}
-        onOpenChange={(open) => {
-          if (!open && deletingConversationId !== conversationPendingDelete?.id) {
-            setConversationPendingDelete(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {conversationPendingDelete
-                ? `This will remove "${conversationPendingDelete.title}" and all messages in that analysis.`
-                : "This analysis will be removed from your recent chats."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              className="border border-border"
-              disabled={deletingConversationId === conversationPendingDelete?.id}
-              onClick={() => setConversationPendingDelete(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={deletingConversationId !== null || !conversationPendingDelete}
-              onClick={() => {
-                if (!conversationPendingDelete) {
-                  return;
-                }
-                deleteConversation.mutate(conversationPendingDelete.id);
-              }}
-            >
-              {deletingConversationId === conversationPendingDelete?.id ? "Deleting..." : "Delete chat"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      </div>
     </aside>
   );
 }
