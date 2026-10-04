@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 
+import type { Monaco } from "@monaco-editor/react";
+
 import { cn } from "@/lib/utils";
 import type { CollabFileChange } from "@/types";
 
@@ -63,6 +65,41 @@ function useDarkMode(): boolean {
   );
 }
 
+/** Monaco themes matching Chikaima's own surfaces, so the editor doesn't sit in a grey box. */
+function defineThemes(monaco: Monaco): void {
+  monaco.editor.defineTheme("chikaima-dark", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#0d0d0d",
+      "editorGutter.background": "#0d0d0d",
+      "editor.lineHighlightBackground": "#171717",
+      "editorLineNumber.foreground": "#5a5a5a",
+      "editorLineNumber.activeForeground": "#a3a3a3",
+      "editor.selectionBackground": "#2f8f6755",
+      "editorCursor.foreground": "#79c8a7",
+      "diffEditor.insertedTextBackground": "#53ab8530",
+      "diffEditor.removedTextBackground": "#e5484d30",
+      "diffEditor.insertedLineBackground": "#53ab8518",
+      "diffEditor.removedLineBackground": "#e5484d18",
+    },
+  });
+  monaco.editor.defineTheme("chikaima-light", {
+    base: "vs",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#f5f7f6",
+      "editorGutter.background": "#f5f7f6",
+      "editor.lineHighlightBackground": "#edf2ef",
+      "editorLineNumber.foreground": "#9aa8a0",
+      "editor.selectionBackground": "#2f8f6733",
+      "editorCursor.foreground": "#2f8f67",
+    },
+  });
+}
+
 const EDITOR_OPTIONS = {
   minimap: { enabled: false },
   fontSize: 12,
@@ -83,7 +120,8 @@ export function CodeEditor({ path, value, onChange, onSave, readOnly = false }: 
       path={path}
       language={languageFor(path)}
       value={value}
-      theme={dark ? "vs-dark" : "light"}
+      theme={dark ? "chikaima-dark" : "chikaima-light"}
+      beforeMount={defineThemes}
       onChange={(next) => onChange?.(next ?? "")}
       onMount={(editor, monaco) => {
         // Cmd/Ctrl+S saves, as in a desktop editor.
@@ -94,8 +132,8 @@ export function CodeEditor({ path, value, onChange, onSave, readOnly = false }: 
   );
 }
 
-/** Side-by-side (or inline) diff of one or more changed files, with a file picker. */
-export function DiffView({ files, height = 420 }: { files: CollabFileChange[]; height?: number }) {
+/** Side-by-side (or inline) diff of one or more changed files, with a file picker. `height="fill"` takes the parent's full height. */
+export function DiffView({ files, height = 420 }: { files: CollabFileChange[]; height?: number | "fill" }) {
   const dark = useDarkMode();
   const [selected, setSelected] = useState(0);
   const [sideBySide, setSideBySide] = useState(true);
@@ -103,8 +141,8 @@ export function DiffView({ files, height = 420 }: { files: CollabFileChange[]; h
   if (!file) return <p className="text-xs text-foreground-muted">No file contents to show.</p>;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border">
-      <div className="flex flex-wrap items-center gap-1 border-b border-border bg-background px-2 py-1.5">
+    <div className={cn("overflow-hidden rounded-xl border border-border", height === "fill" && "flex h-full flex-col")}>
+      <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border bg-background px-2 py-1.5">
         {files.map((entry, index) => (
           <button
             key={entry.path}
@@ -120,12 +158,13 @@ export function DiffView({ files, height = 420 }: { files: CollabFileChange[]; h
           {sideBySide ? "Inline" : "Side by side"}
         </button>
       </div>
-      <div style={{ height }}>
+      <div className={height === "fill" ? "min-h-0 flex-1" : undefined} style={height === "fill" ? undefined : { height }}>
         <DiffEditor
           original={file.before ?? ""}
           modified={file.after ?? ""}
           language={languageFor(file.path)}
-          theme={dark ? "vs-dark" : "light"}
+          theme={dark ? "chikaima-dark" : "chikaima-light"}
+          beforeMount={defineThemes}
           options={{ ...EDITOR_OPTIONS, readOnly: true, renderSideBySide: sideBySide, originalEditable: false }}
         />
       </div>

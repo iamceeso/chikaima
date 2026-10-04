@@ -45,7 +45,13 @@ function Expandable({ label, children }: { label: React.ReactNode; children: Rea
   );
 }
 
-function ApprovalCard({ access, message, who }: { access: ApiAccess; message: CollabMessage; who: string }) {
+/** Approval requests still waiting on the supervisor. */
+export function pendingApprovals(messages: CollabMessage[]): CollabMessage[] {
+  const resolved = new Set(messages.filter((message) => message.kind === "approval" && message.data.status !== "pending").map((message) => String(message.data.approval_id)));
+  return messages.filter((message) => message.kind === "approval" && message.data.status === "pending" && !resolved.has(String(message.data.approval_id)));
+}
+
+export function ApprovalCard({ access, message, who }: { access: ApiAccess; message: CollabMessage; who: string }) {
   const [note, setNote] = useState("");
   const resolve = useMutation({
     mutationFn: (decision: "approve" | "reject") => api.resolveCollabApproval(access, message.run_id, String(message.data.approval_id), decision, note || undefined),
@@ -90,9 +96,21 @@ function ApprovalCard({ access, message, who }: { access: ApiAccess; message: Co
  * The run as an operational log: who did what, in order, with diffs, test
  * output and reviews one click away, and pending approvals pinned on top.
  */
-export function ActivityFeed({ access, team, messages }: { access: ApiAccess; team: CollabTeam; messages: CollabMessage[] }) {
-  const resolved = new Set(messages.filter((message) => message.kind === "approval" && message.data.status !== "pending").map((message) => String(message.data.approval_id)));
-  const pending = messages.filter((message) => message.kind === "approval" && message.data.status === "pending" && !resolved.has(String(message.data.approval_id)));
+export function ActivityFeed({
+  access,
+  team,
+  messages,
+  hideApprovals = false,
+  onOpenDiff,
+}: {
+  access: ApiAccess;
+  team: CollabTeam;
+  messages: CollabMessage[];
+  hideApprovals?: boolean;
+  /** Opens a change's side-by-side diff somewhere roomier (the editor area). */
+  onOpenDiff?: (title: string, files: CollabFileChange[]) => void;
+}) {
+  const pending = hideApprovals ? [] : pendingApprovals(messages);
   const nameOf = (memberId: string | null) => {
     const member = team.members.find((candidate) => candidate.id === memberId);
     return member ? member.name : "Chikaima";
@@ -103,6 +121,14 @@ export function ActivityFeed({ access, team, messages }: { access: ApiAccess; te
       case "change": {
         const files = (message.data.files as string[] | undefined) ?? [];
         const detail = message.data.files_detail as CollabFileChange[] | undefined;
+        if (onOpenDiff && detail?.length) {
+          return (
+            <button type="button" onClick={() => onOpenDiff(`Step ${Number(message.data.step ?? 0) + 1} changes`, detail)} className="text-left text-foreground hover:text-primary">
+              Changed {files.length} file(s){message.data.worktree ? " (in its own worktree)" : ""}: <span className="font-mono text-xs">{files.join(", ")}</span>{" "}
+              <span className="text-xs text-primary underline">Open diff</span>
+            </button>
+          );
+        }
         return (
           <Expandable label={<span>Changed {files.length} file(s){message.data.worktree ? " (in its own worktree)" : ""}: <span className="font-mono text-xs">{files.join(", ")}</span></span>}>
             <div className="mt-2">{detail?.length ? <DiffView files={detail} /> : <DiffBlock diff={message.content} />}</div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, GitBranch, GitCommitHorizontal, GitMerge, Play, RefreshCw, Rocket, Square, Undo2 } from "lucide-react";
+import { ExternalLink, Play, RefreshCw, Rocket, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { api, type ApiAccess } from "@/services/api";
 import type { CollabTeam } from "@/types";
 
-import { DiffView } from "./code-editor";
 
 function Console({ text, className }: { text: string; className?: string }) {
   const ref = useRef<HTMLPreElement>(null);
@@ -161,132 +160,6 @@ export function PreviewPanel({ access, team }: { access: ApiAccess; team: Collab
           {preview?.status === "starting" ? "Starting the dev server…" : "Start the preview to see the app. Agents with “Use the preview” can browse and screenshot it."}
         </div>
       )}
-    </div>
-  );
-}
-
-/** Branches, uncommitted changes, history with side-by-side diffs, and merging run branches. */
-export function GitPanel({ access, team, disabled }: { access: ApiAccess; team: CollabTeam; disabled: boolean }) {
-  const queryClient = useQueryClient();
-  const [message, setMessage] = useState("");
-  const [openCommit, setOpenCommit] = useState<string | null>(null);
-  const gitQuery = useQuery({ queryKey: ["collab-git", team.id], queryFn: () => api.getCollabGit(access, team.id) });
-  const commitFiles = useQuery({ queryKey: ["collab-commit", team.id, openCommit], queryFn: () => api.getCollabCommitFiles(access, team.id, openCommit!), enabled: Boolean(openCommit) });
-  const action = useMutation({
-    mutationFn: (payload: Parameters<typeof api.collabGitAction>[2]) => api.collabGitAction(access, team.id, payload),
-    onSuccess: async () => {
-      setMessage("");
-      await queryClient.invalidateQueries({ queryKey: ["collab-git", team.id] });
-      await queryClient.invalidateQueries({ queryKey: ["collab-files", team.id] });
-    },
-  });
-
-  const git = gitQuery.data;
-  if (git && !git.is_repo) {
-    return (
-      <div className="text-sm text-foreground-muted">
-        This folder isn&apos;t a git repository yet. {team.git_enabled ? "The team's first run will create one, or " : ""}
-        <Button type="button" variant="ghost" className="ml-1 h-8 border border-border px-3 text-xs" disabled={disabled || action.isPending} onClick={() => action.mutate({ action: "init" })}>
-          Initialize git
-        </Button>
-      </div>
-    );
-  }
-
-  const runBranches = (git?.branches ?? []).filter((branch) => branch.startsWith("chikaima/") && branch !== git?.branch);
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <GitBranch className="h-4 w-4 text-foreground-muted" />
-        <select
-          className="h-8 rounded-md border border-border bg-background px-2 text-xs"
-          value={git?.branch ?? ""}
-          disabled={disabled || action.isPending}
-          onChange={(event) => action.mutate({ action: "checkout", branch: event.target.value })}
-        >
-          {(git?.branches ?? []).map((branch) => (
-            <option key={branch} value={branch}>
-              {branch}
-            </option>
-          ))}
-        </select>
-        <Button type="button" variant="ghost" className="h-8 border border-border px-2.5" onClick={() => void gitQuery.refetch()} aria-label="Refresh">
-          <RefreshCw className="h-3.5 w-3.5" />
-        </Button>
-        {disabled ? <span className="text-xs text-foreground-muted">Agents are working; git actions are paused.</span> : null}
-      </div>
-      {action.error ? <p className="text-xs text-destructive">{action.error.message}</p> : null}
-
-      {runBranches.length > 0 ? (
-        <div className="rounded-xl border border-border bg-background p-3">
-          <p className="text-xs font-semibold text-foreground">Unmerged run branches</p>
-          {runBranches.map((branch) => (
-            <div key={branch} className="mt-1.5 flex items-center gap-2 text-xs">
-              <span className="font-mono">{branch}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                className="ml-auto h-7 border border-border px-2 text-xs"
-                disabled={disabled || action.isPending}
-                onClick={() => window.confirm(`Merge ${branch} into ${git?.branch}?`) && action.mutate({ action: "merge", branch })}
-              >
-                <GitMerge className="mr-1 h-3.5 w-3.5" /> Merge into {git?.branch}
-              </Button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="rounded-xl border border-border bg-background p-3">
-        <p className="text-xs font-semibold text-foreground">Uncommitted changes ({git?.changes.length ?? 0})</p>
-        <ul className="mt-1.5 max-h-40 space-y-0.5 overflow-y-auto font-mono text-[11px] text-foreground-muted">
-          {git?.changes.map((change) => (
-            <li key={change.path}>
-              <span className="inline-block w-6 text-primary">{change.code.trim() || "·"}</span>
-              {change.path}
-            </li>
-          ))}
-        </ul>
-        {git?.changes.length ? (
-          <div className="mt-2 flex gap-2">
-            <Input className="h-8 flex-1 text-xs" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Commit message" />
-            <Button type="button" className="h-8 px-3 text-xs" disabled={disabled || !message.trim() || action.isPending} onClick={() => action.mutate({ action: "commit", message })}>
-              <GitCommitHorizontal className="mr-1 h-3.5 w-3.5" /> Commit
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-8 border border-border px-3 text-xs"
-              disabled={disabled || action.isPending}
-              onClick={() => window.confirm("Discard all uncommitted changes? This cannot be undone.") && action.mutate({ action: "discard" })}
-            >
-              <Undo2 className="mr-1 h-3.5 w-3.5" /> Discard
-            </Button>
-          </div>
-        ) : null}
-      </div>
-
-      <div>
-        <p className="text-xs font-semibold text-foreground">History</p>
-        <ol className="mt-1.5 space-y-1">
-          {git?.commits.map((commit) => (
-            <li key={commit.hash}>
-              <button
-                type="button"
-                onClick={() => setOpenCommit(openCommit === commit.hash ? null : commit.hash)}
-                className={cn("grid w-full grid-cols-[4.5rem_1fr_auto] gap-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-background", openCommit === commit.hash && "bg-background")}
-              >
-                <span className="font-mono text-primary">{commit.shortHash}</span>
-                <span className="truncate text-foreground">{commit.subject}</span>
-                <span className="text-muted">
-                  {commit.author} · {new Date(commit.date).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
-                </span>
-              </button>
-              {openCommit === commit.hash ? <div className="mt-2">{commitFiles.data ? <DiffView files={commitFiles.data} /> : <p className="text-xs text-foreground-muted">Loading…</p>}</div> : null}
-            </li>
-          ))}
-        </ol>
-      </div>
     </div>
   );
 }

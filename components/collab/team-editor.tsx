@@ -23,6 +23,7 @@ import type {
   CollabTemplate,
 } from "@/types";
 
+import { FolderPicker } from "./folder-picker";
 import { AUTONOMY_LABELS, DEFAULT_PERMISSIONS, PERMISSION_LABELS, POLICY_HINTS, ROLE_HINTS, selectClass } from "./constants";
 
 /** Scope is edited as free text so typing commas works; it's split on save. */
@@ -134,15 +135,38 @@ function Chip({ active, children, onClick, title }: { active: boolean; children:
   );
 }
 
-export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess; models: AIModel[]; team: CollabTeam | null; onDone: (team: CollabTeam | null) => void }) {
+/**
+ * Edits a project and its AI team. `section` limits what is shown: "project"
+ * (name, folder, git, commands), "team" (supervision rules and agents), or
+ * "all" (creating a project). `embedded` drops the card chrome for use
+ * inside the workspace.
+ */
+export function TeamEditor({
+  access,
+  models,
+  team,
+  onDone,
+  section = "all",
+  embedded = false,
+}: {
+  access: ApiAccess;
+  models: AIModel[];
+  team: CollabTeam | null;
+  onDone: (team: CollabTeam | null) => void;
+  section?: "all" | "project" | "team";
+  embedded?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft>(() => (team ? fromTeam(team) : blankDraft(models)));
-  const templatesQuery = useQuery({ queryKey: ["collab-templates"], queryFn: () => api.getCollabTemplates(access), enabled: !team });
+  const showProject = section !== "team";
+  const showTeam = section !== "project";
+  const templatesQuery = useQuery({ queryKey: ["collab-templates"], queryFn: () => api.getCollabTemplates(access), enabled: showTeam });
 
   const save = useMutation({
     mutationFn: () => (team ? api.updateCollabTeam(access, team.id, toInput(draft)) : api.createCollabTeam(access, toInput(draft))),
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: ["collab-teams"] });
+      await queryClient.invalidateQueries({ queryKey: ["collab-projects"] });
       onDone(saved);
     },
   });
@@ -158,26 +182,32 @@ export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess
   const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
 
   return (
-    <Card className="rounded-[1.75rem] bg-surface p-6">
+    <Card className={cn(embedded ? "border-0 bg-transparent p-0 shadow-none" : "rounded-xl bg-surface p-6")}>
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">{team ? `Edit ${team.name}` : "New team"}</h2>
-        <button type="button" aria-label="Close" onClick={() => onDone(null)} className="text-foreground-muted hover:text-foreground">
-          <X className="h-4 w-4" />
-        </button>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">{section === "project" ? "Project settings" : section === "team" ? "AI team" : team ? `Edit ${team.name}` : "New project"}</h2>
+          {section === "team" ? <p className="mt-0.5 text-sm text-foreground-muted">Who is on the team, what each agent may do, and how much you approve.</p> : null}
+          {section === "project" ? <p className="mt-0.5 text-sm text-foreground-muted">Where the code lives and how the project is tested, run and deployed.</p> : null}
+        </div>
+        {embedded ? null : (
+          <button type="button" aria-label="Close" onClick={() => onDone(null)} className="text-foreground-muted hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      {!team && templatesQuery.data?.length ? (
+      {showTeam && templatesQuery.data?.length ? (
         <div className="mt-4">
           <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-            <LayoutTemplate className="h-3.5 w-3.5" /> Start from a template
+            <LayoutTemplate className="h-3.5 w-3.5" /> {team ? "Replace the team with a preset" : "Team preset"}
           </p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {templatesQuery.data.map((template) => (
               <button
                 key={template.id}
                 type="button"
                 onClick={() => setDraft((current) => fromTemplate(template, models, current))}
-                className="rounded-2xl border border-border bg-background p-3 text-left hover:border-primary"
+                className="rounded-lg border border-border bg-background p-3 text-left hover:border-primary"
               >
                 <p className="text-sm font-semibold text-foreground">{template.name}</p>
                 <p className="mt-1 text-xs text-foreground-muted">{template.description}</p>
@@ -189,15 +219,29 @@ export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess
       ) : null}
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {showProject ? (
+          <>
         <div>
-          <Label htmlFor="team_name">Team name</Label>
-          <Input id="team_name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="SaaSKit team" />
+          <Label htmlFor="team_name">Project name</Label>
+          <Input id="team_name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="my-saas" />
         </div>
-        <div>
-          <Label htmlFor="team_folder">Project folder</Label>
-          <Input id="team_folder" value={draft.folder} onChange={(event) => setDraft({ ...draft, folder: event.target.value })} placeholder="saaskit" />
-          <p className="mt-1 text-xs text-foreground-muted">Relative to the collaboration root. Your code stays as normal files there.</p>
-        </div>
+        {team ? (
+          <div>
+            <Label htmlFor="team_folder">Folder</Label>
+            <Input id="team_folder" value={draft.folder} disabled />
+            <p className="mt-1 text-xs text-foreground-muted">The project&apos;s code lives here as normal files.</p>
+          </div>
+        ) : (
+          <div className="sm:col-span-2">
+            <Label>Folder</Label>
+            <p className="mb-1.5 text-xs text-foreground-muted">Use an existing folder of code, or create a new one.</p>
+            <FolderPicker access={access} value={draft.folder} onChange={(folder) => setDraft((current) => ({ ...current, folder }))} />
+          </div>
+        )}
+          </>
+        ) : null}
+        {showTeam ? (
+          <>
         <div className="sm:col-span-2">
           <Label>Autonomy</Label>
           <div className="mt-1 grid gap-2 sm:grid-cols-3">
@@ -206,7 +250,7 @@ export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess
                 key={level}
                 type="button"
                 onClick={() => setDraft({ ...draft, autonomy: level })}
-                className={cn("rounded-2xl border p-3 text-left", draft.autonomy === level ? "border-primary bg-background" : "border-border hover:border-primary/60")}
+                className={cn("rounded-lg border p-3 text-left", draft.autonomy === level ? "border-primary bg-background" : "border-border hover:border-primary/60")}
               >
                 <p className="text-sm font-semibold text-foreground">{AUTONOMY_LABELS[level].label}</p>
                 <p className="mt-1 text-xs text-foreground-muted">{AUTONOMY_LABELS[level].hint}</p>
@@ -226,9 +270,23 @@ export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess
           <p className="mt-1 text-xs text-foreground-muted">{POLICY_HINTS[draft.decision_policy]}</p>
         </div>
         <div>
+          <Label htmlFor="team_revisions">Revisions per step</Label>
+          <Input id="team_revisions" type="number" min={0} max={5} value={draft.max_revisions} onChange={(event) => setDraft({ ...draft, max_revisions: Number.parseInt(event.target.value, 10) || 0 })} />
+          <p className="mt-1 text-xs text-foreground-muted">How often a rejected step goes back before it is abandoned.</p>
+        </div>
+        <div>
+          <Label htmlFor="team_budget">Model calls per task</Label>
+          <Input id="team_budget" type="number" min={1} max={500} value={draft.max_model_calls} onChange={(event) => setDraft({ ...draft, max_model_calls: Number.parseInt(event.target.value, 10) || 1 })} />
+          <p className="mt-1 text-xs text-foreground-muted">Hard stop, so agents can&apos;t turn into an expensive meeting.</p>
+        </div>
+          </>
+        ) : null}
+        {showProject ? (
+          <>
+        <div>
           <Label htmlFor="team_tests">Test command</Label>
           <Input id="team_tests" value={draft.test_command ?? ""} onChange={(event) => setDraft({ ...draft, test_command: event.target.value })} placeholder="npm test" />
-          <p className="mt-1 text-xs text-foreground-muted">Used by agents with “Run tests”. Needs CHIKAIMA_COLLAB_ALLOW_COMMANDS on the server.</p>
+          <p className="mt-1 text-xs text-foreground-muted">Used by agents with “Run tests”. Needs CHIKAIMA_COLLAB_EXEC on the server.</p>
         </div>
         <div>
           <Label htmlFor="team_preview">Preview command</Label>
@@ -257,19 +315,11 @@ export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess
             Parallel agents (git worktrees)
           </Chip>
         </div>
-        <div>
-          <Label htmlFor="team_revisions">Revisions per step</Label>
-          <Input id="team_revisions" type="number" min={0} max={5} value={draft.max_revisions} onChange={(event) => setDraft({ ...draft, max_revisions: Number.parseInt(event.target.value, 10) || 0 })} />
-          <p className="mt-1 text-xs text-foreground-muted">How often a rejected step goes back before it is abandoned.</p>
-        </div>
-        <div>
-          <Label htmlFor="team_budget">Model calls per run</Label>
-          <Input id="team_budget" type="number" min={1} max={500} value={draft.max_model_calls} onChange={(event) => setDraft({ ...draft, max_model_calls: Number.parseInt(event.target.value, 10) || 1 })} />
-          <p className="mt-1 text-xs text-foreground-muted">Hard stop, so agents can&apos;t turn into an expensive meeting.</p>
-        </div>
+          </>
+        ) : null}
       </div>
 
-      <div className="mt-6">
+      <div className={cn("mt-6", !showTeam && "hidden")}>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Agents</h3>
           <Button
@@ -294,7 +344,7 @@ export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess
             .map((member, index) => ({ member, index }))
             .sort((a, b) => a.member.precedence - b.member.precedence)
             .map(({ member, index }) => (
-              <div key={index} className="rounded-2xl border border-border bg-background p-4">
+              <div key={index} className="rounded-lg border border-border bg-background p-4">
                 <div className="grid gap-3 sm:grid-cols-[4.5rem_1fr_1fr_8.5rem_auto]">
                   <div>
                     <Label htmlFor={`rank_${index}`}>Rank</Label>
@@ -418,11 +468,13 @@ export function TeamEditor({ access, models, team, onDone }: { access: ApiAccess
 
       {save.error ? <p className="mt-4 text-sm text-destructive">{save.error.message}</p> : null}
       <div className="mt-5 flex justify-end gap-2">
-        <Button type="button" variant="ghost" className="border border-border" onClick={() => onDone(null)}>
-          Cancel
-        </Button>
+        {embedded ? null : (
+          <Button type="button" variant="ghost" className="border border-border" onClick={() => onDone(null)}>
+            Cancel
+          </Button>
+        )}
         <Button type="button" disabled={save.isPending || models.length === 0} onClick={() => save.mutate()}>
-          {save.isPending ? "Saving…" : team ? "Save team" : "Create team"}
+          {save.isPending ? "Saving…" : team ? "Save changes" : "Create project"}
         </Button>
       </div>
     </Card>
