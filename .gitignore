@@ -55,3 +55,7 @@ data/*.db-shm
 data/*.db-wal
 data/*.sqlite
 data/*.sqlite3
+
+# AI collaboration folders mounted by docker-compose
+/workspaces/
+/data/workspaces/

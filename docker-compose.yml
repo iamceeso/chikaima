@@ -15,12 +15,15 @@ services:
       CHIKAIMA_AUDIO_UPLOAD_MAX_MEGABYTES: "512"
       CHIKAIMA_VIDEO_UPLOAD_MAX_MEGABYTES: "2048"
       CHIKAIMA_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      CHIKAIMA_COLLAB_ROOT: /app/workspaces
     ports:
       - "3000:3000"
     restart: unless-stopped
     volumes:
       - chikaima_data:/app/data
       - chikaima_storage:/app/storage
+      # Folders AI collaboration teams can edit. Change the left side to a directory on your machine.
+      - ./workspaces:/app/workspaces
 
 volumes:
   chikaima_data:
