@@ -357,7 +357,7 @@ test("CollabService validates team membership rules", async () => {
       /share precedence #1/,
     );
     assert.throws(() => service.createTeam(user.id, { ...base, members: [{ model_id: "nope", role: "implementer", precedence: 1 }] }), /not an enabled model/);
-    assert.throws(() => service.createTeam(user.id, { ...base, folder: "../x", members: [{ model_id: a!, role: "implementer", precedence: 1 }] }), /inside the collaboration root/);
+    assert.throws(() => service.createTeam(user.id, { ...base, folder: "../x", members: [{ model_id: a!, role: "implementer", precedence: 1 }] }), /inside the projects root/);
     assert.throws(() => service.createTeam(user.id, { ...base, decision_policy: "vibes", members: [{ model_id: a!, role: "implementer", precedence: 1 }] }), /decision_policy/);
 
     const { members } = service.createTeam(user.id, { ...base, members: [{ model_id: b!, role: "reviewer", precedence: 2 }, { model_id: a!, role: "implementer", precedence: 1 }] });

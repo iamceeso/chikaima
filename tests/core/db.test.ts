@@ -72,3 +72,27 @@ test("sqlite-vec extension is loaded and the vector virtual table exists", async
     assert.ok(match.distance < 1e-6);
   });
 });
+
+test("repairCollabSchema adds collaboration columns and tables an early 0006 draft lacked, and is idempotent", async () => {
+  const Database = (await import("better-sqlite3")).default;
+  const { repairCollabSchema } = await import("../../core/db/client.js");
+  const connection = new Database(":memory:");
+  try {
+    connection.exec(`
+      CREATE TABLE users (id text PRIMARY KEY);
+      CREATE TABLE collab_teams (id text PRIMARY KEY, user_id text, name text, folder text, decision_policy text, max_revisions integer, created_at text, updated_at text);
+      CREATE TABLE collab_members (id text PRIMARY KEY, team_id text, model_id text, name text, role text, instructions text, precedence integer, created_at text, updated_at text);
+      CREATE TABLE collab_runs (id text PRIMARY KEY);
+      INSERT INTO collab_teams VALUES ('t', 'u', 'Team', 'site', 'majority', 2, 'x', 'x');
+    `);
+    repairCollabSchema(connection);
+    repairCollabSchema(connection);
+    const columns = (table: string) => (connection.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((row) => row.name);
+    for (const column of ["autonomy", "test_command", "max_model_calls"]) assert.ok(columns("collab_teams").includes(column), column);
+    for (const column of ["title", "scope", "permissions", "reports_to", "reviewed_by"]) assert.ok(columns("collab_members").includes(column), column);
+    assert.ok(columns("collab_approvals").includes("resolved_at"));
+    assert.deepEqual(connection.prepare("SELECT autonomy, max_model_calls FROM collab_teams").get(), { autonomy: "semi", max_model_calls: 80 });
+  } finally {
+    connection.close();
+  }
+});
