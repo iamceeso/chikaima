@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 
 import { getConfig } from "../config/index.js";
@@ -184,6 +184,47 @@ export class Workspace {
     }
     this.snapshot(rel, absolute);
     rmSync(absolute);
+  }
+
+  // --- human file management (explorer), not part of the changeset ---------------
+
+  /** Creates an empty file or a directory (with any missing parents). Refuses to replace anything that exists. */
+  create(path: string, type: "file" | "dir"): string {
+    const { absolute, relative: rel } = this.resolvePath(path);
+    if (rel === ".") throw badRequest("A name is required.");
+    if (existsSync(absolute)) throw badRequest(`${rel} already exists.`);
+    if (type === "dir") {
+      mkdirSync(absolute, { recursive: true });
+    } else {
+      mkdirSync(dirname(absolute), { recursive: true });
+      writeFileSync(absolute, "", { encoding: "utf8", flag: "wx" });
+    }
+    return rel;
+  }
+
+  /** Renames or moves a file or directory. The destination must not exist. */
+  rename(from: string, to: string): string {
+    const source = this.resolvePath(from);
+    const target = this.resolvePath(to);
+    if (source.relative === "." || target.relative === ".") throw badRequest("A name is required.");
+    if (!existsSync(source.absolute)) throw badRequest(`Not found: ${from}`);
+    if (source.relative === target.relative) return target.relative;
+    if (target.relative.startsWith(`${source.relative}/`)) throw badRequest("A folder can't be moved inside itself.");
+    // Allow a case-only rename on case-insensitive file systems, where the "existing" target is the source itself.
+    if (existsSync(target.absolute) && source.relative.toLowerCase() !== target.relative.toLowerCase()) {
+      throw badRequest(`${target.relative} already exists.`);
+    }
+    mkdirSync(dirname(target.absolute), { recursive: true });
+    renameSync(source.absolute, target.absolute);
+    return target.relative;
+  }
+
+  /** Deletes a file, or a directory and everything in it. */
+  remove(path: string): void {
+    const { absolute, relative: rel } = this.resolvePath(path);
+    if (rel === ".") throw badRequest("The project folder itself can't be deleted.");
+    if (!existsSync(absolute)) throw badRequest(`Not found: ${path}`);
+    rmSync(absolute, { recursive: true, force: true });
   }
 
   /** Files touched since the last `commit()`/`revert()`, with their original and current content. Unchanged files are omitted. */

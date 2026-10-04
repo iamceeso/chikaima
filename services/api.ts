@@ -403,6 +403,12 @@ export const api = {
     request<{ path: string; content: string }>(`/collab/teams/${teamId}/files/content?path=${encodeURIComponent(path)}`, { ...access, cache: "no-store" }),
   saveCollabFile: (access: ApiAccess, teamId: string, path: string, content: string) =>
     request<{ path: string }>(`/collab/teams/${teamId}/files/content`, { method: "PUT", ...access, body: JSON.stringify({ path, content }) }),
+  createCollabEntry: (access: ApiAccess, teamId: string, path: string, type: "file" | "dir") =>
+    request<{ path: string; type: "file" | "dir" }>(`/collab/teams/${teamId}/files`, { method: "POST", ...access, body: JSON.stringify({ path, type }) }),
+  renameCollabEntry: (access: ApiAccess, teamId: string, from: string, to: string) =>
+    request<{ path: string }>(`/collab/teams/${teamId}/files`, { method: "PATCH", ...access, body: JSON.stringify({ from, to }) }),
+  deleteCollabEntry: (access: ApiAccess, teamId: string, path: string) =>
+    request<void>(`/collab/teams/${teamId}/files?path=${encodeURIComponent(path)}`, { method: "DELETE", ...access }),
   getCollabGit: (access: ApiAccess, teamId: string) => request<CollabGitOverview>(`/collab/teams/${teamId}/git`, { ...access, cache: "no-store" }),
   collabGitAction: (access: ApiAccess, teamId: string, payload: { action: "init" | "commit" | "checkout" | "merge" | "discard"; message?: string; branch?: string }) =>
     request<{ ok?: boolean; commit?: string }>(`/collab/teams/${teamId}/git`, { method: "POST", ...access, body: JSON.stringify(payload) }),

@@ -18,7 +18,7 @@ import { TeamEditor } from "../team-editor";
 import { AgentPanel } from "./agent-panel";
 import { BottomPanel, type BottomTab } from "./bottom-panel";
 import { EditorArea, type EditorTab } from "./editor-area";
-import { Explorer, type AgentFileMark } from "./explorer";
+import { Explorer, remapPath, type AgentFileMark } from "./explorer";
 import { ResizeHandle, usePanelSize } from "./panel-size";
 import { RunsPanel, SearchPanel, SourceControl } from "./side-panels";
 import { TaskBoard } from "./task-board";
@@ -189,6 +189,55 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
     const remaining = tabs.filter((candidate) => candidate.id !== id);
     setTabs(remaining);
     if (activeTab === id) setActiveTab(remaining.at(-1)?.id ?? null);
+  };
+
+  // File management from the explorer. Open tabs and unsaved drafts follow a rename and close on a delete.
+  const refreshFolder = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["collab-files", team.id] });
+    await queryClient.invalidateQueries({ queryKey: ["collab-git", team.id] });
+  };
+  const retargetFiles = (from: string, to: string | null) => {
+    // Where an open path ends up: unchanged when outside `from`, null when deleted.
+    const target = (path: string) => {
+      const moved = remapPath(path, from, to ?? "");
+      return moved === null ? path : to === null ? null : moved;
+    };
+    setTabs((current) =>
+      current.flatMap<EditorTab>((tab) => {
+        if (tab.kind !== "file") return [tab];
+        const path = target(tab.path);
+        return path === null ? [] : [{ ...tab, id: `file:${path}`, path }];
+      }),
+    );
+    setActiveTab((current) => {
+      if (!current?.startsWith("file:")) return current;
+      const path = target(current.slice("file:".length));
+      return path === null ? (tabs.filter((tab) => !(tab.kind === "file" && target(tab.path) === null)).at(-1)?.id ?? null) : `file:${path}`;
+    });
+    setDrafts((current) =>
+      Object.fromEntries(
+        Object.entries(current).flatMap(([path, draft]) => {
+          const next = target(path);
+          return next === null ? [] : [[next, draft]];
+        }),
+      ),
+    );
+    queryClient.removeQueries({ queryKey: ["collab-file", team.id], predicate: (query) => remapPath(String(query.queryKey[2]), from, "") !== null });
+  };
+  const createEntry = async (path: string, type: "file" | "dir") => {
+    const created = await api.createCollabEntry(access, team.id, path, type);
+    await refreshFolder();
+    if (type === "file") openFile(created.path);
+  };
+  const renameEntry = async (from: string, to: string) => {
+    const renamed = await api.renameCollabEntry(access, team.id, from, to);
+    retargetFiles(from, renamed.path);
+    await refreshFolder();
+  };
+  const deleteEntry = async (path: string) => {
+    await api.deleteCollabEntry(access, team.id, path);
+    retargetFiles(path, null);
+    await refreshFolder();
   };
   const openRun = (runId: string) => {
     setSelectedRunId(runId);
@@ -367,8 +416,12 @@ export function IdeShell({ access, team, projects, models, view }: { access: Api
                   activePath={active?.kind === "file" ? active.path : null}
                   agentFiles={agentFiles}
                   gitStatus={gitStatus}
+                  readOnly={runActive}
                   onOpen={(path) => openFile(path)}
                   onRefresh={() => void filesQuery.refetch()}
+                  onCreate={createEntry}
+                  onRename={renameEntry}
+                  onDelete={deleteEntry}
                 />
               ) : null}
               {side === "search" ? <SearchPanel access={access} team={team} onOpen={openFile} /> : null}

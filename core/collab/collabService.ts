@@ -180,6 +180,30 @@ export class CollabService {
     return { path: relative };
   }
 
+  /** Creates an empty file or a folder from the explorer. */
+  createEntry(userId: string, teamId: string, path: string, type: string): { path: string; type: "file" | "dir" } {
+    if (type !== "file" && type !== "dir") throw badRequest('type must be "file" or "dir".');
+    const workspace = this.humanWorkspace(userId, teamId);
+    return { path: workspace.create(path, type), type };
+  }
+
+  /** Renames or moves a file or folder from the explorer. */
+  renameEntry(userId: string, teamId: string, from: string, to: string): { path: string } {
+    return { path: this.humanWorkspace(userId, teamId).rename(from, to) };
+  }
+
+  /** Deletes a file or folder (recursively) from the explorer. */
+  deleteEntry(userId: string, teamId: string, path: string): void {
+    this.humanWorkspace(userId, teamId).remove(path);
+  }
+
+  /** The team folder for a human file operation; refused while a run is working in it. */
+  private humanWorkspace(userId: string, teamId: string): Workspace {
+    const { team } = this.getTeam(userId, teamId);
+    if (this.folderBusy(team.folder)) throw conflict("Agents are working in this folder; wait for the run to finish or stop it first.");
+    return Workspace.open(team.folder);
+  }
+
   /** Whether a run is active in this folder (from any team). */
   isFolderBusy(folder: string): boolean {
     return this.folderBusy(folder);

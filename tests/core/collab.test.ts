@@ -139,6 +139,31 @@ test("Workspace tracks a changeset and can revert writes, creations and deletion
   });
 });
 
+test("Workspace creates, renames and removes files and folders for the explorer", async () => {
+  await withCollabEnv(() => {
+    const workspace = Workspace.open("site");
+
+    assert.equal(workspace.create("src/components/button.tsx", "file"), "src/components/button.tsx");
+    assert.equal(workspace.create("assets/icons", "dir"), "assets/icons");
+    assert.equal(workspace.list(), "assets/\nassets/icons/\nsrc/\nsrc/components/\nsrc/components/button.tsx");
+    assert.throws(() => workspace.create("src", "dir"), /already exists/);
+    assert.throws(() => workspace.create(".", "file"), /name is required/);
+    assert.throws(() => workspace.create("../outside.txt", "file"), /escapes the workspace/);
+
+    assert.equal(workspace.rename("src/components", "src/ui"), "src/ui");
+    assert.equal(existsSync(join(workspace.root, "src/ui/button.tsx")), true);
+    assert.throws(() => workspace.rename("src", "src/ui/src"), /inside itself/);
+    assert.throws(() => workspace.rename("src/ui", "assets"), /already exists/);
+    assert.throws(() => workspace.rename("missing.txt", "found.txt"), /Not found/);
+    assert.throws(() => workspace.rename("src/ui/button.tsx", ".git/button.tsx"), /off limits/);
+
+    workspace.remove("src");
+    assert.equal(existsSync(join(workspace.root, "src")), false);
+    assert.throws(() => workspace.remove("."), /can't be deleted/);
+    assert.throws(() => workspace.remove("src"), /Not found/);
+  });
+});
+
 test("Workspace.list skips dependency and VCS directories", async () => {
   await withCollabEnv(() => {
     const workspace = Workspace.open("site");
